@@ -11,6 +11,7 @@ import type { CapabilityProbeSummary } from './provider-manager';
 export interface CapabilityProbeOptions {
   textModel: string;
   visionModel?: string;
+  fallbackVisionModel?: string;
   sampleImageDataUrl?: string;
   now?: () => Date;
 }
@@ -18,6 +19,10 @@ export interface CapabilityProbeOptions {
 export interface CapabilityProbeReport {
   summary: CapabilityProbeSummary;
   capabilities: ProviderCapabilities;
+  selectedModels: {
+    textModel: string;
+    visionModel?: string;
+  };
   models: ProviderModel[];
   checks: Record<string, { passed: boolean; detail?: string }>;
 }
@@ -61,6 +66,18 @@ export async function runCapabilityProbe(
       detail: error instanceof Error ? error.message : String(error),
     };
   }
+
+  const configuredVisionMetadata = options.visionModel
+    ? models.find((model) => model.id === options.visionModel)
+    : undefined;
+  const shouldSelectVisionModel =
+    !options.visionModel ||
+    (configuredVisionMetadata !== undefined &&
+      !configuredVisionMetadata.inputModalities?.includes('image'));
+  const selectedVisionModel = shouldSelectVisionModel
+    ? (models.find((model) => model.inputModalities?.includes('image'))?.id ??
+      options.visionModel)
+    : options.visionModel;
 
   let text = false;
   let usage = false;
@@ -113,20 +130,43 @@ export async function runCapabilityProbe(
   }
 
   let vision = false;
-  if (options.visionModel && options.sampleImageDataUrl) {
-    try {
-      const response = await provider.chat(
-        request(`probe:vision:${crypto.randomUUID()}`, options.visionModel, '图片中是什么颜色？', {
-          images: [options.sampleImageDataUrl],
-        }),
-      );
-      vision = response.content.length > 0;
-      checks.vision = { passed: vision };
-    } catch (error: unknown) {
+  let resolvedVisionModel = selectedVisionModel;
+  if (selectedVisionModel && options.sampleImageDataUrl) {
+    const tryVisionModel = async (
+      model: string,
+    ): Promise<{ passed: boolean; detail: string }> => {
+      try {
+        const response = await provider.chat(
+          request(`probe:vision:${crypto.randomUUID()}`, model, '图片中是什么颜色？', {
+            images: [options.sampleImageDataUrl!],
+          }),
+        );
+        return response.content.length > 0
+          ? { passed: true, detail: `模型 ${model} 视觉请求通过` }
+          : { passed: false, detail: `模型 ${model} 返回空内容` };
+      } catch (error: unknown) {
+        return {
+          passed: false,
+          detail: `模型 ${model}：${error instanceof Error ? error.message : String(error)}`,
+        };
+      }
+    };
+    const primary = await tryVisionModel(selectedVisionModel);
+    vision = primary.passed;
+    checks.vision = primary;
+    const fallbackVisionModel = options.fallbackVisionModel;
+    if (!vision && fallbackVisionModel && fallbackVisionModel !== selectedVisionModel) {
+      const fallback = await tryVisionModel(fallbackVisionModel);
+      vision = fallback.passed;
       checks.vision = {
-        passed: false,
-        detail: error instanceof Error ? error.message : String(error),
+        passed: fallback.passed,
+        detail: fallback.passed
+          ? `${primary.detail}；备用模型 ${fallbackVisionModel} 视觉请求通过`
+          : `${primary.detail}；备用模型失败：${fallback.detail}`,
       };
+      if (fallback.passed) {
+        resolvedVisionModel = fallbackVisionModel;
+      }
     }
   } else {
     checks.vision = { passed: false, detail: '未配置视觉模型或样例图' };
@@ -219,6 +259,7 @@ export async function runCapabilityProbe(
     rateLimitFormat,
     probedAt,
     failureReason: text ? undefined : (checks.text?.detail ?? '文本探针失败'),
+    visionFailureReason: vision ? undefined : checks.vision?.detail,
   };
   return {
     summary,
@@ -231,6 +272,10 @@ export async function runCapabilityProbe(
       supportsUsage: usage,
       supportsAbort: abort,
       probedAt,
+    },
+    selectedModels: {
+      textModel: options.textModel,
+      visionModel: resolvedVisionModel,
     },
     models,
     checks,

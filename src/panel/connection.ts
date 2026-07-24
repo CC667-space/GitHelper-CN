@@ -14,14 +14,20 @@ export interface PanelConnection {
   disconnect(): void;
 }
 
+const RECONNECT_BASE_DELAY_MS = 250;
+const RECONNECT_MAX_DELAY_MS = 5_000;
+
 export function connectPanel(
   onEvent: (event: StreamEvent) => void,
   onProviderState: (state: ProviderState) => void,
   onConnectionChange: (connected: boolean) => void,
 ): PanelConnection {
-  const port = chrome.runtime.connect({ name: PANEL_PORT_NAME });
-  onConnectionChange(true);
-  port.onMessage.addListener((raw: unknown) => {
+  let activePort: chrome.runtime.Port | undefined;
+  let reconnectAttempt = 0;
+  let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  let stopped = false;
+
+  const handleMessage = (raw: unknown): void => {
     const candidate = raw as { type?: unknown };
     if (candidate?.type === 'PROVIDER_STATE') {
       onProviderState(
@@ -38,17 +44,67 @@ export function connectPanel(
       expectedType: 'STREAM_EVENT',
     });
     onEvent(event.payload);
-  });
-  port.onDisconnect.addListener(() => onConnectionChange(false));
+  };
+
+  const scheduleReconnect = (): void => {
+    if (stopped || reconnectTimer !== undefined) {
+      return;
+    }
+    const delay = Math.min(
+      RECONNECT_BASE_DELAY_MS * 2 ** reconnectAttempt,
+      RECONNECT_MAX_DELAY_MS,
+    );
+    reconnectAttempt += 1;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = undefined;
+      openPort();
+    }, delay);
+  };
+
+  const openPort = (): void => {
+    if (stopped) {
+      return;
+    }
+    try {
+      const port = chrome.runtime.connect({ name: PANEL_PORT_NAME });
+      activePort = port;
+      reconnectAttempt = 0;
+      port.onMessage.addListener(handleMessage);
+      port.onDisconnect.addListener(() => {
+        if (stopped || activePort !== port) {
+          return;
+        }
+        activePort = undefined;
+        onConnectionChange(false);
+        scheduleReconnect();
+      });
+      onConnectionChange(true);
+    } catch {
+      activePort = undefined;
+      onConnectionChange(false);
+      scheduleReconnect();
+    }
+  };
+
+  openPort();
+
   return {
     send(text, providerId) {
-      port.postMessage(createEnvelope('PANEL_MESSAGE', { text, providerId }));
+      activePort?.postMessage(createEnvelope('PANEL_MESSAGE', { text, providerId }));
     },
     abort(requestId) {
-      port.postMessage(createEnvelope('PANEL_ABORT', { requestId }));
+      activePort?.postMessage(createEnvelope('PANEL_ABORT', { requestId }));
     },
     disconnect() {
-      port.disconnect();
+      stopped = true;
+      if (reconnectTimer !== undefined) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = undefined;
+      }
+      const port = activePort;
+      activePort = undefined;
+      port?.disconnect();
+      onConnectionChange(false);
     },
   };
 }

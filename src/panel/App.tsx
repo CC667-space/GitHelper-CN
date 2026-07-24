@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 
 import type { ProviderId } from '../lib/types';
 import { connectPanel, type PanelConnection } from './connection';
+import { MarkdownMessage } from './MarkdownMessage';
 import { usePanelStore } from './store';
 
 export function PanelApp({
@@ -29,9 +30,24 @@ export function PanelApp({
   } = usePanelStore();
 
   useEffect(() => {
-    const activeConnection = connect(applyStreamEvent, applyProviderState, setConnected);
+    let active = true;
+    const activeConnection = connect(
+      applyStreamEvent,
+      applyProviderState,
+      (nextConnected) => {
+        if (active) {
+          setConnected(nextConnected);
+        }
+      },
+    );
     connection.current = activeConnection;
-    return () => activeConnection.disconnect();
+    return () => {
+      active = false;
+      if (connection.current === activeConnection) {
+        connection.current = undefined;
+      }
+      activeConnection.disconnect();
+    };
   }, [applyProviderState, applyStreamEvent, connect, setConnected]);
 
   function submit(): void {
@@ -126,7 +142,11 @@ export function PanelApp({
               }`}
               key={message.id}
             >
-              {message.content}
+              {message.role === 'assistant' ? (
+                <MarkdownMessage content={message.content} />
+              ) : (
+                message.content
+              )}
             </article>
           ))
         )}
@@ -147,9 +167,20 @@ export function PanelApp({
           id="panel-message"
           maxLength={8_000}
           onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (
+              event.key === 'Enter' &&
+              !event.shiftKey &&
+              !event.nativeEvent.isComposing
+            ) {
+              event.preventDefault();
+              submit();
+            }
+          }}
           placeholder="问问当前 GitHub 页面……"
           value={draft}
         />
+        <p className="mt-1 text-xs text-slate-500">Enter 发送 · Shift+Enter 换行</p>
         {activeRequestId ? (
           <button
             className="mt-2 w-full rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700"

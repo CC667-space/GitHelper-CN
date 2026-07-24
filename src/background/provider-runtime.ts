@@ -15,7 +15,7 @@ import type { ProviderRuntimeView } from '../lib/bridge-protocol';
 
 const PROBE_STORAGE_KEY = 'provider:probes:v1';
 const SAMPLE_RED_PIXEL =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZPyoAAAAASUVORK5CYII=';
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAvSURBVFhH7c6hAQAACMOw/f/08BwAJqKmKmnSz7LHdQAAAAAAAAAAAAAAAAAAAANUDfhqnpuFxwAAAABJRU5ErkJggg==';
 
 interface ProbeStorage {
   schemaVersion: 1;
@@ -75,6 +75,7 @@ export class ProviderRuntime {
           keyMask,
           availability,
           disabledReason: state.disabledReason,
+          visionFailureReason: probe?.visionFailureReason,
           capabilities: this.manager.capabilities(catalog.id),
         };
       }),
@@ -114,12 +115,23 @@ export class ProviderRuntime {
     return this.manager.abort(requestId);
   }
 
-  async runAllConfiguredProbes(): Promise<CapabilityProbeReport[]> {
+  async runConfiguredProbes(providerId?: ProviderId): Promise<CapabilityProbeReport[]> {
     await this.ready;
     const settings = await providerSettingsStore().read();
     const reports: CapabilityProbeReport[] = [];
-    const stored: ProbeStorage = { schemaVersion: 1, results: {} };
-    for (const catalog of PROVIDER_CATALOG) {
+    const priorStorage = await chrome.storage.local.get(PROBE_STORAGE_KEY);
+    const prior = priorStorage[PROBE_STORAGE_KEY] as ProbeStorage | undefined;
+    const stored: ProbeStorage = {
+      schemaVersion: 1,
+      results:
+        prior?.schemaVersion === 1 && prior.results
+          ? { ...prior.results }
+          : {},
+    };
+    const catalogs = providerId
+      ? PROVIDER_CATALOG.filter((catalog) => catalog.id === providerId)
+      : PROVIDER_CATALOG;
+    for (const catalog of catalogs) {
       if (!(await getCredentialMask(catalog.id))) {
         continue;
       }
@@ -151,11 +163,22 @@ export class ProviderRuntime {
         const report = await runCapabilityProbe(provider, {
           textModel: setting.textModel,
           visionModel: setting.visionModel,
+          fallbackVisionModel: catalog.defaultVisionModel,
           sampleImageDataUrl: catalog.id === 'deepseek' ? undefined : SAMPLE_RED_PIXEL,
         });
         reports.push(report);
         stored.results[catalog.id] = report.summary;
         this.manager.setProbeResult(report.summary);
+        if (
+          report.summary.vision &&
+          report.selectedModels.visionModel &&
+          report.selectedModels.visionModel !== setting.visionModel
+        ) {
+          await providerSettingsStore().writeProvider(catalog.id, {
+            ...setting,
+            visionModel: report.selectedModels.visionModel,
+          });
+        }
       } catch (error: unknown) {
         const failed: CapabilityProbeSummary = {
           providerId: catalog.id,

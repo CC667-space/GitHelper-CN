@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 4 无凭据工作已全部完成，已到强制确认节点 ①：等待用户在扩展 Options 页填入真实 Provider API Key。**
+**Phase 4 第三轮真实探针已通过 D-031：UUAPI/OpenRouter 文本已验证，OpenRouter 视觉已验证；等待一次真实流式对话手测后完成阶段提交。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -75,17 +75,35 @@
   - 能力探针框架覆盖模型列表、文本、流式、取消、视觉、工具、结构化输出、usage、错误格式；真实限流只在实际遇到时标记，不主动制造限流
   - Panel 已接真实流式 runtime、文本/视觉 Provider 分列、不可用项置灰、停止生成；Options 已接 Key password input、保存即清空、Background 掩码回读、model 配置与完整数据流向披露
   - UUAPI model 留空时真实探针先尝试 `/v1/models` 自动选择；用户也可在同一 Options 页面覆盖 model ID
-  - 当前真实能力一律记录为“未探针”，证据与后续更新位置：`scripts/provider-probe-report.md`
+  - 初始真实能力记录为“未探针”，真实结果与后续更新位置：`scripts/provider-probe-report.md`
   - 无凭据验收：Node 24.18.0 下 typecheck、lint 通过；Vitest 20 files / 58 tests 全过；build 与构建安全扫描通过；隔离 Chrome 实测 SW/Options/Panel/Content 加载、TRUSTED_CONTEXTS 与权限探针均通过
+- [x] 用户确认已在扩展 Options 页填入真实 Provider Key；未在聊天、代码、日志、配置或 Git 中接收/记录明文
+- [x] 将 Options 真实探针消息超时从通用 15 秒单独放宽到 10 分钟；typecheck、lint、Vitest 20 files / 58 tests、build 与构建安全扫描通过
+- [x] 修复真实探针按钮“点击后看似无反应”：运行/完成/失败状态改为在按钮卡片内原位显示，运行中禁用重复点击；新增回归测试后 Vitest 20 files / 59 tests 全过
+- [x] 修复真实探针完成后把约 107KB 完整报告塞入 64KB 消息导致 UI 报错：完整报告不再跨消息返回，仅回传紧凑 Provider 状态；Provider 卡片新增文本/视觉验证结果与失败原因；新增路由/UI 回归测试后 Vitest 21 files / 61 tests 全过
+- [x] 首轮真实结果：OpenRouter 文本已验证；DeepSeek 文本探针失败；UUAPI HTTP 502；OpenRouter 与 UUAPI 视觉均未通过，触发 D-031 条件性暂停
+- [x] 修复视觉探针假阴性风险：样例由 1×1 改为 32×32 PNG；配置型号在 `/models` 中明确不支持 `image` 时自动选择图像输入型号，通过后保存实际型号；UI 持久化并显示视觉失败原因；最终 typecheck、lint、Vitest 21 files / 62 tests、build 与构建安全扫描通过
+- [x] 第二轮真实结果：OpenRouter 文本继续通过，但 `~openai/gpt-latest` 视觉返回空内容；UUAPI 返回 `All available accounts exhausted`；DeepSeek 文本仍失败
+- [x] 为 OpenRouter 增加明确视觉 fallback：首选视觉模型报错或返回空内容时改用官方 `openrouter/free` 路由，通过后保存实际视觉模型；typecheck、lint、Vitest 21 files / 63 tests、build 与构建安全扫描通过
+- [x] 第三轮真实结果：UUAPI/OpenRouter 文本已验证，OpenRouter 视觉已验证；D-031“至少一个文本 + 一个视觉 Provider”硬门槛通过；DeepSeek 单家失败记录并禁用
+- [x] 新增 D-038，记录 OpenRouter 视觉 fallback、32×32 样例图及第三轮真实证据
+- [x] 定位 DeepSeek 空正文高置信根因：V4 默认启用 Thinking，而 16-token 探针预算同时覆盖 reasoning 与最终正文；适配器现显式发送 `thinking.type=disabled`，符合低成本默认文本路线
+- [x] Options 增加“仅复测单个 Provider”，消息 Schema、Router 与 Runtime 只调用明确目标并保留其他 Provider 已有结果；21 files / 66 tests、typecheck、lint、build 与构建安全扫描通过
+- [x] 新增 D-039，记录 DeepSeek V4 非思考默认、未来 Thinking 边界及单 Provider 复测策略
+- [x] 第四轮仅复测 DeepSeek：文本已验证；真实端点证实 D-039 修复有效，低成本默认文本路线恢复可用
+- [x] 修复 Side Panel 三项真实交互缺陷（D-040）：扩展 action/快捷键直接打开 Panel；忽略 React StrictMode 旧连接的延迟断开；Enter 发送、Shift+Enter 换行并避开 IME 合成
+- [x] 三项缺陷均先由独立红测稳定复现再修复；最终 typecheck、lint、Vitest 22 files / 69 tests、build 与构建安全扫描通过
+- [x] 真实 UI 复验：action 直接打开、连接状态、发送键、Enter/Shift+Enter 与 DeepSeek 首轮流式回答全部成功
+- [x] 首轮回答后发现 Background port 断开会永久离线；新增 D-041 自动重连（250ms 起步、最高 5s，主动关闭不重连），生命周期红测转绿
+- [x] D-041 补丁最终通过 typecheck、lint、Vitest 23 files / 70 tests、build 与构建安全扫描
+- [x] 真实连续两轮 DeepSeek 对话成功；D-041 自动重连与第二轮发送通过用户实测
+- [x] 新增 D-042 安全 Markdown/GFM 渲染：标题、列表、强调、引用、代码与表格语义化展示；原始 HTML、远程图片、可点击外链均阻断
+- [x] Markdown 红测转绿；固定 `react-markdown@10.1.0` / `remark-gfm@4.0.1`，依赖锁通过供应链策略；最终 typecheck、lint、Vitest 23 files / 71 tests、build 与构建安全扫描通过
+- [x] **Phase 4 — Provider + 能力探针 + 对话 + 手动切换（2026-07-24）通过验收**：三适配器 Mock、真实文本/视觉探针、DeepSeek 低成本路线、手动切换、连续两轮流式对话、断线恢复、输入交互与安全 Markdown 展示均完成
 
 ## 下一任务
-**Phase 4 强制确认节点 ①**（见 EXECUTION_PLAN v1.2）。
-用户只需在已构建扩展的 **GitHelper-CN 设置（Options）→ Provider 与 API Key** 中填入真实 Key 并点击各卡片的“保存 Key”；不要把 Key 发到聊天、文件或日志。模型可保持已填默认值；UUAPI 留空时后续探针会先尝试自动发现。
-
-用户完成后回复“已填入”，执行 Agent 将自动：
-1. 运行三家真实端点能力探针并更新 `provider:probes:v1` 与探针报告
-2. 按 D-031 记录/禁用单家失败；验证至少一个文本和一个视觉 Provider
-3. 手测一次真实流式对话，完成 Phase 4 验收与阶段 Commit，然后自动进入 Phase 5
+**Phase 5 — Session + 偏好 + 容量淘汰**（见 EXECUTION_PLAN v1.2）。
+实现会话保存/恢复、过期清理、上下文长度控制、偏好读写、D-033 三种数据清除及容量淘汰；完成自动测试、文档与本地阶段提交后自动进入 Phase 6。
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -95,7 +113,7 @@
 | 1.5 安全地基 | ✅ 已完成 |
 | 2 Side Panel + 消息通信 | ✅ 已完成 |
 | 3 页面识别 + 上下文 + SPA | ✅ 已完成 |
-| 4 Provider + 能力探针 + 对话 + 手动切换 | ⏸ 无凭据实现完成，等待真实 Key |
+| 4 Provider + 能力探针 + 对话 + 手动切换 | ✅ 已完成 |
 | 5 Session + 偏好 + 容量淘汰 | ⬜ |
 | 6 点击提问（MVP 必达） | ⬜ |
 | 7 框选 + 视觉（MVP 必达） | ⬜ |
@@ -105,12 +123,15 @@
 | 11 测试 + 打包 + MVP 验收 | ⬜ |
 
 ## 待处理的强制确认节点
-- ⏸ **当前已触发** — Phase 4：填入真实 Provider Key（必需）
+- ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
+- ✅ 所有视觉 Provider 首轮失败后的第二轮复探针成本确认（已授权并执行）
+- ✅ 第二轮视觉仍失败后的第三轮 `openrouter/free` fallback 真实确认（已授权、执行并通过）
+- ✅ DeepSeek V4 非思考修复后的单 Provider 真实复测（只调用 DeepSeek，文本已验证）
 - ⏸ Phase 11：MVP 批量体验复核（必需）
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-仅有计划内强制确认节点：真实 Provider Key 必须由用户本人在扩展 Options 页录入。代码、Mock、构建和本地浏览器加载无其他阻塞。
+无。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -123,3 +144,16 @@
 - 2026-07-24：Phase 2 通过；Panel/Options UI 骨架、三端安全通信、页面信息往返及流式占位落地，29 项单测与真实浏览器加载复验通过。
 - 2026-07-24：Phase 3 通过；六类页面解析、有限降级、私有/无权限零出站、SPA 去抖与 Content 幂等入口落地，42 项单测及真实浏览器复验通过。
 - 2026-07-24：Phase 4 无凭据工作完成；三适配器、能力探针框架、Manager/Panel/Options/凭据 UI 与 58 项测试通过，按强制确认节点 ① 暂停等待用户在 Options 页录入真实 Key。
+- 2026-07-24：用户确认真实 Key 已在 Options 页录入；真实探针消息超时改为 10 分钟并通过 58 项回归测试。Chrome 自动化接口禁止访问扩展内部页，等待用户从 UI 触发一次探针。
+- 2026-07-24：真实探针按钮原先只在页面顶部显示状态，导致当前视口内看似无反应；现已增加卡片内即时状态、运行态按钮与防重复提交，并由新增 UI 回归测试覆盖。
+- 2026-07-24：真实探针完成后因完整报告约 107KB 超过 64KB 消息上限而在 UI 报错；探针摘要已先持久化。路由现只回传紧凑 Provider 状态，Provider 卡片显示文本/视觉结果与失败原因，并新增超大报告和 UI 回归测试。
+- 2026-07-24：首轮真实结果为 OpenRouter 文本通过、DeepSeek 文本失败、UUAPI HTTP 502、视觉路线全未通过。修复视觉模型自动选择、32×32 样例图与视觉失败原因记录后，按 D-031/新增成本规则暂停等待一次复探针确认。
+- 2026-07-24：用户授权一次修复版真实能力复探针；等待其重新加载扩展后从 Options UI 触发。
+- 2026-07-24：第二轮真实探针确认 OpenRouter 文本通过但 `~openai/gpt-latest` 视觉返回空内容，UUAPI 账户耗尽。增加 `openrouter/free` 视觉 fallback 并通过 63 项测试，按 D-031/新增请求规则再次暂停。
+- 2026-07-24：用户授权第三轮真实复探针，用于验证 `openrouter/free` 视觉 fallback。
+- 2026-07-24：第三轮真实探针通过：UUAPI/OpenRouter 文本已验证，OpenRouter 视觉已验证；记录 D-038，等待一次真实流式对话后完成 Phase 4。
+- 2026-07-24：根据 DeepSeek 官方 V4 文档定位其默认 Thinking 会与 16-token 探针预算冲突；适配器改为显式非思考模式，并增加只调用指定 Provider 的复测入口。记录 D-039；本地 66 项测试及全套静态/构建验证通过，等待 DeepSeek 单家真实复测。
+- 2026-07-24：第四轮仅复测 DeepSeek，文本显示“已验证”；D-039 得到真实端点验证，默认低成本文本路线恢复。等待一次 DeepSeek 真实流式对话后完成 Phase 4。
+- 2026-07-24：真实 Side Panel 复验发现 action 未直接打开、发送键因 StrictMode 旧连接回调误置为离线、Enter 只换行。三项均以红测复现后修复，记录 D-040；全量 69 项测试与构建验证通过，等待真实 UI 复验。
+- 2026-07-24：D-040 三项交互及 DeepSeek 首轮真实流式回答均通过；回答完成后 port 断开导致永久离线。增加 D-041 自动重连与退避，生命周期红测及全量 70 项测试通过，等待真实连续两轮复验。
+- 2026-07-24：DeepSeek 连续两轮真实对话成功，D-041 通过实测。随后补充 D-042 安全 Markdown/GFM 展示并通过 71 项测试；Phase 4 全部验收通过，准备阶段提交并进入 Phase 5。

@@ -11,6 +11,8 @@ export function OptionsApp({
   services?: OptionsServices;
 }): React.JSX.Element {
   const [probeStatus, setProbeStatus] = useState('待验证');
+  const [providerProbeTarget, setProviderProbeTarget] = useState<ProviderId | 'all'>();
+  const [providerProbeStatus, setProviderProbeStatus] = useState('尚未运行');
   const [providers, setProviders] = useState<ProviderRuntimeView[]>([]);
   const [keys, setKeys] = useState<Partial<Record<ProviderId, string>>>({});
   const [models, setModels] = useState<
@@ -69,11 +71,26 @@ export function OptionsApp({
     await refreshProviders();
   }
 
-  async function runProbes(): Promise<void> {
-    setStatus('正在调用真实端点；会消耗少量 Provider 额度…');
-    await services.runProbes();
-    await refreshProviders();
-    setStatus('能力探针已完成；请查看各 Provider 可用状态');
+  async function runProbes(providerId?: ProviderId): Promise<void> {
+    const targetLabel =
+      providerId === undefined
+        ? '全部已配置 Provider'
+        : PROVIDER_CATALOG.find((provider) => provider.id === providerId)?.label ?? providerId;
+    setProviderProbeTarget(providerId ?? 'all');
+    setProviderProbeStatus(`正在复测${targetLabel}；会消耗少量 Provider 额度…`);
+    setStatus(`正在复测${targetLabel}；会消耗少量 Provider 额度…`);
+    try {
+      await services.runProbes(providerId);
+      await refreshProviders();
+      setProviderProbeStatus(`${targetLabel}的能力探针已完成`);
+      setStatus(`${targetLabel}的能力探针已完成；请查看对应 Provider 状态`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      setProviderProbeStatus(`能力探针失败：${message}`);
+      throw error;
+    } finally {
+      setProviderProbeTarget(undefined);
+    }
   }
 
   async function openProbeSidePanel(): Promise<void> {
@@ -130,6 +147,25 @@ export function OptionsApp({
                   {provider?.availability ?? 'needs_key'}
                 </span>
               </div>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                <span>
+                  文本：
+                  {provider?.availability === 'available' ? '已验证' : '未验证/不可用'}
+                </span>
+                <span>
+                  视觉：{provider?.capabilities.supportsVision ? '已验证' : '未验证/不支持'}
+                </span>
+              </div>
+              {provider?.disabledReason ? (
+                <p className="mt-2 rounded bg-red-50 px-2 py-1 text-xs text-red-700">
+                  失败原因：{provider.disabledReason}
+                </p>
+              ) : null}
+              {provider?.visionFailureReason ? (
+                <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                  视觉失败原因：{provider.visionFailureReason}
+                </p>
+              ) : null}
 
               <label className="mt-4 block text-sm font-medium" htmlFor={`${catalog.id}-api-key`}>
                 {catalog.label} API Key
@@ -227,6 +263,20 @@ export function OptionsApp({
               >
                 保存模型配置
               </button>
+              <button
+                className="ml-2 mt-3 rounded border border-amber-700 px-3 py-2 text-sm text-amber-900 disabled:border-slate-200 disabled:text-slate-400"
+                disabled={providerProbeTarget !== undefined || !provider?.keyMask}
+                onClick={() =>
+                  void runProbes(catalog.id).catch((error: unknown) =>
+                    setStatus(error instanceof Error ? error.message : String(error)),
+                  )
+                }
+                type="button"
+              >
+                {providerProbeTarget === catalog.id
+                  ? `正在复测 ${catalog.label}…`
+                  : `仅复测 ${catalog.label}`}
+              </button>
             </article>
           );
         })}
@@ -238,7 +288,9 @@ export function OptionsApp({
           </p>
           <button
             className="mt-3 rounded bg-amber-900 px-3 py-2 text-sm text-white disabled:bg-amber-300"
-            disabled={!providers.some((provider) => provider.keyMask)}
+            disabled={
+              providerProbeTarget !== undefined || !providers.some((provider) => provider.keyMask)
+            }
             onClick={() =>
               void runProbes().catch((error: unknown) =>
                 setStatus(error instanceof Error ? error.message : String(error)),
@@ -246,8 +298,11 @@ export function OptionsApp({
             }
             type="button"
           >
-            运行真实能力探针
+            {providerProbeTarget === 'all' ? '探针运行中…' : '运行真实能力探针'}
           </button>
+          <p aria-live="polite" className="mt-2 text-sm text-amber-900">
+            {providerProbeStatus}
+          </p>
         </div>
       </section>
 

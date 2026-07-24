@@ -240,3 +240,53 @@
 - **理由**：实测两个入口都名为 `index.ts` 时，CRXJS 产物名碰撞会让 `service-worker-loader.js` 错误导入 Content bundle；开启 sourcemap 时 Content IIFE 尾部会被拼入 `sourceMappingURL` 行注释导致语法错误。唯一入口名与关闭 sourcemap 后，实际 loader、注入、SW 消息和截图链路全部通过。
 - **范围**：仅构建兼容调整，不改变模块职责、权限、安全边界或 MVP。
 - 状态：已验证 ｜ 2026-07-24
+
+## D-038 OpenRouter 视觉 fallback
+- **决策**：
+  - OpenRouter 文本默认保留 `~openai/gpt-latest`；视觉默认/fallback 使用 `openrouter/free`。
+  - 视觉探针先验证已配置型号；若报错或返回空内容，则尝试明确 fallback。fallback 通过后保存实际视觉型号，后续 Panel 不再继续使用已失败型号。
+  - 视觉样例使用 `32×32` PNG，避免 `1×1` 图片造成端点兼容性假阴性。
+- **实测证据**：第二轮 `~openai/gpt-latest` 视觉返回空内容；加入 fallback 后第三轮 OpenRouter 文本与视觉均在 Options UI 显示“已验证”。完整记录见 `scripts/provider-probe-report.md`。
+- **范围**：Provider 内部模型路由与探针可靠性修正，不新增 Host、Chrome 权限、数据类型或 MVP 功能。
+- 状态：已验证 ｜ 2026-07-24
+
+## D-039 DeepSeek V4 默认使用非思考模式
+- **决策**：
+  - DeepSeek 适配器对 `deepseek-v4-flash` / `deepseek-v4-pro` 请求显式发送 `thinking: { type: "disabled" }`；v1 不把 Thinking 隐式作为默认能力。
+  - Options 增加单 Provider 能力复测入口；指定单家时只调用该 Provider，并保留其他 Provider 已持久化的探针结果。
+  - 若未来增加 Thinking 开关，须单独设计 reasoning 上下文续传、成本披露与安全展示；不得把 `reasoning_content` 当最终回答兜底。
+- **理由**：DeepSeek 官方 V4 文档显示 Thinking 默认为 enabled，`max_tokens` 同时覆盖 reasoning 与最终回答。Phase 4 文本探针仅给 16 tokens，真实端点 HTTP 成功但最终 `content` 为空，与预算被默认 reasoning 消耗的行为一致。显式非思考模式既修正假阴性，也符合本项目“文本默认 DeepSeek、成本最低”的冻结路由原则。
+- **证据**：适配器回归测试验证非流式/流式共用请求体覆写；Options/UI/消息路由测试验证 `providerId=deepseek` 的单家复测不会触发其他端点。第四轮真实单家复测中，DeepSeek 文本由“未验证/不可用”变为“已验证”。
+- **范围**：Provider 内部请求参数与探针触发粒度调整；不新增 Host、Chrome 权限、数据类型或 MVP 功能。
+- 状态：已验证 ｜ 2026-07-24
+
+## D-040 Side Panel 产品入口、连接代际与输入语义
+- **决策**：
+  - 单击扩展 action 或执行 `Alt+Shift+G` 时，直接对当前标签调用 `chrome.sidePanel.open()`；Phase 0 技术探针不再复用产品打开入口，只能由明确探针消息触发。
+  - Panel 的长连接回调与当前 React effect 代际绑定；effect 清理后到达的旧 `onDisconnect` 不得覆盖新连接状态。
+  - 输入框默认 `Enter` 发送、`Shift+Enter` 换行；输入法正在合成字符（`isComposing`）时不拦截 Enter。
+- **理由**：用户实测发现 action 点击未打开 Panel，且 React StrictMode 首次连接的延迟断开事件会把第二次有效连接误标为离线，造成已有输入时发送按钮仍为灰色。textarea 原生 Enter 只换行，也不符合对话工具的常用交互。
+- **证据**：三个独立红测分别复现 action 未调用 `sidePanel.open`、StrictMode 旧连接覆盖新状态、Enter 不发送；修复后定向测试 8/8、全量 Vitest 22 files / 69 tests、typecheck、lint、build 与构建安全扫描全部通过。
+- **范围**：仅修复现有 Side Panel 打开、连接与输入交互；不新增权限、Host、数据类型或 MVP 功能。
+- 状态：已验证 ｜ 2026-07-24
+
+## D-041 MV3 Port 断线自动恢复
+- **决策**：
+  - Panel 将 Background port 的 `onDisconnect` 视为可恢复状态，而不是会话终态；先标记离线，再自动建立新 port。
+  - 重连从 250ms 开始指数退避，最高 5s；任一时刻只允许一个重连计时器。重连成功后归零退避次数，并由新 Service Worker 连接重新下发 Provider 状态。
+  - Panel 主动卸载/关闭时停止计时器并禁止重连；旧 port 的延迟断开不得影响新 port。
+  - 不用心跳请求强行常驻 Service Worker，继续服从 MV3 生命周期。
+- **理由**：真实 DeepSeek 首轮流式回答成功后 Background 连接断开，Panel 仅变为离线且无法发送第二轮。MV3 Service Worker 可被回收，客户端必须把 port 当作可重建资源。
+- **证据**：确定性生命周期红测复现“首轮发送→port 断开→永不重连”；修复后 250ms 建立第二个 port、第二轮发往新 port，主动关闭后 5s 内不再连接。全量 Vitest 23 files / 70 tests、typecheck、lint、build 与构建安全扫描通过。
+- **范围**：仅增强现有 Panel↔Background 连接韧性；不新增权限、网络请求、Host、持久数据或 MVP 功能。
+- 状态：已验证 ｜ 2026-07-24
+
+## D-042 助手回答安全 Markdown/GFM 渲染
+- **决策**：
+  - 助手回答使用固定版本 `react-markdown@10.1.0` + `remark-gfm@4.0.1` 渲染标题、段落、列表、强调、引用、代码和表格；用户消息保持纯文本。
+  - 禁用原始 HTML；图片不创建 `<img>`、只显示“远程图片已阻止”占位；链接不创建可点击 `<a>`、只显示带目标提示的文本。
+  - 不引入 `rehype-raw`、远程脚本、远程样式或运行时 Markdown 代码执行。
+- **理由**：真实 DeepSeek 回答包含 Markdown，但纯文本节点把 `**粗体**`、编号列表等原样显示，显著降低长回答可读性。模型输出仍是不可信数据，渲染不能产生脚本、隐式图片请求或绕过导航确认的外链。
+- **证据**：组件红测先复现纯文本输出；修复后语义化 heading/list/strong 渲染通过，同时断言无 `script` / `img` / `a`。依赖锁文件通过供应链策略检查；全量 Vitest 23 files / 71 tests、typecheck、lint、build 与构建安全扫描通过。
+- **范围**：仅改变助手消息的本地展示；不新增 Chrome 权限、网络 Host、出站数据或模型请求。
+- 状态：代码已验证 ｜ 2026-07-24

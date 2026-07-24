@@ -14,6 +14,7 @@ export interface CapabilityProbeSummary {
   rateLimitFormat: boolean;
   probedAt: string;
   failureReason?: string;
+  visionFailureReason?: string;
 }
 
 export interface ProviderRuntimeState {

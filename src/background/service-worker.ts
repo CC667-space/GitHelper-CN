@@ -218,8 +218,15 @@ async function runPhase0Probe(
   }
 }
 
+async function openSidePanelForTab(tab: chrome.tabs.Tab): Promise<void> {
+  if (tab.id === undefined) {
+    throw new Error('活动标签页缺少 tabId');
+  }
+  await chrome.sidePanel.open({ tabId: tab.id });
+}
+
 chrome.action.onClicked.addListener((tab) => {
-  void runPhase0Probe(tab, { sidePanelAlreadyVerified: true });
+  void openSidePanelForTab(tab).catch(() => undefined);
 });
 
 chrome.commands.onCommand.addListener((command) => {
@@ -232,7 +239,7 @@ chrome.commands.onCommand.addListener((command) => {
       if (!tab) {
         throw new Error('快捷键触发时未找到活动标签页');
       }
-      return runPhase0Probe(tab);
+      return openSidePanelForTab(tab);
     })
     .catch(async (error: unknown) => {
       await chrome.storage.local.set({

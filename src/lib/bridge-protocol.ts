@@ -74,6 +74,7 @@ export const providerRuntimeViewSchema = z
     keyMask: z.string().max(100).optional(),
     availability: z.enum(['needs_key', 'pending_probe', 'available', 'disabled']),
     disabledReason: z.string().max(2_000).optional(),
+    visionFailureReason: z.string().max(2_000).optional(),
     capabilities: providerCapabilitiesSchema,
   })
   .strict();
@@ -85,7 +86,11 @@ export const providerStateSchema = z
   .strict();
 
 export const optionsProviderStateRequestSchema = z.object({}).strict();
-export const optionsRunProbesRequestSchema = z.object({}).strict();
+export const optionsRunProbesRequestSchema = z
+  .object({
+    providerId: z.enum(['deepseek', 'uuapi', 'openrouter']).optional(),
+  })
+  .strict();
 
 export type PanelMessagePayload = z.infer<typeof panelMessageSchema>;
 export type PageInfo = z.infer<typeof pageInfoSchema>;

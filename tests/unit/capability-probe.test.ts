@@ -77,6 +77,57 @@ class ProbeProvider implements Provider {
   }
 }
 
+class ModelAwareProbeProvider extends ProbeProvider {
+  override async chat(request: ProviderChatRequest) {
+    if (request.images?.length && request.model !== 'vision-model') {
+      throw new ProviderError('MODEL_UNAVAILABLE', 'configured model does not accept images', 400);
+    }
+    return await super.chat(request);
+  }
+
+  override async listModels() {
+    return [
+      {
+        id: 'text-model',
+        inputModalities: ['text'],
+        supportedParameters: ['tools'],
+      },
+      {
+        id: 'vision-model',
+        inputModalities: ['text', 'image'],
+        supportedParameters: ['tools'],
+      },
+    ];
+  }
+}
+
+class VisionFallbackProbeProvider extends ProbeProvider {
+  override async chat(request: ProviderChatRequest) {
+    if (request.images?.length && request.model === '~openai/gpt-latest') {
+      return { content: '' };
+    }
+    if (request.images?.length && request.model === 'openrouter/free') {
+      return { content: 'red' };
+    }
+    return await super.chat(request);
+  }
+
+  override async listModels() {
+    return [
+      {
+        id: '~openai/gpt-latest',
+        inputModalities: ['text', 'image'],
+        supportedParameters: ['tools'],
+      },
+      {
+        id: 'openrouter/free',
+        inputModalities: ['text', 'image'],
+        supportedParameters: ['tools'],
+      },
+    ];
+  }
+}
+
 describe('Capability probe', () => {
   it('只把实际通过的能力写入带时间戳报告', async () => {
     const report = await runCapabilityProbe(new ProbeProvider(), {
@@ -101,4 +152,31 @@ describe('Capability probe', () => {
     expect(report.capabilities.probedAt).toBe('2026-07-24T00:00:00.000Z');
     expect(report.checks.rateLimitFormat?.detail).toMatch(/未触发真实限流/);
   });
+
+  it('配置模型不支持图像时改用模型列表中已声明 image 输入的型号', async () => {
+    const report = await runCapabilityProbe(new ModelAwareProbeProvider(), {
+      textModel: 'text-model',
+      visionModel: 'text-model',
+      sampleImageDataUrl: 'data:image/png;base64,AA==',
+    });
+
+    expect(report.summary.text).toBe(true);
+    expect(report.summary.vision).toBe(true);
+    expect(report.checks.vision?.detail).toContain('vision-model');
+  });
+
+  it('首选视觉模型返回空内容时使用明确备用模型重试', async () => {
+    const report = await runCapabilityProbe(new VisionFallbackProbeProvider(), {
+      textModel: '~openai/gpt-latest',
+      visionModel: '~openai/gpt-latest',
+      fallbackVisionModel: 'openrouter/free',
+      sampleImageDataUrl: 'data:image/png;base64,AA==',
+    });
+
+    expect(report.summary.text).toBe(true);
+    expect(report.summary.vision).toBe(true);
+    expect(report.selectedModels.visionModel).toBe('openrouter/free');
+    expect(report.checks.vision?.detail).toContain('备用模型');
+  });
+
 });

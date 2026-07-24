@@ -103,6 +103,11 @@ interface Envelope<T> {
 - **SW 不接受 Content Script 提供的任意 URL 代为 fetch**；出站域名必须命中 Provider Host 白名单或 `api.github.com`。
 - 凭据永不出现在消息载荷中。
 - Panel↔Background 用长连接 `chrome.runtime.connect`（流式 token 推送）。
+- 扩展 action 与 `Alt+Shift+G` 是产品级 Side Panel 入口，用户手势中直接调用 `chrome.sidePanel.open({tabId})`；Phase 0 技术探针不挂载到产品入口。
+- React effect 每次建立的 Panel 长连接具有独立有效期；清理后的旧连接即使延迟触发 `onDisconnect`，也不能改写当前连接状态（D-040）。
+- Background port 断开后 Panel 以 250ms 起步、最高 5s 的指数退避自动重连；主动卸载停止重连，不用心跳强行常驻 MV3 Service Worker（D-041）。
+- Panel 输入语义：`Enter` 发送、`Shift+Enter` 换行；IME 合成期间 Enter 保留给输入法。
+- 助手输出经安全 Markdown/GFM 组件渲染；原始 HTML 跳过、远程图片阻断、链接不可点击，避免模型文本触发代码、隐式网络或绕过导航策略（D-042）。
 
 ### 3.2 AI 请求流
 ```

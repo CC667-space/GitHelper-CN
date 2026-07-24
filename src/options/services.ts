@@ -14,7 +14,7 @@ export interface OptionsServices {
   saveKey(providerId: ProviderId, apiKey: string): Promise<void>;
   deleteKey(providerId: ProviderId): Promise<void>;
   saveModels(providerId: ProviderId, setting: ProviderSetting): Promise<void>;
-  runProbes(): Promise<unknown>;
+  runProbes(providerId?: ProviderId): Promise<unknown>;
 }
 
 async function runtimeRequest(type: string, payload: unknown): Promise<unknown> {
@@ -45,6 +45,9 @@ export const defaultOptionsServices: OptionsServices = {
   saveKey: writeCredential,
   deleteKey: deleteCredential,
   saveModels: (providerId, setting) => providerSettingsStore().writeProvider(providerId, setting),
-  runProbes: async () =>
-    await runtimeRequest('OPTIONS_RUN_PROVIDER_PROBES', optionsRunProbesRequestSchema.parse({})),
+  runProbes: async (providerId) =>
+    await runtimeRequest(
+      'OPTIONS_RUN_PROVIDER_PROBES',
+      optionsRunProbesRequestSchema.parse({ providerId }),
+    ),
 };

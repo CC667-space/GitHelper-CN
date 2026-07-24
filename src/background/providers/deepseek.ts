@@ -25,6 +25,16 @@ export class DeepSeekProvider extends OpenAICompatibleProvider {
     return model || 'deepseek-v4-flash';
   }
 
+  protected override buildRequestBody(
+    request: ProviderChatRequest,
+    stream: boolean,
+  ): Record<string, unknown> {
+    return {
+      ...super.buildRequestBody(request, stream),
+      thinking: { type: 'disabled' },
+    };
+  }
+
   protected override withImages(request: ProviderChatRequest): ProviderMessage[] {
     if (request.images?.length) {
       throw new Error('DeepSeek API 不支持图像输入，请切换 UUAPI 或 OpenRouter');

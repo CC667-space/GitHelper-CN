@@ -130,6 +130,29 @@ describe.each(factories)('$id adapter', ({ id, endpoint, model, create }) => {
 });
 
 describe('Provider-specific behavior', () => {
+  it('DeepSeek V4 显式关闭默认思考模式以避免简单文本请求浪费输出预算', async () => {
+    const transport: ProviderTransport = {
+      request: vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              model: 'deepseek-v4-flash',
+              choices: [{ message: { content: 'OK' }, finish_reason: 'stop' }],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+      ),
+    };
+    const provider = new DeepSeekProvider(transport);
+
+    await provider.chat(request('deepseek:non-thinking', 'deepseek-v4-flash'));
+
+    const [, , init] = vi.mocked(transport.request).mock.calls[0]!;
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      thinking: { type: 'disabled' },
+    });
+  });
+
   it('DeepSeek 拒绝停用别名和图像输入', async () => {
     const transport: ProviderTransport = {
       request: vi.fn(),

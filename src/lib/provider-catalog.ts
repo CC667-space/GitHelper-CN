@@ -38,7 +38,7 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     apiPath: '/api/v1/chat/completions',
     intermediary: true,
     defaultTextModel: '~openai/gpt-latest',
-    defaultVisionModel: '~openai/gpt-latest',
+    defaultVisionModel: 'openrouter/free',
     modelSuggestions: ['~openai/gpt-latest', 'openrouter/free'],
   },
 ] as const;
