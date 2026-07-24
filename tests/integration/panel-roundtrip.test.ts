@@ -19,6 +19,7 @@ describe('Panel → Background → Content → Panel', () => {
       const request = createEnvelope('PAGE_INFO_REQUEST', {});
       const response = handlePageInfoRequest(
         request,
+        document,
         { href: 'https://github.com/openai/openai-node' },
         'openai/openai-node',
         new Date('2026-07-24T00:00:00.000Z'),

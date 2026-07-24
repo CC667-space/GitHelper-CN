@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 2 已通过验收。下一步进入 Phase 3（页面识别 + 上下文 + SPA）。**
+**Phase 3 已通过验收。下一步进入 Phase 4（Provider + 能力探针 + 文本对话）。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -61,14 +61,22 @@
   - Options 落地数据流向披露骨架，明确最小上下文与私有仓库禁止出站
   - 集成测试覆盖完整 Panel → Background → Content → Panel 往返、伪造来源及非法 Schema
   - 验收：typecheck、lint 通过；Vitest 13 files / 29 tests 全过；build 与构建安全扫描通过；隔离 Chrome 实测扩展加载、Side Panel 打开及 Content 注入均通过
+- [x] **Phase 3 — GitHub 页面识别与上下文读取（2026-07-24）**：
+  - URL + 稳定 DOM 特征识别 repo/issue/pr/releases/blob/search/code/other，并按页面类型独立解析 PageContext
+  - 解析器提取标题、描述、状态、正文、标签、分支、发布、文件代码、搜索结果等有限字段；未知/残缺 DOM 降级有限纯文本且不抛异常
+  - 私有仓库、Repository not found 与登录受限页面统一标记为零出站上下文，并与出站阻断函数联测
+  - SPA watcher 覆盖 pushState/replaceState/popstate/turbo/MutationObserver，300ms 去抖；URL 变化立即失效旧上下文、清理选择态；Content 入口幂等
+  - 8 个 GitHub 精简 HTML fixture 覆盖六种公开页面及私有/无权限边界
+  - 验收：typecheck、lint 通过；Vitest 16 files / 42 tests 全过；build 与构建安全扫描通过；隔离 Chrome 实测 Content 注入、Side Panel 与探针均通过
 
 ## 下一任务
-**Phase 3 — GitHub 页面识别与上下文读取**（见 EXECUTION_PLAN v1.2）。
+**Phase 4 — Provider 抽象、能力探针与文本对话**（见 EXECUTION_PLAN v1.2）。
 执行 Agent 应继续：
-1. 实现 repo/issue/pr/releases/blob/search 的 URL + DOM 页面识别
-2. 落地各页面结构化解析器与纯文本降级
-3. 实现 GitHub turbo/History/popstate/DOM 兜底的去抖 SPA watcher
-4. 检测私有仓库/无权限页面并接入零出站标记，使用真实页面 fixtures 验收
+1. 完成公共 Provider 协议及 DeepSeek/UUAPI/OpenRouter 三个独立适配器
+2. 完成能力探针、Provider Manager 手动覆盖/禁用/Capability 护栏
+3. 接入 Panel Provider 切换、流式渲染、取消与可读错误
+4. 完成 Options Key 录入/清空/掩码、模型配置与数据流向披露
+5. 完成全部 Mock、路由与凭据隔离测试；在首次需要填入真实 Key 时触发强制确认节点
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -77,7 +85,7 @@
 | 1 仓库结构 + 扩展骨架 | ✅ 已完成 |
 | 1.5 安全地基 | ✅ 已完成 |
 | 2 Side Panel + 消息通信 | ✅ 已完成 |
-| 3 页面识别 + 上下文 + SPA | ⬜ |
+| 3 页面识别 + 上下文 + SPA | ✅ 已完成 |
 | 4 Provider + 能力探针 + 对话 + 手动切换 | ⬜ |
 | 5 Session + 偏好 + 容量淘汰 | ⬜ |
 | 6 点击提问（MVP 必达） | ⬜ |
@@ -104,3 +112,4 @@
 - 2026-07-24：Phase 1 通过；数据模型、目录骨架及 storage/messaging/logger 共享库落地，10 项单测通过。
 - 2026-07-24：Phase 1.5 通过；凭据隔离、Host 白名单、安全消息路由、脱敏、私有上下文零出站、Prompt 隔离及构建扫描落地，25 项单测通过。
 - 2026-07-24：Phase 2 通过；Panel/Options UI 骨架、三端安全通信、页面信息往返及流式占位落地，29 项单测与真实浏览器加载复验通过。
+- 2026-07-24：Phase 3 通过；六类页面解析、有限降级、私有/无权限零出站、SPA 去抖与 Content 幂等入口落地，42 项单测及真实浏览器复验通过。
