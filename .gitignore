@@ -5,6 +5,8 @@ test-results/
 playwright-report/
 .vite/
 .cache/
+.npm-cache/
+.pnpm-store/
 
 .env
 .env.*

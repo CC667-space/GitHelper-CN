@@ -139,10 +139,11 @@ interface Envelope<T> {
 职责划分：
 1. **Content Script（不可信侧）只负责**：选择遮罩、记录框选矩形（视口坐标）、上报页面滚动位置 / 浏览器缩放 / `devicePixelRatio` / 视口 CSS 尺寸 / 选区 DOM 内容。**不调用截图 API**。
 2. **Background SW（可信侧）负责**：调用 `chrome.tabs.captureVisibleTab()` 获取可见区截图 → 按坐标换算裁剪 → 压缩 → base64 → 决定是否发送给视觉 Provider。
-3. **坐标换算方法（v1.2 关键约束）**：
-   - **最终换算公式不在规划期写死，由 Phase 0 探针 B 在真实环境实测后定稿**（记入 `scripts/probe-results.md` 并回写本节）。
-   - 探针 B 的**首选假设**：用**截图实际像素尺寸 ÷ 视口 CSS 尺寸**计算 `scaleX` / `scaleY`（`scaleX = capturedWidth / viewportCssWidth`，`scaleY` 同理），以此替代直接乘 dpr×zoom 的推导——它天然吸收 DPI、浏览器缩放与 Side Panel 挤压视口的综合影响。
-   - **注意**：若选区矩形来自 `getBoundingClientRect()`，其坐标已是**视口坐标**，**不得默认再次扣除 scroll 偏移**；只有当坐标来源是文档坐标时才涉及滚动换算。是否需要滚动补偿由探针 B 结论决定。
+3. **坐标换算方法（Phase 0 探针 B 已定稿，D-029 / D-036）**：
+   - `scaleX = capturedWidth / viewport.cssWidth`，`scaleY = capturedHeight / viewport.cssHeight`；X/Y 必须分别按实际尺寸计算。
+   - `pixelRect = { x: round(rect.x × scaleX), y: round(rect.y × scaleY), width: round(rect.width × scaleX), height: round(rect.height × scaleY) }`，随后 clamp 到截图边界，空矩形拒绝裁剪。
+   - `rect` 来自 `getBoundingClientRect()`，是**视口坐标**：**不扣除 scroll**，也**不做 GitHub 固定页头补偿**。只有未来明确接收文档坐标时才另行换算。
+   - 2026-07-24 实测：Windows 1.5× DPI + Chrome 125% zoom + 页面滚动 + Side Panel 开启时，截图 `1560×1347 px`、viewport `832×718 CSS px`，`scaleX=1.875`、`scaleY≈1.8760446`；三个不同位置元素均像素级对齐。完整证据见 `scripts/probe-results.md`。
 4. 截图不落盘、不持久保存、用后即弃（P1-1）。
 5. **Phase 0 探针 B 必须覆盖**：Windows 高 DPI、浏览器缩放、页面滚动、`devicePixelRatio`、Side Panel 开启时的可见区域变化、GitHub 固定页头/动态布局，并在真实 GitHub 页面取 3 个不同位置元素验证裁剪对齐。
 
@@ -381,9 +382,9 @@ interface OperationConfirmation {
 |---|---|---|---|
 | `sidePanel` | 是 | 主界面 | 无替代 |
 | `storage` | 是 | 会话/偏好/凭据 | 初始化即 `setAccessLevel('TRUSTED_CONTEXTS')` |
-| `activeTab` | 是 | 用户手势触发的当前页访问与截图授权 | Phase 0 验证 activeTab 是否足以支撑 `captureVisibleTab`；若足够则**不申请 `tabs`** |
-| `tabs` | 待探针 | 仅当 activeTab 不足以覆盖读取当前 tab URL / 截图时才申请 | Phase 0 输出结论；能不申请就不申请 |
-| `scripting` | 待探针 | 动态注入 | 优先用 **manifest 静态声明 content_scripts**（matches 限 github.com）；静态够用则不申请 `scripting` |
+| `activeTab` | 是 | 用户手势触发的当前页访问与截图授权 | Phase 0 已验证：扩展 action 手势后 `captureVisibleTab` 成功 |
+| `tabs` | 否 | 不需要 | action sender / Content 响应可提供当前 URL；Phase 0 证明截图不需要 `tabs` |
+| `scripting` | 否 | 不需要 | Phase 0 证明 manifest 静态 `content_scripts` 可稳定注入 GitHub |
 | host: `https://github.com/*` | 是 | content script 只在 GitHub 生效 | **禁 `<all_urls>`** |
 | host: `https://api.github.com/*` | 是 | 匿名 GitHub REST API | 限域 |
 | host: `https://api.deepseek.com/*` | 是 | 固定端点(P0-3) | 逐域列举 |

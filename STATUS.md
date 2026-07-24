@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**规划修订完成（基线 v1.2），尚未开始编码。下一步进入 Phase 0。**
+**Phase 0 已通过验收。下一步进入 Phase 1（仓库结构与扩展骨架）。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -31,19 +31,28 @@
   - 数据清除三分：会话偏好 / 单 Key / 全部（D-033）
   - manifest 增加 `minimum_chrome_version: "114"`（D-035）
   - DeepSeek 模型策略：别名 2026-07-24 15:59 UTC 停用，推荐 `deepseek-v4-flash`，保留 `deepseek-v4-pro`，模型名非冻结常量（D-034）
+- [x] **Phase 0 — 基线检查、环境与技术探针（2026-07-24）**：
+  - 只读基线检查通过：唯一根目录正确，8 份规划文件各一份，`references/Claude_Prompt.md` 就位
+  - 修正“下一任务”中的 `EXECUTION_PLAN v1.1` → `v1.2`，纳入初始基线提交 `96120a6`
+  - 建立 pnpm 11 + Node 24 LTS 锁 + TypeScript strict + ESLint + Prettier + Vite 8 + CRXJS 2.7.1 最小 MV3 扩展
+  - manifest 已含 `minimum_chrome_version: "114"`、五域 Host 白名单与最终最小权限
+  - 探针 A–D 全部通过：Side Panel、静态 Content 注入/URL、截图比例换算、权限复审、TRUSTED_CONTEXTS 隔离
+  - 截图公式定稿并回写 ARCHITECTURE §3.5；权限定稿为 `sidePanel/storage/activeTab`，不申请 `tabs/scripting/<all_urls>`
+  - Node 24.18.0 验证：typecheck 通过、lint 通过、Vitest 1/1 通过、build 通过
+  - 完整证据：`scripts/probe-results.md`
 
 ## 下一任务
-**Phase 0 — 只读基线检查、环境与技术探针**（见 EXECUTION_PLAN v1.2）。
-执行 Agent 应从这里开始：
-1. 只读基线检查（8 份规划文件齐全一致、目录正确、references/Claude_Prompt.md 就位）
-2. Git 初始化 + .gitignore + 规划文件基线提交
-3. pnpm + Vite + CRXJS 最小 MV3 扩展
-4. 技术探针 A（基础）/ B（截图坐标）/ C（权限复审）/ D（setAccessLevel），结论记入 `scripts/probe-results.md`
+**Phase 1 — 仓库结构与扩展骨架**（见 EXECUTION_PLAN v1.2）。
+执行 Agent 应继续：
+1. 按 ARCHITECTURE §4 补齐目录与空模块
+2. 落地 `lib/types.ts` 数据模型（含 ProviderCapabilities / ProviderCredential）
+3. 实现并测试 `lib/storage` / `lib/messaging` / `lib/logger`
+4. 保持 Phase 0 定稿权限与五域 Host 闭合
 
 ## 阶段进度表
 | Phase | 状态 |
 |---|---|
-| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ⬜ 未开始 |
+| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成 |
 | 1 仓库结构 + 扩展骨架 | ⬜ |
 | 1.5 安全地基 | ⬜ |
 | 2 Side Panel + 消息通信 | ⬜ |
@@ -70,3 +79,4 @@
 - 2026-07-24：目录更名为 `C:\AI_GitHelper-CN` 并冻结为唯一项目根；完成 v1.1 定向修订（安全/权限/MV3/Provider 兼容/GitHub 边界/Git 治理/一致性/验收可执行性），未写任何项目代码。
 - 2026-07-24：完成 v1.2 最终定点修订（D-028~D-035 + D-007R/D-013R），未写任何项目代码。
 - 2026-07-24：只读基线检查时修正“下一任务”中的执行方案版本引用（v1.1 → v1.2）；仅为文档引用纠正，不改变基线范围。
+- 2026-07-24：Phase 0 通过；完成 Git 基线、最小 MV3 构建、A–D 自动探针、截图坐标与最小权限定稿，并记录 CRXJS/Vite 入口 basename 兼容约束（D-036/D-037）。

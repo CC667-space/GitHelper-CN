@@ -1,0 +1,6 @@
+dist/
+node_modules/
+coverage/
+probe-artifacts/
+pnpm-lock.yaml
+references/Claude_Prompt.md

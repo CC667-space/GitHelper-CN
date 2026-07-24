@@ -226,3 +226,17 @@
 - **决策**：manifest 声明 `"minimum_chrome_version": "114"`。
 - **理由**：Side Panel API 需 Chrome ≥114；`storage.local.setAccessLevel` 需 ≥102，114 一并覆盖。声明后低版本浏览器直接拒装，避免运行时才发现 API 缺失。
 - 状态：冻结 ｜ 2026-07-24
+
+## D-036 Phase 0 截图换算与最小权限定稿
+- **决策**：
+  - 截图坐标使用 `scaleX = capturedWidth / viewport.cssWidth`、`scaleY = capturedHeight / viewport.cssHeight`，矩形各分量分别乘对应比例并四舍五入，随后 clamp 到截图边界。
+  - `getBoundingClientRect()` 产生的视口坐标不扣 scroll、不做 GitHub 固定页头补偿。
+  - v1 最终 API 权限为 `sidePanel` / `storage` / `activeTab`；不申请 `tabs` / `scripting` / `<all_urls>`。
+- **实测证据**：Windows 1.5× DPI + Chrome 125% zoom + scrollY≈914 + Side Panel 开启，三个真实 GitHub 元素的预期/实测像素矩形完全一致；Content storage 访问被 TRUSTED_CONTEXTS 拒绝。详见 `scripts/probe-results.md`。
+- 状态：已验证 ｜ 2026-07-24
+
+## D-037 CRXJS/Vite 多入口 basename 唯一化
+- **决策**：MV3 Background 与 Content 构建入口使用唯一 basename：`service-worker.ts` / `content-script.ts`；当前 CRXJS 2.7.1 + Vite 8.1.5 生产构建关闭 sourcemap。
+- **理由**：实测两个入口都名为 `index.ts` 时，CRXJS 产物名碰撞会让 `service-worker-loader.js` 错误导入 Content bundle；开启 sourcemap 时 Content IIFE 尾部会被拼入 `sourceMappingURL` 行注释导致语法错误。唯一入口名与关闭 sourcemap 后，实际 loader、注入、SW 消息和截图链路全部通过。
+- **范围**：仅构建兼容调整，不改变模块职责、权限、安全边界或 MVP。
+- 状态：已验证 ｜ 2026-07-24
