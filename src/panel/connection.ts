@@ -1,18 +1,22 @@
 import {
   PANEL_PORT_NAME,
+  panelPickStateSchema,
   panelSessionStateSchema,
   providerStateSchema,
   streamEventSchema,
   type PanelSessionState,
+  type PanelPickState,
   type ProviderState,
   type StreamEvent,
 } from '../lib/bridge-protocol';
 import { createEnvelope, parseEnvelope } from '../lib/messaging';
-import type { ProviderId } from '../lib/types';
+import type { ProviderId, SelectedElement } from '../lib/types';
 
 export interface PanelConnection {
-  send(text: string, providerId?: ProviderId): void;
+  send(text: string, providerId?: ProviderId, selectedElement?: SelectedElement): void;
   abort(requestId: string): void;
+  startPick?(): void;
+  cancelPick?(): void;
   disconnect(): void;
 }
 
@@ -24,6 +28,7 @@ export function connectPanel(
   onProviderState: (state: ProviderState) => void,
   onConnectionChange: (connected: boolean) => void,
   onSessionState: (state: PanelSessionState) => void = () => undefined,
+  onPickState: (state: PanelPickState) => void = () => undefined,
 ): PanelConnection {
   let activePort: chrome.runtime.Port | undefined;
   let reconnectAttempt = 0;
@@ -44,6 +49,14 @@ export function connectPanel(
       onSessionState(
         parseEnvelope(raw, panelSessionStateSchema, {
           expectedType: 'SESSION_STATE',
+        }).payload,
+      );
+      return;
+    }
+    if (candidate?.type === 'PICK_STATE') {
+      onPickState(
+        parseEnvelope(raw, panelPickStateSchema, {
+          expectedType: 'PICK_STATE',
         }).payload,
       );
       return;
@@ -97,11 +110,19 @@ export function connectPanel(
   openPort();
 
   return {
-    send(text, providerId) {
-      activePort?.postMessage(createEnvelope('PANEL_MESSAGE', { text, providerId }));
+    send(text, providerId, selectedElement) {
+      activePort?.postMessage(
+        createEnvelope('PANEL_MESSAGE', { text, providerId, selectedElement }),
+      );
     },
     abort(requestId) {
       activePort?.postMessage(createEnvelope('PANEL_ABORT', { requestId }));
+    },
+    startPick() {
+      activePort?.postMessage(createEnvelope('PANEL_PICK_START', {}));
+    },
+    cancelPick() {
+      activePort?.postMessage(createEnvelope('PANEL_PICK_CANCEL', {}));
     },
     disconnect() {
       stopped = true;

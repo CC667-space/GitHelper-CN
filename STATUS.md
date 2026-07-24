@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 6 — 点击提问（MVP 必达）：Phase 5 已通过验收并完成状态记录，待阶段提交后自动进入点击选择实现。**
+**Phase 7 — 框选区域与视觉输入（MVP 必达）：Phase 6 已通过验收，待阶段提交后自动进入框选与视觉实现。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -107,10 +107,17 @@
   - `PreferencesStore` 用 zod 同时约束类型与运行时数据；`downloads` 仅 confirm/deny，`accountChanges` 固定 deny
   - D-033 三种入口完成：会话/偏好清除不动 Key、单 Key 删除、明确二次确认后清除全部本地数据；全清同时清空 Background 内存探针状态，避免重录 Key 后误用旧能力结论
   - 验收：Node 24.18.0 下 typecheck、lint 通过；Vitest 27 files / 87 tests 全过；build（393 modules）与构建安全扫描通过
+- [x] **Phase 6 — 点击元素提问（MVP 必达，2026-07-24）通过验收**：
+  - Panel 增加“点击页面元素提问”入口、选择中取消、已选元素预览/重选/清除；选择中禁用普通发送
+  - Content `PickController` 用捕获阶段处理 pointermove/click/Escape；悬停叠层不接管 pointer events，选中时阻止原页面点击，退出、取消与 SPA 失效均移除监听和叠层
+  - `SelectedElement` 提取 tag/role/text/href/sourceUrl/安全属性/邻近上下文/pageType；嵌套点击归一到链接/按钮等逻辑元素，password input 不提取 value
+  - Panel → Background → Content 及返回状态全部使用固定 envelope + request ID + zod；所选元素只由 ContextBuilder 作为不可信页面数据加入 user 上下文
+  - 发送前以 `sourceUrl` 对比当前页面；SPA 后旧选择被丢弃并提示，不会发给 Provider
+  - 验收：typecheck、lint 通过；Vitest 29 files / 95 tests 全过；build（394 modules）与构建安全扫描通过
 
 ## 下一任务
-**Phase 6 — 点击提问（MVP 必达）**（见 EXECUTION_PLAN v1.2）。
-实现 hover 高亮、pick mode、点击拦截、SelectedElement 稳定提取、取消/退出和基于所选元素的问答闭环；完成自动测试、文档与本地阶段提交后自动进入 Phase 7。
+**Phase 7 — 框选区域与视觉输入（MVP 必达）**（见 EXECUTION_PLAN v1.2）。
+实现 drag 框选、结构化优先提取、坐标/dpr/滚动/缩放上报、SW `captureVisibleTab` 裁剪、视觉 Capability/偏好护栏与消耗提示；完成自动测试、文档与本地阶段提交后自动进入 Phase 8。
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -122,7 +129,7 @@
 | 3 页面识别 + 上下文 + SPA | ✅ 已完成 |
 | 4 Provider + 能力探针 + 对话 + 手动切换 | ✅ 已完成 |
 | 5 Session + 偏好 + 容量淘汰 | ✅ 已完成 |
-| 6 点击提问（MVP 必达） | ⬜ |
+| 6 点击提问（MVP 必达） | ✅ 已完成 |
 | 7 框选 + 视觉（MVP 必达） | ⬜ |
 | 8 NL 搜索（MVP 必达） | ⬜ |
 | 9 一键仓库分析 | ⬜ |
@@ -165,3 +172,4 @@
 - 2026-07-24：D-040 三项交互及 DeepSeek 首轮真实流式回答均通过；回答完成后 port 断开导致永久离线。增加 D-041 自动重连与退避，生命周期红测及全量 70 项测试通过，等待真实连续两轮复验。
 - 2026-07-24：DeepSeek 连续两轮真实对话成功，D-041 通过实测。随后补充 D-042 安全 Markdown/GFM 展示并通过 71 项测试；Phase 4 全部验收通过，准备阶段提交并进入 Phase 5。
 - 2026-07-24：Phase 5 通过；会话持久化/恢复、本地摘要与有限历史、30 天/50 会话/容量淘汰、收紧偏好 Schema、Options 容量显示及 D-033 三种数据清除落地；87 项测试及全套静态/构建验证通过，记录 D-043/D-044，准备进入 Phase 6。
+- 2026-07-24：Phase 6 通过；点击选择叠层、逻辑元素提取、Panel 状态/预览、SelectedElement AI 上下文闭环及 SPA 旧选择阻断落地；95 项测试及全套静态/构建验证通过，记录 D-045，准备进入 Phase 7。

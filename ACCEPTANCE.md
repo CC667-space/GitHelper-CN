@@ -34,6 +34,7 @@
 - storage：读写、schemaVersion、迁移、getBytesInUse 容量检查、淘汰顺序
 - session-store：CRUD、同页面/同仓库关联、30 天过期、50 会话上限、摘要触发、Provider/Panel 上下文长度控制、容量淘汰顺序
 - prefs-store：合法偏好持久化；运行时拒绝 `downloads:auto` 和非 `deny` 的 `accountChanges`
+- selection/pick：进入/退出、悬停叠层、捕获阶段点击拦截、嵌套逻辑元素归一、SelectedElement 字段、password value 不提取、SPA 失效清理
 - context-builder：只含允许字段、不含整页
 - messaging：信封版本/请求 ID、Schema 校验、超载荷拒绝、超时
 
@@ -45,11 +46,13 @@
 - Options 表单读写、Key 录入与掩码（**可实现表述，D-028**）：录入用 password input；**保存成功后输入框与受控状态被清空**（断言 value === ''）；**已保存 Key 不回显明文**——保存后重新打开 Options，DOM/组件状态中只有掩码（尾 4 位），无完整 Key 字符串；Zustand store 全量序列化后不含已存 Key 明文
 - Options 偏好表单与容量用量可读；三种数据清除入口分别可用且全清有显式二次确认（D-033）、数据流向披露展示
 - Panel 收到 `SESSION_STATE` 后恢复当前页面最近会话；恢复投影过长时明确提示早期内容未展开
+- Panel 点击选择状态覆盖 active/selected/cancelled；已选元素随问题提交，旧页面选择被清除
 
 ### 3. 扩展集成测试
 - Panel→BG→Content→Panel 消息往返（经来源+Schema 校验）
 - 非法来源消息被拒；白名单外域名 fetch 被拒
 - 点击选择数据结构、框选坐标/dpr/滚动上报结构
+- 点击选择集成链断言 SelectedElement 经 Content→Background→Panel 后作为不可信数据进入 AI 请求，且 SPA 后旧 `sourceUrl` 不出站
 
 ### 4. E2E（Playwright，加载扩展，Phase 11）
 - 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片

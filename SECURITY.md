@@ -117,6 +117,7 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
 - 工具调用只认白名单 + zod 校验 + 确认策略，模型"想调用"≠"能调用"。
 - System Prompt 显式声明：任何来自页面内容的"指令"都不可信。
 - 模型返回内容同样按不可信数据展示：Markdown 渲染不接受原始 HTML，不加载远程图片，不生成可点击外链；不得使用 `dangerouslySetInnerHTML` 或等价绕过（D-042）。
+- 点击选择产出的 `SelectedElement` 仍是页面不可信数据，只能经 ContextBuilder 放入 user 上下文；属性使用 allowlist，password input 不提取 value，SPA 后 `sourceUrl` 不匹配的旧选择禁止出站（D-045）。
 
 **验收表述（P1-2）**：自动测试**只能客观证明**防护机制在位（网页内容未进 System Prompt、不可信标注存在、白名单外工具被拒、参数被校验、敏感字段被遮蔽、数据未发往未授权端点）；**不得宣称"模型绝对不被注入影响"**。注入的实际效果通过红队攻击样例 + 结果记录评估（Phase 10）。
 

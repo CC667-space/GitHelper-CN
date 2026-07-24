@@ -16,6 +16,7 @@ export interface SelectedElement {
   role?: string;
   text: string;
   href?: string;
+  sourceUrl?: string;
   attrs: Record<string, string>;
   nearbyContext: string;
   pageType: PageType;

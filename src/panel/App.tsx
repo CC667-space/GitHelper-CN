@@ -18,17 +18,22 @@ export function PanelApp({
     sessionHistoryTruncated,
     pageLabel,
     providers,
+    pickStatus,
+    pickStatusMessage,
+    selectedElement,
     selectedTextProviderId,
     selectedVisionProviderId,
     activeRequestId,
     addUserMessage,
     applyProviderState,
+    applyPickState,
     applySessionState,
     applyStreamEvent,
     selectTextProvider,
     selectVisionProvider,
     setConnected,
     setDraft,
+    clearSelectedElement,
   } = usePanelStore();
 
   useEffect(() => {
@@ -42,6 +47,7 @@ export function PanelApp({
         }
       },
       applySessionState,
+      applyPickState,
     );
     connection.current = activeConnection;
     return () => {
@@ -51,7 +57,14 @@ export function PanelApp({
       }
       activeConnection.disconnect();
     };
-  }, [applyProviderState, applySessionState, applyStreamEvent, connect, setConnected]);
+  }, [
+    applyPickState,
+    applyProviderState,
+    applySessionState,
+    applyStreamEvent,
+    connect,
+    setConnected,
+  ]);
 
   function submit(): void {
     const text = draft.trim();
@@ -59,7 +72,11 @@ export function PanelApp({
       return;
     }
     addUserMessage(text);
-    connection.current.send(text, selectedTextProviderId);
+    if (selectedElement) {
+      connection.current.send(text, selectedTextProviderId, selectedElement);
+    } else {
+      connection.current.send(text, selectedTextProviderId);
+    }
   }
 
   return (
@@ -124,6 +141,44 @@ export function PanelApp({
         <p className="mt-2 truncate text-xs text-slate-500" title={pageLabel}>
           {pageLabel}
         </p>
+        <div className="mt-3">
+          {pickStatus === 'active' ? (
+            <button
+              className="w-full rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+              onClick={() => connection.current?.cancelPick?.()}
+              type="button"
+            >
+              取消点击选择
+            </button>
+          ) : (
+            <button
+              className="w-full rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-900 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+              disabled={!connected || Boolean(activeRequestId)}
+              onClick={() => connection.current?.startPick?.()}
+              type="button"
+            >
+              {selectedElement ? '重新选择页面元素' : '点击页面元素提问'}
+            </button>
+          )}
+          {pickStatusMessage ? (
+            <p className="mt-1 text-xs text-amber-700">{pickStatusMessage}</p>
+          ) : null}
+          {selectedElement ? (
+            <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
+              <div className="flex items-start justify-between gap-2">
+                <p className="min-w-0">
+                  已选择 &lt;{selectedElement.tag}&gt;：
+                  <span className="break-words">
+                    {selectedElement.text || selectedElement.attrs['aria-label'] || '无文本元素'}
+                  </span>
+                </p>
+                <button className="shrink-0 underline" onClick={clearSelectedElement} type="button">
+                  清除
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </header>
 
       <section
@@ -196,7 +251,7 @@ export function PanelApp({
         ) : (
           <button
             className="mt-2 w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:bg-slate-400"
-            disabled={!connected || !draft.trim()}
+            disabled={!connected || !draft.trim() || pickStatus === 'active'}
             type="submit"
           >
             发送

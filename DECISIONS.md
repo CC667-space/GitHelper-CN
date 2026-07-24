@@ -309,3 +309,14 @@
 - **证据**：测试断言非法 operationPolicy 被拒；会话/偏好清除后 Key 与配置完好；单 Key 删除不影响其他数据；全清无存储残留且 ProviderManager 回到未探针状态。
 - **范围**：Phase 5 偏好/清除安全收口；不扩大权限或清除范围。
 - 状态：代码已验证 ｜ 2026-07-24
+
+## D-045 点击选择事件边界与 SPA 失效
+- **决策**：
+  - Content `PickController` 在捕获阶段监听 pointermove/click/keydown；高亮叠层 `pointer-events:none`，只有用户完成选择时才 `preventDefault` 并停止原页面点击。Escape、Panel 取消、SPA 失效或 Panel 断开均退出并清理。
+  - 嵌套节点归一到最近的链接、按钮或表单控件；SelectedElement 只保留 allowlist 属性，password input 不读取 value。
+  - SelectedElement 附带 `sourceUrl`；Background 在每次提问时重读当前 PageInfo，URL 不一致就丢弃旧选择并通知 Panel，不把旧页面内容发给 Provider。
+  - 选择数据全程经固定 envelope、request ID 与 zod；ContextBuilder 将其放在带不可信标记的 user 页面上下文中，绝不进入 System Prompt。
+- **理由**：捕获阶段能在 GitHub 自身 handler 前稳定截获一次明确用户手势；逻辑元素归一比内部 span/svg 更可解释。SPA 后 Panel 可能仍持有已选对象，发送前 URL 二次校验是必要的零信任边界。
+- **证据**：测试覆盖叠层定位、点击阻断、Escape/外部取消、SelectedElement 完整结构、password 值排除、Panel 状态与消息提交、Background 状态推进、ContextBuilder 隔离及 SPA 旧选择不出站；全量 95 项测试通过。
+- **范围**：Phase 6 冻结核心功能的内部实现；不新增 Chrome 权限、Host、持久化敏感数据或写操作。
+- 状态：代码已验证 ｜ 2026-07-24

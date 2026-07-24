@@ -116,4 +116,38 @@ describe('Panel connection lifecycle', () => {
     );
     connection.disconnect();
   });
+
+  it('收发点击选择协议消息', () => {
+    const fake = createFakePort();
+    vi.stubGlobal('chrome', {
+      runtime: {
+        connect: vi.fn(() => fake.port),
+      },
+    });
+    const onPickState = vi.fn();
+    const connection = connectPanel(vi.fn(), vi.fn(), vi.fn(), vi.fn(), onPickState);
+    connection.startPick?.();
+    connection.cancelPick?.();
+
+    expect(fake.postMessage.mock.calls.map(([message]) => message.type)).toEqual([
+      'PANEL_PICK_START',
+      'PANEL_PICK_CANCEL',
+    ]);
+
+    fake.emitMessage(
+      createEnvelope('PICK_STATE', {
+        status: 'selected',
+        element: {
+          tag: 'button',
+          role: 'button',
+          text: 'Star',
+          attrs: {},
+          nearbyContext: 'Repository actions',
+          pageType: 'repo',
+        },
+      }),
+    );
+    expect(onPickState).toHaveBeenCalledWith(expect.objectContaining({ status: 'selected' }));
+    connection.disconnect();
+  });
 });

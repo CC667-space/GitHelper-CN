@@ -60,12 +60,23 @@ describe('context-builder and private outbound guard', () => {
         },
         visionEnabled: true,
       },
+      selectedElement: {
+        tag: 'a',
+        role: 'link',
+        text: 'Issues 42',
+        href: 'https://github.com/openai/openai-node/issues',
+        attrs: { 'aria-label': 'Issues' },
+        nearbyContext: 'Repository navigation',
+        pageType: 'repo',
+      },
     });
 
     expect(built.messages).toHaveLength(2);
     expect(built.messages[0]?.content).not.toContain('此前讨论');
     expect(built.messages[1]?.content).toContain('此前讨论了安装步骤');
     expect(built.messages[1]?.content).toContain('Windows 11');
+    expect(built.messages[1]?.content).toContain('Issues 42');
+    expect(built.messages[1]?.content).toContain('selectedElement');
     expect(built.messages[1]?.content).not.toContain('sk-abcdefghijklmnopqrstuvwxyz');
   });
 });

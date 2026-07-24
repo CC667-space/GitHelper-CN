@@ -2,10 +2,26 @@ import { z } from 'zod';
 
 export const PANEL_PORT_NAME = 'git-helper-panel-v1';
 
+export const selectedElementSchema = z
+  .object({
+    tag: z.string().min(1).max(100),
+    role: z.string().max(100).optional(),
+    text: z.string().max(8_000),
+    href: z.string().max(4_000).optional(),
+    sourceUrl: z.url().optional(),
+    attrs: z
+      .record(z.string().max(200), z.string().max(1_000))
+      .refine((attrs) => Object.keys(attrs).length <= 24, '元素属性最多保留 24 项'),
+    nearbyContext: z.string().max(8_000),
+    pageType: z.enum(['repo', 'issue', 'pr', 'releases', 'blob', 'search', 'code', 'other']),
+  })
+  .strict();
+
 export const panelMessageSchema = z
   .object({
     text: z.string().trim().min(1).max(8_000),
     providerId: z.enum(['deepseek', 'uuapi', 'openrouter']).optional(),
+    selectedElement: selectedElementSchema.optional(),
   })
   .strict();
 
@@ -16,6 +32,42 @@ export const panelAbortSchema = z
   .strict();
 
 export const pageInfoRequestSchema = z.object({}).strict();
+export const panelPickStartSchema = z.object({}).strict();
+export const panelPickCancelSchema = z.object({}).strict();
+export const contentPickStartSchema = z.object({}).strict();
+export const contentPickCancelSchema = z.object({}).strict();
+export const contentPickCancelResponseSchema = z.object({ cancelled: z.literal(true) }).strict();
+
+export const pickOutcomeSchema = z.discriminatedUnion('status', [
+  z
+    .object({
+      status: z.literal('selected'),
+      element: selectedElementSchema,
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal('cancelled'),
+      reason: z.string().max(500).optional(),
+    })
+    .strict(),
+]);
+
+export const panelPickStateSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('active') }).strict(),
+  z
+    .object({
+      status: z.literal('selected'),
+      element: selectedElementSchema,
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal('cancelled'),
+      reason: z.string().max(500).optional(),
+    })
+    .strict(),
+]);
 
 export const pageContextSchema = z
   .object({
@@ -113,6 +165,9 @@ export const optionsRunProbesRequestSchema = z
   .strict();
 
 export type PanelMessagePayload = z.infer<typeof panelMessageSchema>;
+export type PickOutcome = z.infer<typeof pickOutcomeSchema>;
+export type PanelPickState = z.infer<typeof panelPickStateSchema>;
+export type SelectedElementPayload = z.infer<typeof selectedElementSchema>;
 export type PageInfo = z.infer<typeof pageInfoSchema>;
 export type StreamEvent = z.infer<typeof streamEventSchema>;
 export type ProviderRuntimeView = z.infer<typeof providerRuntimeViewSchema>;

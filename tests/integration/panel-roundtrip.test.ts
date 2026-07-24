@@ -78,8 +78,12 @@ describe('Panel → Background → Content → Panel', () => {
   it('发送前装载有限历史，完成后持久化助手回答并刷新 Panel 会话', async () => {
     const emitSessionState = vi.fn();
     const saveAssistant = vi.fn();
-    const streamAnswer = vi.fn(async function* (input: { history?: Array<{ content: string }> }) {
+    const streamAnswer = vi.fn(async function* (input: {
+      history?: Array<{ content: string }>;
+      selectedElement?: { text: string };
+    }) {
       expect(input.history?.[0]?.content).toBe('上一轮问题');
+      expect(input.selectedElement?.text).toBe('Issues');
       yield '本轮';
       yield '回答';
     });
@@ -130,7 +134,22 @@ describe('Panel → Background → Content → Panel', () => {
     });
 
     await bridge.dispatch(
-      createEnvelope('PANEL_MESSAGE', { text: '继续' }, { id: 'panel-session' }),
+      createEnvelope(
+        'PANEL_MESSAGE',
+        {
+          text: '继续',
+          selectedElement: {
+            tag: 'a',
+            role: 'link',
+            text: 'Issues',
+            href: 'https://github.com/openai/openai-node/issues',
+            attrs: {},
+            nearbyContext: 'Repository navigation',
+            pageType: 'repo',
+          },
+        },
+        { id: 'panel-session' },
+      ),
       panelSender,
     );
 
@@ -138,5 +157,86 @@ describe('Panel → Background → Content → Panel', () => {
       expect.objectContaining({ sessionId: 'session-1' }),
     );
     expect(saveAssistant).toHaveBeenCalledWith('session-1', '本轮回答');
+  });
+
+  it('点击选择状态经 Background 从 active 推进到 selected', async () => {
+    const emitPickState = vi.fn();
+    const element = {
+      tag: 'button',
+      role: 'button',
+      text: 'Star',
+      attrs: { 'aria-label': 'Star this repository' },
+      nearbyContext: 'Repository actions',
+      pageType: 'repo' as const,
+    };
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(),
+      streamAnswer: vi.fn(),
+      startPick: vi.fn(async () => ({ status: 'selected' as const, element })),
+      cancelPick: vi.fn(),
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitPickState,
+    });
+
+    const response = await bridge.dispatch(
+      createEnvelope('PANEL_PICK_START', {}, { id: 'pick-1' }),
+      panelSender,
+    );
+
+    expect(response.id).toBe('pick-1');
+    expect(emitPickState).toHaveBeenNthCalledWith(1, { status: 'active' });
+    expect(emitPickState).toHaveBeenNthCalledWith(2, {
+      status: 'selected',
+      element,
+    });
+  });
+
+  it('SPA 页面变化后不把旧页面 SelectedElement 发给 Provider', async () => {
+    const streamAnswer = vi.fn(async function* (input: { selectedElement?: unknown }) {
+      expect(input.selectedElement).toBeUndefined();
+      yield '已忽略旧选择';
+    });
+    const emitPickState = vi.fn();
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(async () => ({
+        url: 'https://github.com/openai/openai-node/issues/2',
+        title: 'Issue 2',
+        placeholder: false,
+        capturedAt: '2026-07-24T00:00:00.000Z',
+        pageContext: {
+          url: 'https://github.com/openai/openai-node/issues/2',
+          pageType: 'issue' as const,
+          repository: 'openai/openai-node',
+          isPrivate: false,
+          extracted: {},
+          capturedAt: '2026-07-24T00:00:00.000Z',
+        },
+      })),
+      streamAnswer,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitPickState,
+    });
+
+    await bridge.dispatch(
+      createEnvelope('PANEL_MESSAGE', {
+        text: '解释所选元素',
+        selectedElement: {
+          tag: 'button',
+          text: 'Old button',
+          sourceUrl: 'https://github.com/openai/openai-node/issues/1',
+          attrs: {},
+          nearbyContext: 'Old issue',
+          pageType: 'issue',
+        },
+      }),
+      panelSender,
+    );
+
+    expect(emitPickState).toHaveBeenCalledWith({
+      status: 'cancelled',
+      reason: '页面已变化，旧的元素选择未发送',
+    });
   });
 });

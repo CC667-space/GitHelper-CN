@@ -3,6 +3,13 @@ import { parseGitHubPage } from './parsers';
 import { startGitHubSpaWatcher } from './spa-watcher';
 import type { PageContext } from '../lib/types';
 import { initializeOnce } from './bootstrap';
+import {
+  contentPickCancelSchema,
+  contentPickStartSchema,
+  pickOutcomeSchema,
+} from '../lib/bridge-protocol';
+import { createEnvelope, parseEnvelope } from '../lib/messaging';
+import { PickController } from './selection/pick';
 
 const CONTENT_SCRIPT_BOOT_KEY = '__gitHelperContentScriptBootV1';
 
@@ -19,8 +26,10 @@ function initializeContentScript(): void {
 
   document.documentElement.setAttribute(INJECTED_ATTR, 'true');
   let currentPageContext: PageContext | undefined;
+  const picker = new PickController(document, () => window.location.href);
 
   function clearTransientSelectionState(): void {
+    picker.cancel('页面已变化，点击选择已取消');
     document
       .querySelectorAll('[data-git-helper-selection-overlay]')
       .forEach((element) => element.remove());
@@ -173,6 +182,52 @@ function initializeContentScript(): void {
         return false;
       }
 
+      return false;
+    },
+  );
+
+  chrome.runtime.onMessage.addListener(
+    (message: unknown, sender, sendResponse: (response: unknown) => void) => {
+      if (sender.id !== chrome.runtime.id) {
+        return false;
+      }
+      const type = (message as { type?: unknown } | null)?.type;
+      if (type === 'PICK_START_REQUEST') {
+        try {
+          const request = parseEnvelope(message, contentPickStartSchema, {
+            expectedType: 'PICK_START_REQUEST',
+          });
+          void picker.start().then((outcome) => {
+            sendResponse(
+              createEnvelope('PICK_START_RESPONSE', pickOutcomeSchema.parse(outcome), {
+                id: request.id,
+              }),
+            );
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      if (type === 'PICK_CANCEL_REQUEST') {
+        try {
+          const request = parseEnvelope(message, contentPickCancelSchema, {
+            expectedType: 'PICK_CANCEL_REQUEST',
+          });
+          picker.cancel('用户已取消点击选择');
+          sendResponse(
+            createEnvelope(
+              'PICK_CANCEL_RESPONSE',
+              { cancelled: true },
+              {
+                id: request.id,
+              },
+            ),
+          );
+        } catch {
+          return false;
+        }
+      }
       return false;
     },
   );

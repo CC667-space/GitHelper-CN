@@ -1,6 +1,12 @@
 import { PROVIDER_CATALOG, providerCatalogEntry } from '../lib/provider-catalog';
 import { providerSettingsStore } from '../lib/provider-settings';
-import type { Message, PageContext, ProviderId, UserPreferences } from '../lib/types';
+import type {
+  Message,
+  PageContext,
+  ProviderId,
+  SelectedElement,
+  UserPreferences,
+} from '../lib/types';
 import { runCapabilityProbe, type CapabilityProbeReport } from './capability-probe';
 import { buildMinimalContext } from './context-builder';
 import { getCredentialMask } from './credential-store';
@@ -32,6 +38,7 @@ export interface StreamAnswerInput {
   history?: Message[];
   historySummary?: string;
   preferences?: UserPreferences;
+  selectedElement?: SelectedElement;
   signal: AbortSignal;
 }
 
@@ -92,6 +99,7 @@ export class ProviderRuntime {
       history: input.history,
       historySummary: input.historySummary,
       preferences: input.preferences,
+      selectedElement: input.selectedElement,
     });
     const provider = this.manager.resolve({
       needsVision: input.needsVision ?? false,

@@ -128,9 +128,15 @@ interface Envelope<T> {
 ```
 用户点"点击提问" → Panel 通知 Content 进入 pick 模式
   → Content 叠层高亮可选元素 → 用户点击目标
-  → Content 提取 SelectedElement(类型/文字/href/属性/邻近上下文/页面类型)
-  → 回传 Panel 展示"已选中" → 用户提问 → 走 AI 请求流
+  → Content 提取 SelectedElement(类型/文字/href/sourceUrl/安全属性/邻近上下文/页面类型)
+  → 经 Background zod 校验后回传 Panel 展示"已选中"
+  → 用户提问 → Background 重读当前 PageContext 并校验 sourceUrl 未过期
+  → ContextBuilder 将所选元素标为不可信页面数据 → 走 AI 请求流
 ```
+
+pick 用捕获阶段拦截 click，选中时阻止原页面动作；Escape、Panel 取消、SPA 失效和 Panel
+断开都会清理监听与叠层。嵌套节点优先归一到最近的链接/按钮/表单控件；属性只保留 allowlist，
+password input 不读取 value。`sourceUrl` 与发送时页面不一致则丢弃旧选择（D-045）。
 
 ### 3.4 框选提问流
 ```
@@ -273,7 +279,8 @@ interface PageContext {
 
 interface SelectedElement {
   tag: string; role?: string; text: string;
-  href?: string; attrs: Record<string,string>;
+  href?: string; sourceUrl?: string;
+  attrs: Record<string,string>;
   nearbyContext: string; pageType: PageContext['pageType'];
 }
 

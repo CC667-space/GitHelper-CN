@@ -2,11 +2,13 @@ import { create } from 'zustand';
 
 import type {
   PanelSessionState,
+  PanelPickState,
   ProviderRuntimeView,
   ProviderState,
   StreamEvent,
 } from '../lib/bridge-protocol';
 import type { ProviderId } from '../lib/types';
+import type { SelectedElement } from '../lib/types';
 
 interface PanelMessage {
   id: string;
@@ -22,6 +24,9 @@ interface PanelState {
   messages: PanelMessage[];
   sessionHistoryTruncated: boolean;
   sessionId?: string;
+  pickStatus: 'idle' | 'active' | 'selected';
+  pickStatusMessage?: string;
+  selectedElement?: SelectedElement;
   pageLabel: string;
   providers: ProviderRuntimeView[];
   selectedTextProviderId?: ProviderId;
@@ -31,6 +36,8 @@ interface PanelState {
   addUserMessage(content: string): void;
   applyProviderState(state: ProviderState): void;
   applySessionState(state: PanelSessionState): void;
+  applyPickState(state: PanelPickState): void;
+  clearSelectedElement(): void;
   applyStreamEvent(event: StreamEvent): void;
   selectTextProvider(providerId: ProviderId): void;
   selectVisionProvider(providerId: ProviderId): void;
@@ -41,6 +48,7 @@ export const usePanelStore = create<PanelState>((set) => ({
   draft: '',
   messages: [],
   sessionHistoryTruncated: false,
+  pickStatus: 'idle',
   pageLabel: '等待读取当前 GitHub 页面',
   providers: [],
   setConnected: (connected) => set({ connected }),
@@ -79,6 +87,32 @@ export const usePanelStore = create<PanelState>((set) => ({
       sessionId,
       messages,
       sessionHistoryTruncated: truncated,
+    }),
+  applyPickState: (state) =>
+    set(
+      state.status === 'active'
+        ? {
+            pickStatus: 'active',
+            pickStatusMessage: '请在 GitHub 页面点击要提问的元素',
+            selectedElement: undefined,
+          }
+        : state.status === 'selected'
+          ? {
+              pickStatus: 'selected',
+              pickStatusMessage: undefined,
+              selectedElement: state.element,
+            }
+          : {
+              pickStatus: 'idle',
+              pickStatusMessage: state.reason,
+              selectedElement: undefined,
+            },
+    ),
+  clearSelectedElement: () =>
+    set({
+      pickStatus: 'idle',
+      pickStatusMessage: undefined,
+      selectedElement: undefined,
     }),
   applyStreamEvent: (event) =>
     set((state) => {
