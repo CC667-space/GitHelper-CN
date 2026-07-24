@@ -17,8 +17,10 @@ class MemoryCredentialArea implements CredentialStorageArea {
     Object.assign(this.values, items);
   }
 
-  async remove(key: string): Promise<void> {
-    delete this.values[key];
+  async remove(key: string | string[]): Promise<void> {
+    for (const item of Array.isArray(key) ? key : [key]) {
+      delete this.values[item];
+    }
   }
 }
 
@@ -39,6 +41,19 @@ describe('credential-store', () => {
 
     await options.delete('deepseek');
     await expect(background.read('deepseek')).resolves.toBeUndefined();
+  });
+
+  it('批量删除只移除三个 Provider 凭据', async () => {
+    const area = new MemoryCredentialArea();
+    const options = createOptionsCredentialStore(area);
+    await options.write('deepseek', 'deepseek-test-key');
+    await options.write('uuapi', 'uuapi-test-key');
+    await options.write('openrouter', 'openrouter-test-key');
+    area.values['preferences:v1'] = { schemaVersion: 1 };
+
+    await options.deleteAll();
+
+    expect(Object.keys(area.values)).toEqual(['preferences:v1']);
   });
 
   it('拒绝无效 Key 且从不把已存明文放进错误', async () => {

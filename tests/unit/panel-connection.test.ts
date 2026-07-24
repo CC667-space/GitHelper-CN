@@ -1,15 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createEnvelope } from '../../src/lib/messaging';
 import { connectPanel } from '../../src/panel/connection';
 
 interface FakePort {
   disconnectFromBackground(): void;
+  emitMessage(message: unknown): void;
   port: chrome.runtime.Port;
   postMessage: ReturnType<typeof vi.fn>;
 }
 
 function createFakePort(): FakePort {
   const disconnectListeners: Array<() => void> = [];
+  const messageListeners: Array<(message: unknown) => void> = [];
   const postMessage = vi.fn();
   const disconnectFromBackground = (): void => {
     for (const listener of disconnectListeners) {
@@ -18,6 +21,11 @@ function createFakePort(): FakePort {
   };
   return {
     disconnectFromBackground,
+    emitMessage: (message) => {
+      for (const listener of messageListeners) {
+        listener(message);
+      }
+    },
     postMessage,
     port: {
       name: 'git-helper-panel-v1',
@@ -26,7 +34,9 @@ function createFakePort(): FakePort {
         addListener: vi.fn((listener: () => void) => disconnectListeners.push(listener)),
       },
       onMessage: {
-        addListener: vi.fn(),
+        addListener: vi.fn((listener: (message: unknown) => void) =>
+          messageListeners.push(listener),
+        ),
       },
       postMessage,
       sender: undefined,
@@ -74,5 +84,36 @@ describe('Panel connection lifecycle', () => {
     connection.disconnect();
     await vi.advanceTimersByTimeAsync(5_000);
     expect(runtimeConnect).toHaveBeenCalledTimes(2);
+  });
+
+  it('接收并校验会话恢复信封', () => {
+    const fake = createFakePort();
+    vi.stubGlobal('chrome', {
+      runtime: {
+        connect: vi.fn(() => fake.port),
+      },
+    });
+    const onSessionState = vi.fn();
+    const connection = connectPanel(vi.fn(), vi.fn(), vi.fn(), onSessionState);
+
+    fake.emitMessage(
+      createEnvelope('SESSION_STATE', {
+        sessionId: 'session-1',
+        messages: [
+          {
+            id: 'message-1',
+            role: 'assistant',
+            content: '已恢复',
+            createdAt: '2026-07-24T00:00:00.000Z',
+          },
+        ],
+        truncated: false,
+      }),
+    );
+
+    expect(onSessionState).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: 'session-1' }),
+    );
+    connection.disconnect();
   });
 });

@@ -1,4 +1,4 @@
-import type { PageContext } from '../lib/types';
+import type { Message, PageContext, UserPreferences } from '../lib/types';
 import { assertPublicContext } from './outbound-policy';
 import { sanitizeText, sanitizeUnknown, type SanitizerFinding } from './sanitizer';
 
@@ -23,6 +23,12 @@ export interface BuiltContext {
   truncated: boolean;
 }
 
+export interface ConversationContext {
+  history?: Message[];
+  historySummary?: string;
+  preferences?: UserPreferences;
+}
+
 function truncateUtf8(value: string, maxBytes: number): { value: string; truncated: boolean } {
   const encoder = new TextEncoder();
   if (encoder.encode(value).byteLength <= maxBytes) {
@@ -41,7 +47,24 @@ function truncateUtf8(value: string, maxBytes: number): { value: string; truncat
   return { value: `${value.slice(0, low)}\n‹CONTEXT_TRUNCATED›`, truncated: true };
 }
 
-export function buildMinimalContext(question: string, page: PageContext): BuiltContext {
+function roleLabel(role: Message['role']): string {
+  switch (role) {
+    case 'user':
+      return '用户';
+    case 'assistant':
+      return '助手';
+    case 'tool':
+      return '工具';
+    case 'system':
+      return '历史系统消息';
+  }
+}
+
+export function buildMinimalContext(
+  question: string,
+  page: PageContext,
+  conversation: ConversationContext = {},
+): BuiltContext {
   assertPublicContext(page);
   const sanitizedQuestion = sanitizeText(question);
   const allowedPageData = {
@@ -54,9 +77,28 @@ export function buildMinimalContext(question: string, page: PageContext): BuiltC
     capturedAt: page.capturedAt,
   };
   const sanitizedPage = sanitizeUnknown(allowedPageData);
+  const sanitizedHistory = sanitizeUnknown({
+    summary: conversation.historySummary,
+    recentMessages: (conversation.history ?? []).map((message) => ({
+      role: roleLabel(message.role),
+      content: message.content,
+    })),
+  });
+  const sanitizedPreferences = sanitizeUnknown(
+    conversation.preferences
+      ? {
+          technicalLevel: conversation.preferences.technicalLevel,
+          operatingSystem: conversation.preferences.operatingSystem,
+          explanationPreference: conversation.preferences.explanationPreference,
+          visionEnabled: conversation.preferences.visionEnabled,
+        }
+      : {},
+  );
   const untrusted = JSON.stringify(sanitizedPage.value);
   const combined = [
     `用户问题：${sanitizedQuestion.value}`,
+    `用户偏好：${JSON.stringify(sanitizedPreferences.value)}`,
+    `有限历史上下文：${JSON.stringify(sanitizedHistory.value)}`,
     UNTRUSTED_CONTEXT_START,
     untrusted,
     UNTRUSTED_CONTEXT_END,
@@ -67,7 +109,12 @@ export function buildMinimalContext(question: string, page: PageContext): BuiltC
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: bounded.value },
     ],
-    findings: [...sanitizedQuestion.findings, ...sanitizedPage.findings],
+    findings: [
+      ...sanitizedQuestion.findings,
+      ...sanitizedPreferences.findings,
+      ...sanitizedHistory.findings,
+      ...sanitizedPage.findings,
+    ],
     truncated: bounded.truncated,
   };
 }

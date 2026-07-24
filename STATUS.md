@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 4 第三轮真实探针已通过 D-031：UUAPI/OpenRouter 文本已验证，OpenRouter 视觉已验证；等待一次真实流式对话手测后完成阶段提交。**
+**Phase 6 — 点击提问（MVP 必达）：Phase 5 已通过验收并完成状态记录，待阶段提交后自动进入点击选择实现。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -100,10 +100,17 @@
 - [x] 新增 D-042 安全 Markdown/GFM 渲染：标题、列表、强调、引用、代码与表格语义化展示；原始 HTML、远程图片、可点击外链均阻断
 - [x] Markdown 红测转绿；固定 `react-markdown@10.1.0` / `remark-gfm@4.0.1`，依赖锁通过供应链策略；最终 typecheck、lint、Vitest 23 files / 71 tests、build 与构建安全扫描通过
 - [x] **Phase 4 — Provider + 能力探针 + 对话 + 手动切换（2026-07-24）通过验收**：三适配器 Mock、真实文本/视觉探针、DeepSeek 低成本路线、手动切换、连续两轮流式对话、断线恢复、输入交互与安全 Markdown 展示均完成
+- [x] **Phase 5 — Session + 偏好 + 容量淘汰（2026-07-24）通过验收**：
+  - Background `SessionStore` 完成新建、同页面/同仓库继续、最近列表、删除、页面关联、30 天过期与最近 50 个限制；Panel 连接/重连后按当前页面恢复最近会话
+  - 单条消息限制 16KB；消息数 >40 或估算 token >8k 时生成本地提取式 `historySummary`；Provider 只接收 ContextBuilder 统一组装的有限历史和必要偏好，Panel 恢复载荷限制为 48KB
+  - 容量写入使用 `getBytesInUse()`；按过期 → 超量 → 已摘要正文 → 页面摘要顺序淘汰，偏好和凭据不自动淘汰；Options 展示当前用量与 6MB/9MB 阈值
+  - `PreferencesStore` 用 zod 同时约束类型与运行时数据；`downloads` 仅 confirm/deny，`accountChanges` 固定 deny
+  - D-033 三种入口完成：会话/偏好清除不动 Key、单 Key 删除、明确二次确认后清除全部本地数据；全清同时清空 Background 内存探针状态，避免重录 Key 后误用旧能力结论
+  - 验收：Node 24.18.0 下 typecheck、lint 通过；Vitest 27 files / 87 tests 全过；build（393 modules）与构建安全扫描通过
 
 ## 下一任务
-**Phase 5 — Session + 偏好 + 容量淘汰**（见 EXECUTION_PLAN v1.2）。
-实现会话保存/恢复、过期清理、上下文长度控制、偏好读写、D-033 三种数据清除及容量淘汰；完成自动测试、文档与本地阶段提交后自动进入 Phase 6。
+**Phase 6 — 点击提问（MVP 必达）**（见 EXECUTION_PLAN v1.2）。
+实现 hover 高亮、pick mode、点击拦截、SelectedElement 稳定提取、取消/退出和基于所选元素的问答闭环；完成自动测试、文档与本地阶段提交后自动进入 Phase 7。
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -114,7 +121,7 @@
 | 2 Side Panel + 消息通信 | ✅ 已完成 |
 | 3 页面识别 + 上下文 + SPA | ✅ 已完成 |
 | 4 Provider + 能力探针 + 对话 + 手动切换 | ✅ 已完成 |
-| 5 Session + 偏好 + 容量淘汰 | ⬜ |
+| 5 Session + 偏好 + 容量淘汰 | ✅ 已完成 |
 | 6 点击提问（MVP 必达） | ⬜ |
 | 7 框选 + 视觉（MVP 必达） | ⬜ |
 | 8 NL 搜索（MVP 必达） | ⬜ |
@@ -157,3 +164,4 @@
 - 2026-07-24：真实 Side Panel 复验发现 action 未直接打开、发送键因 StrictMode 旧连接回调误置为离线、Enter 只换行。三项均以红测复现后修复，记录 D-040；全量 69 项测试与构建验证通过，等待真实 UI 复验。
 - 2026-07-24：D-040 三项交互及 DeepSeek 首轮真实流式回答均通过；回答完成后 port 断开导致永久离线。增加 D-041 自动重连与退避，生命周期红测及全量 70 项测试通过，等待真实连续两轮复验。
 - 2026-07-24：DeepSeek 连续两轮真实对话成功，D-041 通过实测。随后补充 D-042 安全 Markdown/GFM 展示并通过 71 项测试；Phase 4 全部验收通过，准备阶段提交并进入 Phase 5。
+- 2026-07-24：Phase 5 通过；会话持久化/恢复、本地摘要与有限历史、30 天/50 会话/容量淘汰、收紧偏好 Schema、Options 容量显示及 D-033 三种数据清除落地；87 项测试及全套静态/构建验证通过，记录 D-043/D-044，准备进入 Phase 6。

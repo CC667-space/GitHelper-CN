@@ -5,12 +5,13 @@ const CREDENTIAL_PREFIX = 'credential:provider:';
 export interface CredentialStorageArea {
   get(key: string): Promise<Record<string, unknown>>;
   set(items: Record<string, unknown>): Promise<void>;
-  remove(key: string): Promise<void>;
+  remove(key: string | string[]): Promise<void>;
 }
 
 export interface OptionsCredentialStore {
   write(providerId: ProviderId, apiKey: string): Promise<void>;
   delete(providerId: ProviderId): Promise<void>;
+  deleteAll(): Promise<void>;
 }
 
 export interface BackgroundCredentialStore {
@@ -46,6 +47,9 @@ export function createOptionsCredentialStore(area: CredentialStorageArea): Optio
     },
     delete(providerId) {
       return area.remove(storageKey(providerId));
+    },
+    deleteAll() {
+      return area.remove([storageKey('deepseek'), storageKey('uuapi'), storageKey('openrouter')]);
     },
   };
 }
@@ -94,6 +98,10 @@ export function writeCredential(providerId: ProviderId, apiKey: string): Promise
 
 export function deleteCredential(providerId: ProviderId): Promise<void> {
   return createOptionsCredentialStore(localArea()).delete(providerId);
+}
+
+export function deleteAllCredentials(): Promise<void> {
+  return createOptionsCredentialStore(localArea()).deleteAll();
 }
 
 // Background 唯一允许的默认入口。

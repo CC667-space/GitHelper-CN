@@ -290,3 +290,22 @@
 - **证据**：组件红测先复现纯文本输出；修复后语义化 heading/list/strong 渲染通过，同时断言无 `script` / `img` / `a`。依赖锁文件通过供应链策略检查；全量 Vitest 23 files / 71 tests、typecheck、lint、build 与构建安全扫描通过。
 - **范围**：仅改变助手消息的本地展示；不新增 Chrome 权限、网络 Host、出站数据或模型请求。
 - 状态：代码已验证 ｜ 2026-07-24
+
+## D-043 会话集合、页面关联与有限历史
+- **决策**：
+  - Background 以版本化 `sessions:v1` 集合独占会话持久化；Panel 不直接读写会话，只接收经 zod 校验的 `SESSION_STATE` 投影。
+  - 当前 URL 精确匹配优先；同仓库 SPA/页面切换继续最近会话并更新 `pageUrl/pageType`；跨仓库自动隔离为新会话。此规则消解 ARCHITECTURE 3.6 与 3.10 对“同仓库但页面类型变化”的歧义，以 repository 作为会话关联主边界。
+  - 消息数 >40 或估算 token >8k 时，在本地生成提取式 `historySummary` 并保留最近消息，不为摘要额外调用付费 Provider。单条消息 16KB、Provider 历史窗口 12KB、Panel 恢复投影 48KB，出站总上下文继续受 ContextBuilder 32KB 上限控制。
+- **理由**：MV3 Service Worker 不常驻，单一版本化集合便于原子恢复、过期和确定性淘汰；本地摘要避免隐藏成本，三个独立载荷边界同时防止无限历史出站和再次触发 64KB 消息上限。
+- **证据**：单元/集成测试覆盖 CRUD、同仓库关联、30 天过期、最近 50 个、摘要触发、容量淘汰、Panel 恢复和回答完成持久化。
+- **范围**：Phase 5 内部持久化与上下文实现；不改变 MVP、Provider、Host、Chrome 权限或数据出站边界。
+- 状态：代码已验证 ｜ 2026-07-24
+
+## D-044 偏好运行时约束与全清内存复位
+- **决策**：
+  - `preferences:v1` 读写均经 zod 严格校验；`downloads` 只允许 `confirm|deny`，`accountChanges` 只允许字面量 `deny`，非法持久数据回退安全默认值，非法写入直接拒绝。
+  - D-033“清除全部本地数据”先经 credential-store 批量删除三个 Provider Key，再清空其余 local storage；随后通知 Background 清除内存中的探针、禁用状态和手动路由。
+- **理由**：TypeScript 类型不能保护损坏或手工篡改的浏览器存储；全清若只删磁盘而保留 Service Worker 内存状态，重新录入 Key 后可能错误沿用旧能力结论。
+- **证据**：测试断言非法 operationPolicy 被拒；会话/偏好清除后 Key 与配置完好；单 Key 删除不影响其他数据；全清无存储残留且 ProviderManager 回到未探针状态。
+- **范围**：Phase 5 偏好/清除安全收口；不扩大权限或清除范围。
+- 状态：代码已验证 ｜ 2026-07-24

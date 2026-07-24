@@ -1,6 +1,6 @@
 import { PROVIDER_CATALOG, providerCatalogEntry } from '../lib/provider-catalog';
 import { providerSettingsStore } from '../lib/provider-settings';
-import type { PageContext, ProviderId } from '../lib/types';
+import type { Message, PageContext, ProviderId, UserPreferences } from '../lib/types';
 import { runCapabilityProbe, type CapabilityProbeReport } from './capability-probe';
 import { buildMinimalContext } from './context-builder';
 import { getCredentialMask } from './credential-store';
@@ -29,6 +29,9 @@ export interface StreamAnswerInput {
   manualProviderId?: ProviderId;
   needsVision?: boolean;
   images?: string[];
+  history?: Message[];
+  historySummary?: string;
+  preferences?: UserPreferences;
   signal: AbortSignal;
 }
 
@@ -85,7 +88,11 @@ export class ProviderRuntime {
   async *streamAnswer(input: StreamAnswerInput): AsyncIterable<string> {
     await this.ready;
     assertPublicContext(input.pageContext);
-    const built = buildMinimalContext(input.question, input.pageContext);
+    const built = buildMinimalContext(input.question, input.pageContext, {
+      history: input.history,
+      historySummary: input.historySummary,
+      preferences: input.preferences,
+    });
     const provider = this.manager.resolve({
       needsVision: input.needsVision ?? false,
       manualOverrideId: input.manualProviderId,
@@ -115,6 +122,11 @@ export class ProviderRuntime {
     return this.manager.abort(requestId);
   }
 
+  async resetLocalState(): Promise<void> {
+    await this.ready;
+    this.manager.reset();
+  }
+
   async runConfiguredProbes(providerId?: ProviderId): Promise<CapabilityProbeReport[]> {
     await this.ready;
     const settings = await providerSettingsStore().read();
@@ -123,10 +135,7 @@ export class ProviderRuntime {
     const prior = priorStorage[PROBE_STORAGE_KEY] as ProbeStorage | undefined;
     const stored: ProbeStorage = {
       schemaVersion: 1,
-      results:
-        prior?.schemaVersion === 1 && prior.results
-          ? { ...prior.results }
-          : {},
+      results: prior?.schemaVersion === 1 && prior.results ? { ...prior.results } : {},
     };
     const catalogs = providerId
       ? PROVIDER_CATALOG.filter((catalog) => catalog.id === providerId)
@@ -153,10 +162,7 @@ export class ProviderRuntime {
         }
       }
       if (!setting?.textModel) {
-        this.manager.disable(
-          catalog.id,
-          '未配置文本模型 ID，且 /models 未返回可自动选择的型号',
-        );
+        this.manager.disable(catalog.id, '未配置文本模型 ID，且 /models 未返回可自动选择的型号');
         continue;
       }
       try {

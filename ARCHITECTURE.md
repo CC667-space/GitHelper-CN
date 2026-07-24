@@ -156,11 +156,15 @@ interface Envelope<T> {
 ```
 首次提问 → 若无活动会话则新建(sessionId, pageUrl, pageType, repository)
   → 每轮追加 message → updatedAt 刷新
-  → 页面变化(SPA) → 若仓库/页面类型变 → 询问是否新建或关联新会话
-  → 对话超阈值 → 生成 pageSummary/历史摘要压缩上下文
+  → 页面变化(SPA) → 同仓库关联最近会话并更新 pageUrl；跨仓库隔离为新会话
+  → 对话超阈值 → 本地生成 historySummary，保留最近有限消息
   → 重开 Panel → 按 pageUrl/repository 匹配最近会话恢复
   → 30 天过期清理 / 容量超限淘汰(见 §8) / 用户手动删除
 ```
+
+`sessions:v1` 由 Background 独占读写；Panel 只接收经 Schema 校验、总量限制为 48KB 的
+`SESSION_STATE` 投影。Provider 请求只经 `ContextBuilder` 接收最近有限消息、历史摘要与必要偏好，
+历史和偏好均不得进入固定 System Prompt（D-043）。
 
 ### 3.7 工具调用流程
 ```
@@ -295,7 +299,8 @@ interface Session {
   schemaVersion: number;
   sessionId: string; pageUrl: string; pageType: string;
   repository?: string; messages: Message[];
-  pageSummary?: string; updatedAt: string; createdAt: string;
+  pageSummary?: string; historySummary?: string;
+  updatedAt: string; createdAt: string;
 }
 
 interface UserPreferences {
@@ -443,3 +448,8 @@ interface OperationConfirmation {
 **容量检查**：`lib/storage` 封装 `chrome.storage.local.getBytesInUse()`，写入前检查，Options 页显示当前用量 + 手动清除入口。
 
 **数据清除（v1.2，D-033）**：Options 页提供三个独立入口——① 清除会话/偏好（不动凭据）；② 删除单个 Provider Key（经 credential-store）；③ 明确二次确认后清除全部本地数据（会话+偏好+全部凭据）。每种清除配套"目标无残留、非目标完好"断言测试。
+
+**Phase 5 实现定稿（D-043/D-044）**：会话集合使用版本化 `sessions:v1` 记录；偏好使用
+`preferences:v1` 且读写均经 zod 校验。超过摘要阈值时使用本地提取式摘要，不额外调用付费 Provider；
+总上下文仍受 32KB 上限约束。清除全部数据后同步重置 Background 内存中的 Provider 探针/禁用状态，
+避免持久数据已空但旧能力状态继续生效。

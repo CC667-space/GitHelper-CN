@@ -1,5 +1,6 @@
 import {
   optionsProviderStateRequestSchema,
+  optionsResetLocalStateRequestSchema,
   optionsRunProbesRequestSchema,
 } from '../lib/bridge-protocol';
 import { MAX_MESSAGE_BYTES } from '../lib/messaging';
@@ -30,6 +31,14 @@ export function registerOptionsRouter(runtime: ProviderRuntime): void {
             return sanitizeUnknown({
               providers: await runtime.views(),
             }).value;
+          },
+        },
+        OPTIONS_RESET_LOCAL_STATE: {
+          source: 'extension',
+          payloadSchema: optionsResetLocalStateRequestSchema,
+          handler: async () => {
+            await runtime.resetLocalState();
+            return {};
           },
         },
       },

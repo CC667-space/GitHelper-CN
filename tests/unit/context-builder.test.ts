@@ -34,4 +34,38 @@ describe('context-builder and private outbound guard', () => {
     });
     expect(outbound).not.toHaveBeenCalled();
   });
+
+  it('只把有限历史与必要偏好放入 user 上下文并统一遮蔽', () => {
+    const built = buildMinimalContext('继续说明', page(), {
+      historySummary: '此前讨论了安装步骤',
+      history: [
+        {
+          id: 'history-1',
+          role: 'assistant',
+          content: '不要泄露 sk-abcdefghijklmnopqrstuvwxyz',
+          createdAt: '2026-07-24T00:00:00.000Z',
+        },
+      ],
+      preferences: {
+        schemaVersion: 1,
+        language: 'zh-CN',
+        technicalLevel: 'beginner',
+        operatingSystem: 'Windows 11',
+        explanationPreference: '分步骤',
+        operationPolicy: {
+          navigation: 'auto',
+          search: 'auto',
+          downloads: 'confirm',
+          accountChanges: 'deny',
+        },
+        visionEnabled: true,
+      },
+    });
+
+    expect(built.messages).toHaveLength(2);
+    expect(built.messages[0]?.content).not.toContain('此前讨论');
+    expect(built.messages[1]?.content).toContain('此前讨论了安装步骤');
+    expect(built.messages[1]?.content).toContain('Windows 11');
+    expect(built.messages[1]?.content).not.toContain('sk-abcdefghijklmnopqrstuvwxyz');
+  });
 });

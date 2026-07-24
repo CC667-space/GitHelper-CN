@@ -2,8 +2,13 @@ import React, { useEffect, useState } from 'react';
 
 import { PROVIDER_CATALOG } from '../lib/provider-catalog';
 import type { ProviderRuntimeView } from '../lib/bridge-protocol';
-import type { ProviderId } from '../lib/types';
-import { defaultOptionsServices, type OptionsServices } from './services';
+import type { ProviderId, UserPreferences } from '../lib/types';
+import { defaultUserPreferences } from '../background/prefs-store';
+import { defaultOptionsServices, type OptionsServices, type StorageUsage } from './services';
+
+function formatBytes(bytes: number): string {
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
 
 export function OptionsApp({
   services = defaultOptionsServices,
@@ -18,6 +23,9 @@ export function OptionsApp({
   const [models, setModels] = useState<
     Partial<Record<ProviderId, { textModel: string; visionModel: string }>>
   >({});
+  const [preferences, setPreferences] = useState<UserPreferences>(defaultUserPreferences);
+  const [storageUsage, setStorageUsage] = useState<StorageUsage>();
+  const [confirmingClearAll, setConfirmingClearAll] = useState(false);
   const [status, setStatus] = useState('正在读取本地 Provider 状态…');
 
   async function refreshProviders(): Promise<void> {
@@ -37,8 +45,17 @@ export function OptionsApp({
     setStatus('本地状态已更新');
   }
 
+  async function refreshLocalSettings(): Promise<void> {
+    const [nextPreferences, nextUsage] = await Promise.all([
+      services.loadPreferences(),
+      services.getStorageUsage(),
+    ]);
+    setPreferences(nextPreferences);
+    setStorageUsage(nextUsage);
+  }
+
   useEffect(() => {
-    void refreshProviders().catch((error: unknown) =>
+    void Promise.all([refreshProviders(), refreshLocalSettings()]).catch((error: unknown) =>
       setStatus(error instanceof Error ? error.message : String(error)),
     );
   }, []);
@@ -75,7 +92,7 @@ export function OptionsApp({
     const targetLabel =
       providerId === undefined
         ? '全部已配置 Provider'
-        : PROVIDER_CATALOG.find((provider) => provider.id === providerId)?.label ?? providerId;
+        : (PROVIDER_CATALOG.find((provider) => provider.id === providerId)?.label ?? providerId);
     setProviderProbeTarget(providerId ?? 'all');
     setProviderProbeStatus(`正在复测${targetLabel}；会消耗少量 Provider 额度…`);
     setStatus(`正在复测${targetLabel}；会消耗少量 Provider 额度…`);
@@ -106,6 +123,26 @@ export function OptionsApp({
       },
     });
     setProbeStatus('Side Panel 已打开');
+  }
+
+  async function savePreferences(): Promise<void> {
+    const saved = await services.savePreferences(preferences);
+    setPreferences(saved);
+    setStatus('偏好已保存');
+    setStorageUsage(await services.getStorageUsage());
+  }
+
+  async function clearConversationData(): Promise<void> {
+    await services.clearSessionsAndPreferences();
+    await refreshLocalSettings();
+    setStatus('会话与偏好已清除；Provider Key 保持不变');
+  }
+
+  async function confirmClearAll(): Promise<void> {
+    await services.clearAllLocalData();
+    setConfirmingClearAll(false);
+    await Promise.all([refreshProviders(), refreshLocalSettings()]);
+    setStatus('全部本地数据已清除');
   }
 
   return (
@@ -304,6 +341,208 @@ export function OptionsApp({
             {providerProbeStatus}
           </p>
         </div>
+      </section>
+
+      <section className="rounded-lg border border-slate-200 p-4">
+        <h2 className="font-medium">回答与操作偏好</h2>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <label className="text-sm">
+            技术水平
+            <select
+              className="mt-1 w-full rounded-md border border-slate-300 p-2"
+              onChange={(event) =>
+                setPreferences((current) => ({
+                  ...current,
+                  technicalLevel: event.target.value as UserPreferences['technicalLevel'],
+                }))
+              }
+              value={preferences.technicalLevel}
+            >
+              <option value="beginner">新手</option>
+              <option value="intermediate">进阶</option>
+              <option value="advanced">高级</option>
+            </select>
+          </label>
+          <label className="text-sm">
+            操作系统
+            <input
+              className="mt-1 w-full rounded-md border border-slate-300 p-2"
+              maxLength={100}
+              onChange={(event) =>
+                setPreferences((current) => ({
+                  ...current,
+                  operatingSystem: event.target.value,
+                }))
+              }
+              value={preferences.operatingSystem}
+            />
+          </label>
+        </div>
+        <label className="mt-4 block text-sm">
+          解释偏好
+          <textarea
+            className="mt-1 min-h-20 w-full rounded-md border border-slate-300 p-2"
+            maxLength={500}
+            onChange={(event) =>
+              setPreferences((current) => ({
+                ...current,
+                explanationPreference: event.target.value,
+              }))
+            }
+            value={preferences.explanationPreference}
+          />
+        </label>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="text-sm">
+            GitHub 内导航
+            <select
+              className="mt-1 w-full rounded-md border border-slate-300 p-2"
+              onChange={(event) =>
+                setPreferences((current) => ({
+                  ...current,
+                  operationPolicy: {
+                    ...current.operationPolicy,
+                    navigation: event.target.value as 'auto' | 'confirm',
+                  },
+                }))
+              }
+              value={preferences.operationPolicy.navigation}
+            >
+              <option value="auto">自动</option>
+              <option value="confirm">每次确认</option>
+            </select>
+          </label>
+          <label className="text-sm">
+            公开搜索
+            <select
+              className="mt-1 w-full rounded-md border border-slate-300 p-2"
+              onChange={(event) =>
+                setPreferences((current) => ({
+                  ...current,
+                  operationPolicy: {
+                    ...current.operationPolicy,
+                    search: event.target.value as 'auto' | 'confirm',
+                  },
+                }))
+              }
+              value={preferences.operationPolicy.search}
+            >
+              <option value="auto">自动</option>
+              <option value="confirm">每次确认</option>
+            </select>
+          </label>
+          <label className="text-sm">
+            下载
+            <select
+              className="mt-1 w-full rounded-md border border-slate-300 p-2"
+              onChange={(event) =>
+                setPreferences((current) => ({
+                  ...current,
+                  operationPolicy: {
+                    ...current.operationPolicy,
+                    downloads: event.target.value as 'confirm' | 'deny',
+                  },
+                }))
+              }
+              value={preferences.operationPolicy.downloads}
+            >
+              <option value="confirm">每次确认</option>
+              <option value="deny">拒绝</option>
+            </select>
+          </label>
+          <label className="text-sm">
+            账号变更
+            <input
+              className="mt-1 w-full rounded-md border border-slate-200 bg-slate-100 p-2"
+              disabled
+              value="固定拒绝"
+            />
+          </label>
+        </div>
+        <label className="mt-4 flex items-center gap-2 text-sm">
+          <input
+            checked={preferences.visionEnabled}
+            onChange={(event) =>
+              setPreferences((current) => ({
+                ...current,
+                visionEnabled: event.target.checked,
+              }))
+            }
+            type="checkbox"
+          />
+          允许在用户主动框选后使用视觉能力
+        </label>
+        <button
+          className="mt-4 rounded bg-slate-900 px-3 py-2 text-sm text-white"
+          onClick={() =>
+            void savePreferences().catch((error: unknown) =>
+              setStatus(error instanceof Error ? error.message : String(error)),
+            )
+          }
+          type="button"
+        >
+          保存偏好
+        </button>
+      </section>
+
+      <section className="rounded-lg border border-slate-200 p-4">
+        <h2 className="font-medium">本地数据与容量</h2>
+        <p className="mt-2 text-sm text-slate-600" data-testid="storage-usage">
+          当前占用：{storageUsage ? formatBytes(storageUsage.bytes) : '读取中…'}
+          {storageUsage
+            ? `（软上限 ${formatBytes(storageUsage.softLimitBytes)}，硬上限 ${formatBytes(storageUsage.hardLimitBytes)}）`
+            : ''}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            className="rounded border border-slate-300 px-3 py-2 text-sm"
+            onClick={() =>
+              void clearConversationData().catch((error: unknown) =>
+                setStatus(error instanceof Error ? error.message : String(error)),
+              )
+            }
+            type="button"
+          >
+            清除会话与偏好
+          </button>
+          <button
+            className="rounded border border-rose-300 px-3 py-2 text-sm text-rose-700"
+            onClick={() => setConfirmingClearAll(true)}
+            type="button"
+          >
+            清除全部本地数据
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          “清除会话与偏好”不会删除任何 Provider Key；单个 Key 请在对应 Provider 卡片中删除。
+        </p>
+        {confirmingClearAll ? (
+          <div className="mt-4 rounded-md border border-rose-300 bg-rose-50 p-3" role="alertdialog">
+            <p className="text-sm text-rose-900">
+              二次确认：这会删除全部会话、偏好、Provider Key 和本地配置，且不可恢复。
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+                onClick={() => setConfirmingClearAll(false)}
+                type="button"
+              >
+                返回
+              </button>
+              <button
+                className="rounded bg-rose-700 px-3 py-2 text-sm text-white"
+                onClick={() =>
+                  void confirmClearAll().catch((error: unknown) =>
+                    setStatus(error instanceof Error ? error.message : String(error)),
+                  )
+                }
+                type="button"
+              >
+                确认清除全部
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="rounded-lg border border-slate-200 p-4">

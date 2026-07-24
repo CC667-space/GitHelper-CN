@@ -1,17 +1,29 @@
 import {
   pageInfoSchema,
+  panelSessionStateSchema,
   panelAbortSchema,
   PANEL_PORT_NAME,
   panelMessageSchema,
   streamEventSchema,
   type PageInfo,
+  type PanelSessionState,
   type ProviderRuntimeView,
   type StreamEvent,
 } from '../lib/bridge-protocol';
 import { createEnvelope, MAX_MESSAGE_BYTES, parseEnvelope, type Envelope } from '../lib/messaging';
 import { MessageRouter, type RouteContext } from './router';
 import { sanitizeText } from './sanitizer';
-import type { ProviderId } from '../lib/types';
+import type { Message, ProviderId, UserPreferences } from '../lib/types';
+import { preferencesStore } from './prefs-store';
+import { sessionStore } from './session-store';
+
+interface PreparedPanelSession {
+  sessionId: string;
+  history: Message[];
+  historySummary?: string;
+  preferences: UserPreferences;
+  snapshot: PanelSessionState;
+}
 
 export interface PanelBridgeDependencies {
   requestPageInfo(signal: AbortSignal): Promise<PageInfo>;
@@ -20,11 +32,17 @@ export interface PanelBridgeDependencies {
     question: string;
     page: PageInfo;
     providerId?: ProviderId;
+    history?: Message[];
+    historySummary?: string;
+    preferences?: UserPreferences;
     signal: AbortSignal;
   }): AsyncIterable<string>;
+  prepareSession?(page: PageInfo, question: string): Promise<PreparedPanelSession>;
+  saveAssistant?(sessionId: string, content: string): Promise<void>;
   abort(requestId: string): boolean;
   providerViews?(): Promise<ProviderRuntimeView[]>;
   emit(event: Envelope<StreamEvent>): void;
+  emitSessionState?(state: PanelSessionState): void;
 }
 
 export class PanelBridge {
@@ -62,21 +80,33 @@ export class PanelBridge {
   private async handlePanelMessage(payload: unknown, context: RouteContext): Promise<unknown> {
     const message = panelMessageSchema.parse(payload);
     const requestId = context.requestId;
-    this.emit({ requestId, kind: 'start' });
     const page = await this.dependencies.requestPageInfo(context.signal);
+    const prepared = await this.dependencies.prepareSession?.(page, message.text);
+    if (prepared) {
+      this.dependencies.emitSessionState?.(prepared.snapshot);
+    }
+    this.emit({ requestId, kind: 'start' });
     this.emit({
       requestId,
       kind: 'context',
       text: page.title || page.url,
     });
+    let answer = '';
     for await (const delta of this.dependencies.streamAnswer({
       requestId,
       question: message.text,
       page,
       providerId: message.providerId,
+      history: prepared?.history,
+      historySummary: prepared?.historySummary,
+      preferences: prepared?.preferences,
       signal: context.signal,
     })) {
+      answer += delta;
       this.emit({ requestId, kind: 'delta', text: delta });
+    }
+    if (prepared && this.dependencies.saveAssistant) {
+      await this.dependencies.saveAssistant(prepared.sessionId, answer);
     }
     this.emit({ requestId, kind: 'done' });
     return { accepted: true, requestId };
@@ -126,8 +156,26 @@ export function registerPanelPortBridge(
       port.disconnect();
       return;
     }
+    const sessions = sessionStore();
+    const preferences = preferencesStore();
     const bridge = new PanelBridge(chrome.runtime.id, {
       requestPageInfo: requestActivePageInfo,
+      prepareSession: async (page, question) => {
+        if (!page.pageContext) {
+          throw new Error('当前页面上下文尚未就绪');
+        }
+        const prepared = await sessions.prepare(page.pageContext, question);
+        return {
+          sessionId: prepared.session.sessionId,
+          history: prepared.history,
+          historySummary: prepared.historySummary,
+          preferences: await preferences.read(),
+          snapshot: panelSessionStateSchema.parse(sessions.panelSnapshot(prepared.session)),
+        };
+      },
+      saveAssistant: async (sessionId, content) => {
+        await sessions.appendAssistant(sessionId, content);
+      },
       streamAnswer: async function* (input) {
         if (!input.page.pageContext) {
           throw new Error('当前页面上下文尚未就绪');
@@ -137,13 +185,29 @@ export function registerPanelPortBridge(
           question: input.question,
           pageContext: input.page.pageContext,
           manualProviderId: input.providerId,
+          history: input.history,
+          historySummary: input.historySummary,
+          preferences: input.preferences,
           signal: input.signal,
         });
       },
       abort: (requestId) => runtime.abort(requestId),
       providerViews: () => runtime.views(),
       emit: (event) => port.postMessage(event),
+      emitSessionState: (state) =>
+        port.postMessage(createEnvelope('SESSION_STATE', panelSessionStateSchema.parse(state))),
     });
+    const hydration = requestActivePageInfo(new AbortController().signal)
+      .then(async (page) => {
+        const session = page.pageContext ? await sessions.findForPage(page.pageContext) : undefined;
+        port.postMessage(
+          createEnvelope(
+            'SESSION_STATE',
+            panelSessionStateSchema.parse(sessions.panelSnapshot(session)),
+          ),
+        );
+      })
+      .catch(() => undefined);
     void runtime
       .views()
       .then((providers) => port.postMessage(createEnvelope('PROVIDER_STATE', { providers })))
@@ -154,8 +218,8 @@ export function registerPanelPortBridge(
         (message as { id: string }).id.length <= 128
           ? (message as { id: string }).id
           : undefined;
-      void bridge
-        .dispatch(message, port.sender ?? {})
+      void hydration
+        .then(() => bridge.dispatch(message, port.sender ?? {}))
         .then((response) => port.postMessage(response))
         .catch((error: unknown) => port.postMessage(errorStreamEvent(error, requestId)));
     });

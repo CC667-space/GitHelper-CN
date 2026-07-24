@@ -1,13 +1,27 @@
 import {
   optionsProviderStateRequestSchema,
+  optionsResetLocalStateRequestSchema,
   optionsRunProbesRequestSchema,
   providerStateSchema,
   type ProviderRuntimeView,
 } from '../lib/bridge-protocol';
 import { createEnvelope, parseEnvelope } from '../lib/messaging';
 import { providerSettingsStore, type ProviderSetting } from '../lib/provider-settings';
-import type { ProviderId } from '../lib/types';
+import {
+  STORAGE_HARD_LIMIT_BYTES,
+  STORAGE_SOFT_LIMIT_BYTES,
+  StorageRepository,
+} from '../lib/storage';
+import type { ProviderId, UserPreferences } from '../lib/types';
 import { deleteCredential, writeCredential } from '../background/credential-store';
+import { preferencesStore } from '../background/prefs-store';
+import { clearAllLocalData, clearSessionsAndPreferences } from './local-data';
+
+export interface StorageUsage {
+  bytes: number;
+  softLimitBytes: number;
+  hardLimitBytes: number;
+}
 
 export interface OptionsServices {
   loadProviders(): Promise<ProviderRuntimeView[]>;
@@ -15,6 +29,11 @@ export interface OptionsServices {
   deleteKey(providerId: ProviderId): Promise<void>;
   saveModels(providerId: ProviderId, setting: ProviderSetting): Promise<void>;
   runProbes(providerId?: ProviderId): Promise<unknown>;
+  loadPreferences(): Promise<UserPreferences>;
+  savePreferences(preferences: UserPreferences): Promise<UserPreferences>;
+  getStorageUsage(): Promise<StorageUsage>;
+  clearSessionsAndPreferences(): Promise<void>;
+  clearAllLocalData(): Promise<void>;
 }
 
 async function runtimeRequest(type: string, payload: unknown): Promise<unknown> {
@@ -50,4 +69,19 @@ export const defaultOptionsServices: OptionsServices = {
       'OPTIONS_RUN_PROVIDER_PROBES',
       optionsRunProbesRequestSchema.parse({ providerId }),
     ),
+  loadPreferences: () => preferencesStore().read(),
+  savePreferences: (preferences) => preferencesStore().write(preferences),
+  getStorageUsage: async () => ({
+    bytes: await new StorageRepository().getBytesInUse(null),
+    softLimitBytes: STORAGE_SOFT_LIMIT_BYTES,
+    hardLimitBytes: STORAGE_HARD_LIMIT_BYTES,
+  }),
+  clearSessionsAndPreferences,
+  clearAllLocalData: async () => {
+    await clearAllLocalData();
+    await runtimeRequest(
+      'OPTIONS_RESET_LOCAL_STATE',
+      optionsResetLocalStateRequestSchema.parse({}),
+    );
+  },
 };

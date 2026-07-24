@@ -1,12 +1,18 @@
 import { create } from 'zustand';
 
-import type { ProviderRuntimeView, ProviderState, StreamEvent } from '../lib/bridge-protocol';
+import type {
+  PanelSessionState,
+  ProviderRuntimeView,
+  ProviderState,
+  StreamEvent,
+} from '../lib/bridge-protocol';
 import type { ProviderId } from '../lib/types';
 
 interface PanelMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  createdAt: string;
 }
 
 interface PanelState {
@@ -14,6 +20,8 @@ interface PanelState {
   connected: boolean;
   draft: string;
   messages: PanelMessage[];
+  sessionHistoryTruncated: boolean;
+  sessionId?: string;
   pageLabel: string;
   providers: ProviderRuntimeView[];
   selectedTextProviderId?: ProviderId;
@@ -22,6 +30,7 @@ interface PanelState {
   setDraft(draft: string): void;
   addUserMessage(content: string): void;
   applyProviderState(state: ProviderState): void;
+  applySessionState(state: PanelSessionState): void;
   applyStreamEvent(event: StreamEvent): void;
   selectTextProvider(providerId: ProviderId): void;
   selectVisionProvider(providerId: ProviderId): void;
@@ -31,6 +40,7 @@ export const usePanelStore = create<PanelState>((set) => ({
   connected: false,
   draft: '',
   messages: [],
+  sessionHistoryTruncated: false,
   pageLabel: '等待读取当前 GitHub 页面',
   providers: [],
   setConnected: (connected) => set({ connected }),
@@ -38,7 +48,15 @@ export const usePanelStore = create<PanelState>((set) => ({
   addUserMessage: (content) =>
     set((state) => ({
       draft: '',
-      messages: [...state.messages, { id: crypto.randomUUID(), role: 'user', content }],
+      messages: [
+        ...state.messages,
+        {
+          id: crypto.randomUUID(),
+          role: 'user',
+          content,
+          createdAt: new Date().toISOString(),
+        },
+      ],
     })),
   applyProviderState: ({ providers }) =>
     set((state) => ({
@@ -56,12 +74,26 @@ export const usePanelStore = create<PanelState>((set) => ({
     })),
   selectTextProvider: (selectedTextProviderId) => set({ selectedTextProviderId }),
   selectVisionProvider: (selectedVisionProviderId) => set({ selectedVisionProviderId }),
+  applySessionState: ({ sessionId, messages, truncated }) =>
+    set({
+      sessionId,
+      messages,
+      sessionHistoryTruncated: truncated,
+    }),
   applyStreamEvent: (event) =>
     set((state) => {
       if (event.kind === 'start') {
         return {
           activeRequestId: event.requestId,
-          messages: [...state.messages, { id: event.requestId, role: 'assistant', content: '' }],
+          messages: [
+            ...state.messages,
+            {
+              id: event.requestId,
+              role: 'assistant',
+              content: '',
+              createdAt: new Date().toISOString(),
+            },
+          ],
         };
       }
       if (event.kind === 'context' && event.text) {
@@ -84,7 +116,15 @@ export const usePanelStore = create<PanelState>((set) => ({
             ? state.messages.map((message) =>
                 message.id === event.requestId ? { ...message, content: event.text! } : message,
               )
-            : [...state.messages, { id: event.requestId, role: 'assistant', content: event.text }],
+            : [
+                ...state.messages,
+                {
+                  id: event.requestId,
+                  role: 'assistant',
+                  content: event.text,
+                  createdAt: new Date().toISOString(),
+                },
+              ],
         };
       }
       if (event.kind === 'done') {

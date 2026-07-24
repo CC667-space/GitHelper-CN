@@ -76,6 +76,13 @@ export class ProviderManager {
     state.disabledReason = reason;
   }
 
+  reset(): void {
+    this.manualOverrideId = undefined;
+    for (const providerId of this.providers.keys()) {
+      this.states.set(providerId, { disabled: false });
+    }
+  }
+
   resolve(options: ResolveProviderOptions): Provider {
     const selectedId =
       options.manualOverrideId ??

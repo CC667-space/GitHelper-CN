@@ -88,4 +88,21 @@ describe('ProviderManager', () => {
       /当前不可用/,
     );
   });
+
+  it('清除全部本地数据后丢弃内存中的探针与手动路由状态', () => {
+    const providers = new Map<ProviderId, Provider>([
+      ['deepseek', fakeProvider('deepseek')],
+      ['openrouter', fakeProvider('openrouter')],
+    ]);
+    const manager = new ProviderManager(providers);
+    manager.setProbeResult(probe('deepseek'));
+    manager.setProbeResult(probe('openrouter'));
+    manager.setManualOverride('openrouter');
+
+    manager.reset();
+
+    expect(manager.state('deepseek').probe).toBeUndefined();
+    expect(manager.state('openrouter').probe).toBeUndefined();
+    expect(() => manager.resolve({ needsVision: false })).toThrow(/尚未完成真实文本能力探针/);
+  });
 });

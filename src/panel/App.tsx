@@ -15,6 +15,7 @@ export function PanelApp({
     connected,
     draft,
     messages,
+    sessionHistoryTruncated,
     pageLabel,
     providers,
     selectedTextProviderId,
@@ -22,6 +23,7 @@ export function PanelApp({
     activeRequestId,
     addUserMessage,
     applyProviderState,
+    applySessionState,
     applyStreamEvent,
     selectTextProvider,
     selectVisionProvider,
@@ -39,6 +41,7 @@ export function PanelApp({
           setConnected(nextConnected);
         }
       },
+      applySessionState,
     );
     connection.current = activeConnection;
     return () => {
@@ -48,7 +51,7 @@ export function PanelApp({
       }
       activeConnection.disconnect();
     };
-  }, [applyProviderState, applyStreamEvent, connect, setConnected]);
+  }, [applyProviderState, applySessionState, applyStreamEvent, connect, setConnected]);
 
   function submit(): void {
     const text = draft.trim();
@@ -128,6 +131,11 @@ export function PanelApp({
         className="flex-1 space-y-3 overflow-y-auto p-3"
         data-testid="conversation"
       >
+        {sessionHistoryTruncated ? (
+          <p className="rounded bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            较早消息已摘要或因消息大小限制未在面板中展开。
+          </p>
+        ) : null}
         {messages.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
             输入一条消息，验证 Panel → Background → Content → Panel 通信链路。
@@ -168,11 +176,7 @@ export function PanelApp({
           maxLength={8_000}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
-            if (
-              event.key === 'Enter' &&
-              !event.shiftKey &&
-              !event.nativeEvent.isComposing
-            ) {
+            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();
               submit();
             }

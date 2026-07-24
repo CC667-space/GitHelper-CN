@@ -32,7 +32,8 @@
 - tools registry：zod 校验通过/拒绝、白名单外拒绝、**openGitHubPage 仅接受 `https://github.com/*`、非 https Scheme（javascript/data/file/chrome/chrome-extension/blob）全部拒绝（D-013R）**
 - github-api：**限流分桶（core/search/code_search）、X-RateLimit-Resource/Remaining/Reset 与 Retry-After 解析、限流后不指数重试（mock 计时断言）、到点恢复（D-032）**
 - storage：读写、schemaVersion、迁移、getBytesInUse 容量检查、淘汰顺序
-- session-store：CRUD、过期、摘要触发、上下文长度控制
+- session-store：CRUD、同页面/同仓库关联、30 天过期、50 会话上限、摘要触发、Provider/Panel 上下文长度控制、容量淘汰顺序
+- prefs-store：合法偏好持久化；运行时拒绝 `downloads:auto` 和非 `deny` 的 `accountChanges`
 - context-builder：只含允许字段、不含整页
 - messaging：信封版本/请求 ID、Schema 校验、超载荷拒绝、超时
 
@@ -42,7 +43,8 @@
 - Background port 在首轮完成后断开时，Panel 自动重连并可发送第二轮；主动关闭 Panel 后不再重连（D-041）
 - 助手 Markdown/GFM 生成语义化标题/列表/强调/代码/表格；原始 HTML、远程图片与可点击外链不会进入 DOM（D-042）
 - Options 表单读写、Key 录入与掩码（**可实现表述，D-028**）：录入用 password input；**保存成功后输入框与受控状态被清空**（断言 value === ''）；**已保存 Key 不回显明文**——保存后重新打开 Options，DOM/组件状态中只有掩码（尾 4 位），无完整 Key 字符串；Zustand store 全量序列化后不含已存 Key 明文
-- Options 三种数据清除入口分别可用（D-033）、数据流向披露展示
+- Options 偏好表单与容量用量可读；三种数据清除入口分别可用且全清有显式二次确认（D-033）、数据流向披露展示
+- Panel 收到 `SESSION_STATE` 后恢复当前页面最近会话；恢复投影过长时明确提示早期内容未展开
 
 ### 3. 扩展集成测试
 - Panel→BG→Content→Panel 消息往返（经来源+Schema 校验）

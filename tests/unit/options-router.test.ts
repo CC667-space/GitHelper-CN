@@ -121,4 +121,51 @@ describe('Options Provider router', () => {
     expect(response.ok).toBe(true);
     expect(runConfiguredProbes).toHaveBeenCalledExactlyOnceWith('deepseek');
   });
+
+  it('全清完成通知会复位 Background 内存能力状态', async () => {
+    let listener:
+      | ((
+          message: unknown,
+          sender: chrome.runtime.MessageSender,
+          sendResponse: (response: unknown) => void,
+        ) => boolean)
+      | undefined;
+    vi.stubGlobal('chrome', {
+      runtime: {
+        id: runtimeId,
+        onMessage: {
+          addListener: vi.fn(
+            (
+              next: (
+                message: unknown,
+                sender: chrome.runtime.MessageSender,
+                sendResponse: (response: unknown) => void,
+              ) => boolean,
+            ) => {
+              listener = next;
+            },
+          ),
+        },
+      },
+    });
+    const resetLocalState = vi.fn();
+    const runtime = {
+      resetLocalState,
+    } as unknown as ProviderRuntime;
+    registerOptionsRouter(runtime);
+
+    const response = await new Promise<{ ok?: boolean }>((resolve) => {
+      listener!(
+        createEnvelope('OPTIONS_RESET_LOCAL_STATE', {}),
+        {
+          id: runtimeId,
+          url: `chrome-extension://${runtimeId}/src/options/index.html`,
+        },
+        (value) => resolve(value as { ok?: boolean }),
+      );
+    });
+
+    expect(response.ok).toBe(true);
+    expect(resetLocalState).toHaveBeenCalledOnce();
+  });
 });

@@ -85,7 +85,27 @@ export const providerStateSchema = z
   })
   .strict();
 
+export const panelSessionStateSchema = z
+  .object({
+    sessionId: z.string().min(1).max(128).optional(),
+    messages: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1).max(128),
+            role: z.enum(['user', 'assistant']),
+            content: z.string().max(16 * 1024),
+            createdAt: z.iso.datetime(),
+          })
+          .strict(),
+      )
+      .max(40),
+    truncated: z.boolean(),
+  })
+  .strict();
+
 export const optionsProviderStateRequestSchema = z.object({}).strict();
+export const optionsResetLocalStateRequestSchema = z.object({}).strict();
 export const optionsRunProbesRequestSchema = z
   .object({
     providerId: z.enum(['deepseek', 'uuapi', 'openrouter']).optional(),
@@ -97,3 +117,4 @@ export type PageInfo = z.infer<typeof pageInfoSchema>;
 export type StreamEvent = z.infer<typeof streamEventSchema>;
 export type ProviderRuntimeView = z.infer<typeof providerRuntimeViewSchema>;
 export type ProviderState = z.infer<typeof providerStateSchema>;
+export type PanelSessionState = z.infer<typeof panelSessionStateSchema>;

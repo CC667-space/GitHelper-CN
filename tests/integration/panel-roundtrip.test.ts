@@ -4,6 +4,7 @@ import { PanelBridge } from '../../src/background/panel-bridge';
 import { handlePageInfoRequest } from '../../src/content/page-info';
 import { createEnvelope, parseEnvelope, type Envelope } from '../../src/lib/messaging';
 import { pageInfoSchema, type StreamEvent } from '../../src/lib/bridge-protocol';
+import { defaultUserPreferences } from '../../src/background/prefs-store';
 
 const runtimeId = 'abcdefghijklmnopabcdefghijklmnop';
 const panelSender = {
@@ -72,5 +73,70 @@ describe('Panel → Background → Content → Panel', () => {
     await expect(
       bridge.dispatch(createEnvelope('PANEL_MESSAGE', { text: '' }), panelSender),
     ).rejects.toMatchObject({ code: 'INVALID_ENVELOPE' });
+  });
+
+  it('发送前装载有限历史，完成后持久化助手回答并刷新 Panel 会话', async () => {
+    const emitSessionState = vi.fn();
+    const saveAssistant = vi.fn();
+    const streamAnswer = vi.fn(async function* (input: { history?: Array<{ content: string }> }) {
+      expect(input.history?.[0]?.content).toBe('上一轮问题');
+      yield '本轮';
+      yield '回答';
+    });
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(async () => ({
+        url: 'https://github.com/openai/openai-node',
+        title: 'openai/openai-node',
+        placeholder: false,
+        capturedAt: '2026-07-24T00:00:00.000Z',
+        pageContext: {
+          url: 'https://github.com/openai/openai-node',
+          pageType: 'repo' as const,
+          repository: 'openai/openai-node',
+          isPrivate: false,
+          extracted: {},
+          capturedAt: '2026-07-24T00:00:00.000Z',
+        },
+      })),
+      prepareSession: vi.fn(async () => ({
+        sessionId: 'session-1',
+        history: [
+          {
+            id: 'history-1',
+            role: 'user' as const,
+            content: '上一轮问题',
+            createdAt: '2026-07-24T00:00:00.000Z',
+          },
+        ],
+        preferences: defaultUserPreferences(),
+        snapshot: {
+          sessionId: 'session-1',
+          messages: [
+            {
+              id: 'current-user',
+              role: 'user' as const,
+              content: '继续',
+              createdAt: '2026-07-24T00:00:01.000Z',
+            },
+          ],
+          truncated: false,
+        },
+      })),
+      streamAnswer,
+      saveAssistant,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitSessionState,
+    });
+
+    await bridge.dispatch(
+      createEnvelope('PANEL_MESSAGE', { text: '继续' }, { id: 'panel-session' }),
+      panelSender,
+    );
+
+    expect(emitSessionState).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: 'session-1' }),
+    );
+    expect(saveAssistant).toHaveBeenCalledWith('session-1', '本轮回答');
   });
 });

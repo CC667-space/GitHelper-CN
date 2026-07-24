@@ -10,6 +10,7 @@ import type {
 } from '../../src/lib/bridge-protocol';
 import { OptionsApp } from '../../src/options/App';
 import type { OptionsServices } from '../../src/options/services';
+import { defaultUserPreferences } from '../../src/background/prefs-store';
 import { PanelApp } from '../../src/panel/App';
 import { usePanelStore } from '../../src/panel/store';
 
@@ -46,6 +47,25 @@ function provider(
   };
 }
 
+const phase5ServiceDefaults = {
+  loadPreferences: vi.fn(async () => defaultUserPreferences()),
+  savePreferences: vi.fn(async (preferences) => preferences),
+  getStorageUsage: vi.fn(async () => ({
+    bytes: 0,
+    softLimitBytes: 6 * 1024 * 1024,
+    hardLimitBytes: 9 * 1024 * 1024,
+  })),
+  clearSessionsAndPreferences: vi.fn(),
+  clearAllLocalData: vi.fn(),
+} satisfies Pick<
+  OptionsServices,
+  | 'loadPreferences'
+  | 'savePreferences'
+  | 'getStorageUsage'
+  | 'clearSessionsAndPreferences'
+  | 'clearAllLocalData'
+>;
+
 afterEach(() => {
   cleanup();
   usePanelStore.setState({
@@ -55,6 +75,8 @@ afterEach(() => {
     messages: [],
     pageLabel: '等待读取当前 GitHub 页面',
     providers: [],
+    sessionHistoryTruncated: false,
+    sessionId: undefined,
     selectedTextProviderId: undefined,
     selectedVisionProviderId: undefined,
   });
@@ -67,6 +89,7 @@ describe('Phase 4 trusted UI', () => {
       saved = true;
     });
     const services: OptionsServices = {
+      ...phase5ServiceDefaults,
       loadProviders: vi.fn(async () => [
         provider('deepseek', saved ? 'pending_probe' : 'needs_key', {
           keyMask: saved ? '••••7890' : undefined,
@@ -110,6 +133,7 @@ describe('Phase 4 trusted UI', () => {
         }),
     );
     const services: OptionsServices = {
+      ...phase5ServiceDefaults,
       loadProviders: vi.fn(async () => [
         provider('deepseek', 'pending_probe', { keyMask: '••••7890' }),
         provider('uuapi', 'needs_key'),
@@ -132,9 +156,7 @@ describe('Phase 4 trusted UI', () => {
 
     expect(runProbes).toHaveBeenCalledTimes(1);
     expect(
-      within(probeCard!).getByText(
-        '正在复测全部已配置 Provider；会消耗少量 Provider 额度…',
-      ),
+      within(probeCard!).getByText('正在复测全部已配置 Provider；会消耗少量 Provider 额度…'),
     ).toBeTruthy();
     expect((button as HTMLButtonElement).disabled).toBe(true);
     expect(button.textContent).toContain('探针运行中');
@@ -148,6 +170,7 @@ describe('Phase 4 trusted UI', () => {
   it('Options 可只复测单个 Provider，避免调用其他已配置端点', async () => {
     const runProbes = vi.fn(async () => undefined);
     const services: OptionsServices = {
+      ...phase5ServiceDefaults,
       loadProviders: vi.fn(async () => [
         provider('deepseek', 'disabled', {
           disabledReason: '文本探针失败',
@@ -174,6 +197,7 @@ describe('Phase 4 trusted UI', () => {
 
   it('Options 在 Provider 卡片展示文本/视觉验证结果与失败原因', async () => {
     const services: OptionsServices = {
+      ...phase5ServiceDefaults,
       loadProviders: vi.fn(async () => [
         provider('deepseek', 'disabled', {
           disabledReason: '401 Unauthorized',

@@ -1,7 +1,9 @@
 import {
   PANEL_PORT_NAME,
+  panelSessionStateSchema,
   providerStateSchema,
   streamEventSchema,
+  type PanelSessionState,
   type ProviderState,
   type StreamEvent,
 } from '../lib/bridge-protocol';
@@ -21,6 +23,7 @@ export function connectPanel(
   onEvent: (event: StreamEvent) => void,
   onProviderState: (state: ProviderState) => void,
   onConnectionChange: (connected: boolean) => void,
+  onSessionState: (state: PanelSessionState) => void = () => undefined,
 ): PanelConnection {
   let activePort: chrome.runtime.Port | undefined;
   let reconnectAttempt = 0;
@@ -33,6 +36,14 @@ export function connectPanel(
       onProviderState(
         parseEnvelope(raw, providerStateSchema, {
           expectedType: 'PROVIDER_STATE',
+        }).payload,
+      );
+      return;
+    }
+    if (candidate?.type === 'SESSION_STATE') {
+      onSessionState(
+        parseEnvelope(raw, panelSessionStateSchema, {
+          expectedType: 'SESSION_STATE',
         }).payload,
       );
       return;
@@ -50,10 +61,7 @@ export function connectPanel(
     if (stopped || reconnectTimer !== undefined) {
       return;
     }
-    const delay = Math.min(
-      RECONNECT_BASE_DELAY_MS * 2 ** reconnectAttempt,
-      RECONNECT_MAX_DELAY_MS,
-    );
+    const delay = Math.min(RECONNECT_BASE_DELAY_MS * 2 ** reconnectAttempt, RECONNECT_MAX_DELAY_MS);
     reconnectAttempt += 1;
     reconnectTimer = setTimeout(() => {
       reconnectTimer = undefined;

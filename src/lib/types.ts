@@ -65,6 +65,7 @@ export interface Session {
   repository?: string;
   messages: Message[];
   pageSummary?: string;
+  historySummary?: string;
   updatedAt: string;
   createdAt: string;
 }
