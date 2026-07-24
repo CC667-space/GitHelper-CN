@@ -1,0 +1,326 @@
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { join, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const projectRoot = fileURLToPath(new URL('../', import.meta.url));
+const extensionPath = join(projectRoot, 'dist');
+const artifactsPath = join(projectRoot, 'probe-artifacts');
+const browserPath = join(artifactsPath, 'playwright-browsers');
+const repoFixture = await readFile(
+  join(projectRoot, 'tests', 'fixtures', 'github', 'repo.html'),
+  'utf8',
+);
+const issueFixture = await readFile(
+  join(projectRoot, 'tests', 'fixtures', 'github', 'issue.html'),
+  'utf8',
+);
+
+await mkdir(artifactsPath, { recursive: true });
+process.env.PLAYWRIGHT_BROWSERS_PATH ??= browserPath;
+const { chromium } = await import('playwright-core');
+const profilePath = await mkdtemp(join(artifactsPath, 'phase11-profile-'));
+
+function assert(condition, message) {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+
+async function waitForPanel(context, extensionId, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const panel = context
+      .pages()
+      .find((candidate) =>
+        candidate.url().startsWith(`chrome-extension://${extensionId}/src/panel/index.html`),
+      );
+    if (panel) {
+      return panel;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return undefined;
+}
+
+async function requestActivePageInfo(serviceWorker) {
+  return await serviceWorker.evaluate(
+    () =>
+      new Promise((resolve, reject) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+          if (tab?.id === undefined) {
+            reject(new Error('E2E 未找到活动 GitHub tab'));
+            return;
+          }
+          const request = {
+            v: 1,
+            id: `phase11-${crypto.randomUUID()}`,
+            type: 'PAGE_INFO_REQUEST',
+            timestamp: new Date().toISOString(),
+            payload: {},
+          };
+          chrome.tabs.sendMessage(tab.id, request, (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+              return;
+            }
+            resolve(response);
+          });
+        });
+      }),
+  );
+}
+
+function apiHeaders(resource = 'core') {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'application/json',
+    'X-RateLimit-Resource': resource,
+    'X-RateLimit-Remaining': '59',
+    'X-RateLimit-Reset': String(Math.floor(Date.now() / 1_000) + 3_600),
+  };
+}
+
+const context = await chromium.launchPersistentContext(profilePath, {
+  executablePath: chromium.executablePath(),
+  headless: false,
+  ignoreDefaultArgs: ['--disable-extensions'],
+  args: [
+    `--disable-extensions-except=${extensionPath}`,
+    `--load-extension=${extensionPath}`,
+    '--no-first-run',
+    '--disable-default-apps',
+    '--disable-component-update',
+    '--disable-background-timer-throttling',
+    '--window-size=1440,1000',
+  ],
+  viewport: null,
+});
+
+const pageErrors = [];
+try {
+  await context.route('https://github.com/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/html; charset=utf-8',
+      body: repoFixture,
+    });
+  });
+  await context.route('https://api.github.com/**', async (route) => {
+    const url = new URL(route.request().url());
+    const path = `${url.pathname}${url.search}`;
+    if (path === '/repos/octocat/Hello-World') {
+      await route.fulfill({
+        status: 200,
+        headers: apiHeaders(),
+        body: JSON.stringify({
+          full_name: 'octocat/Hello-World',
+          html_url: 'https://github.com/octocat/Hello-World',
+          description: 'A first repository for testing GitHub APIs.',
+          topics: ['hello-world', 'browser'],
+          default_branch: 'main',
+          language: 'JavaScript',
+          stargazers_count: 2_800,
+          forks_count: 1_100,
+          subscribers_count: 90,
+          watchers_count: 2_800,
+          open_issues_count: 12,
+          archived: false,
+          license: { name: 'MIT License', spdx_id: 'MIT' },
+          pushed_at: '2026-07-20T00:00:00.000Z',
+          updated_at: '2026-07-21T00:00:00.000Z',
+        }),
+      });
+      return;
+    }
+    if (path === '/repos/octocat/Hello-World/languages') {
+      await route.fulfill({
+        status: 200,
+        headers: apiHeaders(),
+        body: JSON.stringify({ JavaScript: 750, HTML: 250 }),
+      });
+      return;
+    }
+    if (path === '/repos/octocat/Hello-World/releases/latest') {
+      await route.fulfill({
+        status: 200,
+        headers: apiHeaders(),
+        body: JSON.stringify({
+          name: 'v1.0.0',
+          tag_name: 'v1.0.0',
+          published_at: '2026-07-01T00:00:00.000Z',
+          html_url: 'https://github.com/octocat/Hello-World/releases/tag/v1.0.0',
+        }),
+      });
+      return;
+    }
+    if (path === '/repos/octocat/Hello-World/pulls?state=open&per_page=1') {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          ...apiHeaders(),
+          Link: '<https://api.github.com/repositories/1/pulls?state=open&per_page=1&page=2>; rel="last"',
+        },
+        body: JSON.stringify([{ id: 1 }]),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 404,
+      headers: apiHeaders(),
+      body: JSON.stringify({ message: `Unmocked E2E API path: ${path}` }),
+    });
+  });
+
+  let serviceWorker = context.serviceWorkers()[0];
+  if (!serviceWorker) {
+    serviceWorker = await context.waitForEvent('serviceworker', { timeout: 20_000 });
+  }
+  const extensionId = new URL(serviceWorker.url()).host;
+  const githubPage = context.pages()[0] ?? (await context.newPage());
+  githubPage.on('pageerror', (error) => pageErrors.push(`GitHub: ${error.message}`));
+  await githubPage.goto('https://github.com/octocat/Hello-World', {
+    waitUntil: 'domcontentloaded',
+    timeout: 20_000,
+  });
+  await githubPage.waitForFunction(
+    () => document.documentElement.getAttribute('data-git-helper-injected') === 'true',
+    undefined,
+    { timeout: 10_000 },
+  );
+  await githubPage.waitForTimeout(500);
+  assert(
+    (await githubPage.locator('#git-helper-phase0-run-button').count()) === 1,
+    'Content Script 初始实例数不是 1',
+  );
+
+  const optionsPage = await context.newPage();
+  optionsPage.on('pageerror', (error) => pageErrors.push(`Options: ${error.message}`));
+  await optionsPage.goto(`chrome-extension://${extensionId}/src/options/index.html`);
+  await optionsPage.locator('#phase0-open-side-panel').click();
+  await optionsPage
+    .getByTestId('phase0-side-panel-status')
+    .getByText('Side Panel 已打开')
+    .waitFor({ timeout: 10_000 });
+  let panel = await waitForPanel(context, extensionId, 2_000);
+  const nativePanelExposedToPlaywright = panel !== undefined;
+  if (!panel) {
+    panel = await context.newPage();
+    await panel.goto(`chrome-extension://${extensionId}/src/panel/index.html`);
+  }
+  panel.on('pageerror', (error) => pageErrors.push(`Panel: ${error.message}`));
+  await githubPage.bringToFront();
+  await panel.getByTestId('side-panel').waitFor({ timeout: 10_000 });
+  await panel.locator('[title="Background 已连接"]').waitFor({ timeout: 10_000 });
+
+  await panel.getByRole('button', { name: '一键分析' }).click();
+  const analysisCard = panel.getByTestId('repository-analysis-card');
+  await analysisCard.waitFor({ timeout: 20_000 });
+  const analysisText = await analysisCard.innerText();
+  assert(analysisText.includes('octocat/Hello-World'), 'E2E 分析卡缺少仓库名');
+  assert(analysisText.includes('2,800'), 'E2E 分析卡缺少 API Star 事实');
+  assert(analysisText.includes('MIT'), 'E2E 分析卡缺少 API 许可证事实');
+
+  const issueBody = issueFixture.match(/<body>([\s\S]*?)<\/body>/iu)?.[1];
+  assert(issueBody, 'Issue fixture 缺少 body');
+  await githubPage.evaluate((body) => {
+    history.pushState({}, '', '/octocat/Hello-World/issues/42');
+    document.title = 'Improve documentation · Issue #42';
+    document.body.innerHTML = body;
+    document.dispatchEvent(new Event('turbo:load'));
+    document.dispatchEvent(new Event('turbo:render'));
+  }, issueBody);
+  await githubPage.waitForTimeout(700);
+  const spaResponse = await requestActivePageInfo(serviceWorker);
+  const spaContext = spaResponse?.payload?.pageContext;
+  assert(spaContext?.pageType === 'issue', 'SPA 后 PageContext 未刷新为 issue');
+  assert(spaContext?.issueOrPrNumber === 42, 'SPA 后 Issue 编号不正确');
+  assert(spaContext?.extracted?.title === 'Improve documentation', 'SPA 后 Issue 标题未刷新');
+  assert(
+    (await githubPage.locator('#git-helper-phase0-run-button').count()) === 1,
+    'SPA 导航后 Content Script 出现重复初始化',
+  );
+
+  const sessionSentinel = 'PHASE11_SESSION_RESTORE_SENTINEL';
+  const input = panel.getByPlaceholder('问问当前 GitHub 页面……');
+  await input.fill(sessionSentinel);
+  await input.press('Enter');
+  await panel
+    .getByTestId('conversation')
+    .getByText(sessionSentinel, { exact: true })
+    .waitFor({ timeout: 10_000 });
+  await panel.getByRole('button', { name: '发送' }).waitFor({ timeout: 10_000 });
+
+  const sensitiveSentinel = 'sk-phase11-security-sentinel-123456';
+  await input.fill(`敏感测试 ${sensitiveSentinel}`);
+  await input.press('Enter');
+  await panel
+    .getByTestId('conversation')
+    .getByText('敏感测试 ‹REDACTED:API_KEY›', { exact: true })
+    .waitFor({ timeout: 10_000 });
+  await panel.getByRole('button', { name: '发送' }).waitFor({ timeout: 10_000 });
+  const storedSessions = await serviceWorker.evaluate(
+    async () => (await chrome.storage.local.get('sessions:v1'))['sessions:v1'],
+  );
+  const serializedSessions = JSON.stringify(storedSessions);
+  assert(serializedSessions.includes(sessionSentinel), '会话未写入 chrome.storage.local');
+  assert(!serializedSessions.includes(sensitiveSentinel), '会话持久化包含敏感哨兵明文');
+  assert(serializedSessions.includes('‹REDACTED:API_KEY›'), '会话持久化缺少敏感哨兵遮蔽标记');
+
+  await panel.reload({ waitUntil: 'domcontentloaded' });
+  await panel.locator('[title="Background 已连接"]').waitFor({ timeout: 10_000 });
+  await panel
+    .getByTestId('conversation')
+    .getByText(sessionSentinel, { exact: true })
+    .waitFor({ timeout: 10_000 });
+  await panel
+    .getByTestId('conversation')
+    .getByText('敏感测试 ‹REDACTED:API_KEY›', { exact: true })
+    .waitFor({ timeout: 10_000 });
+  assert(
+    !(await panel.getByTestId('conversation').innerText()).includes(sensitiveSentinel),
+    'Panel 重载后显示敏感哨兵明文',
+  );
+  assert(pageErrors.length === 0, `E2E 页面异常：${pageErrors.join(' | ')}`);
+
+  console.log(
+    `PHASE11_E2E_JSON=${JSON.stringify({
+      status: 'passed',
+      chromeVersion: await githubPage.evaluate(() => navigator.userAgent),
+      extensionId,
+      nativeSidePanelOpenResolved: true,
+      nativePanelExposedToPlaywright,
+      automatedPanelSurface: nativePanelExposedToPlaywright
+        ? 'native-side-panel'
+        : 'same-extension-panel-document',
+      s1RepositoryAnalysis: {
+        repository: 'octocat/Hello-World',
+        apiFacts: ['stars', 'license', 'release', 'openPullRequests'],
+      },
+      spa: {
+        pageType: spaContext.pageType,
+        issueOrPrNumber: spaContext.issueOrPrNumber,
+        contentScriptInstances: 1,
+      },
+      sessionRestore: {
+        persisted: true,
+        restoredAfterPanelReload: true,
+      },
+      s5SensitiveSentinel: {
+        persistedPlaintext: false,
+        restoredPlaintext: false,
+        redactionMarker: '‹REDACTED:API_KEY›',
+      },
+      providerRequests: 0,
+      pageErrors,
+    })}`,
+  );
+} finally {
+  await context.close();
+  const expectedPrefix = `${artifactsPath}${sep}`;
+  assert(profilePath.startsWith(expectedPrefix), '拒绝删除 probe-artifacts 之外的临时 profile');
+  await rm(profilePath, { recursive: true, force: true });
+}

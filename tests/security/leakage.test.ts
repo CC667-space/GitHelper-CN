@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildMinimalContext } from '../../src/background/context-builder';
+import { PanelBridge } from '../../src/background/panel-bridge';
 import { type ProviderTransport } from '../../src/background/providers/base';
 import { DeepSeekProvider } from '../../src/background/providers/deepseek';
+import { defaultUserPreferences } from '../../src/background/prefs-store';
+import { createEnvelope } from '../../src/lib/messaging';
 import { createLogger } from '../../src/lib/logger';
 import type { PageContext } from '../../src/lib/types';
 
@@ -124,5 +127,66 @@ describe('敏感信息无明文泄漏', () => {
       expect(body).not.toContain(secret);
     }
     expect(body).toContain('‹REDACTED:');
+  });
+
+  it('Panel 消息中的敏感文字在会话持久化和 Provider 调用前遮蔽', async () => {
+    const apiKey = SECRETS.apiKey;
+    const prepareSession = vi.fn(async (_page: unknown, question: string) => ({
+      sessionId: 'security-session',
+      history: [],
+      preferences: defaultUserPreferences(),
+      snapshot: {
+        sessionId: 'security-session',
+        messages: [
+          {
+            id: 'security-user',
+            role: 'user' as const,
+            content: question,
+            createdAt: '2026-07-24T00:00:00.000Z',
+          },
+        ],
+        truncated: false,
+      },
+    }));
+    const streamAnswer = vi.fn(async function* (input: { question: string }) {
+      expect(input.question).not.toContain(apiKey);
+      expect(input.question).toContain('‹REDACTED:API_KEY›');
+      yield '已安全处理';
+    });
+    const emitSessionState = vi.fn();
+    const runtimeId = 'abcdefghijklmnopabcdefghijklmnop';
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(async () => ({
+        url: 'https://github.com/octocat/security-fixture',
+        title: 'octocat/security-fixture',
+        placeholder: false,
+        capturedAt: '2026-07-24T00:00:00.000Z',
+        pageContext: sensitivePage(),
+      })),
+      prepareSession,
+      streamAnswer,
+      saveAssistant: vi.fn(),
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitSessionState,
+    });
+
+    await bridge.dispatch(
+      createEnvelope('PANEL_MESSAGE', {
+        text: `请勿保存 ${apiKey}`,
+      }),
+      {
+        id: runtimeId,
+        url: `chrome-extension://${runtimeId}/src/panel/index.html`,
+      },
+    );
+
+    const boundaryOutput = JSON.stringify({
+      sessionQuestion: prepareSession.mock.calls[0]?.[1],
+      providerQuestion: streamAnswer.mock.calls[0]?.[0]?.question,
+      emittedSessionState: emitSessionState.mock.calls,
+    });
+    expect(boundaryOutput).not.toContain(apiKey);
+    expect(boundaryOutput).toContain('‹REDACTED:API_KEY›');
   });
 });

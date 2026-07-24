@@ -364,3 +364,21 @@
 - **证据**：`tests/security/` 覆盖脱敏后实际 Provider 请求体、日志、私有页三条出口、完整工具白名单、Scheme/Host/userinfo/strict 参数、逐次确认与 12 个注入样例；`tests/security/redteam-log.md` 记录逐项结果与结论边界。全量 186 项常规测试通过（另 1 个 Phase 9 live test 默认跳过），typecheck、lint、build 与构建安全扫描通过。
 - **范围**：Phase 10 后期安全加固；不新增 Chrome 权限、Host、外部调用、真实 Provider 成本、GitHub 写操作或数据类别。
 - 状态：代码已验证 ｜ 2026-07-24
+
+## D-050 Phase 11 浏览器验收采用隔离 fixture E2E 与可校验本地包
+- **决策**：
+  - Playwright E2E 加载真实 `dist` MV3 扩展和项目锁定的 Chrome for Testing，临时 profile 仅位于 Git 忽略的 `probe-artifacts/`。`github.com` 与 `api.github.com` 请求在浏览器上下文中用固定 fixture 响应，确保不依赖账号、实时网络或匿名限额，也不调用 AI Provider。
+  - Options 页真实用户点击必须先成功执行 `chrome.sidePanel.open()`。因当前 Chrome for Testing 不把原生 Side Panel target 暴露为 Playwright `Page`，自动 DOM 断言使用同一扩展进程的 Panel 文档；Background/Content/storage/消息链与生产 bundle 不替换。原生 Side Panel 交互保留给唯一人工批量复核。
+  - E2E 覆盖仓库分析卡的 API 事实、SPA 导航后 PageContext 刷新、Content 单实例标记、会话持久化与 Panel 重载恢复；测试固定断言 Provider 请求为 0。
+  - `package-extension.ps1` 只归档 `dist/` 内容到 Git 忽略的 `artifacts/`，校验 zip 根目录 `manifest.json`、条目数与 SHA-256；产物仅供本地加载/交付，不构成发布。
+- **理由**：fixture E2E 在不泄漏凭据、不产生费用、不受 GitHub 页面漂移影响的前提下验证真实扩展运行链；原生 Side Panel 自动化边界被明确记录而非伪装为已覆盖。
+- **证据**：`pnpm test:e2e` 输出 `status=passed`、`nativeSidePanelOpenResolved=true`、仓库分析/SPA/会话恢复全部通过、`providerRequests=0`、`pageErrors=[]`；`pnpm package:extension` 校验 13 个归档条目。
+- **范围**：Phase 11 测试、打包与使用说明；不新增产品权限、运行时 Host、远程发布或 Provider 调用。
+- 状态：自动验收已验证，待人工批量体验复核 ｜ 2026-07-24
+
+## D-051 对话问题在 Session 与 Provider seam 之前统一脱敏
+- **决策**：`PanelBridge` 校验 `PANEL_MESSAGE` 后立即对用户问题执行一次 `sanitizeText`；SessionStore 准备/持久化、Panel 会话快照和 Provider runtime 都只接收脱敏结果。Panel 的乐观原文状态随后由 Background 返回的脱敏 Session 快照替换。
+- **理由**：ContextBuilder 原本能保证 Provider 请求体脱敏，但 SessionStore 位于其之前；用户若误把凭据粘进提问，原文可能进入本地持久化。把脱敏前移到消息桥公共 seam，可同时保护持久化和出站，而不让 SessionStore 导入 Provider/凭据逻辑。
+- **证据**：安全测试从 `PanelBridge.dispatch` 验证 Session question、Provider question 与回推状态均无假 Key 明文；Playwright E2E 发送假 Key 后，`chrome.storage.local` 和 Panel 重载结果均只有 `‹REDACTED:API_KEY›`。
+- **范围**：Phase 11 发布前安全审查补丁；不改变用户可用功能、权限、Host、Provider 路由或数据类别。
+- 状态：代码与浏览器 E2E 已验证 ｜ 2026-07-24

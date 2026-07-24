@@ -192,6 +192,7 @@ Prompt Injection 红队测试、私有数据测试、工具白名单测试、权
 - 完整只读工具注册表经 strict zod 校验；GitHub 导航拒绝非 HTTPS/非 GitHub Host/多余参数，外链拒绝 URL userinfo 并要求逐次确认；写入、账号和下载工具不存在。
 - 对话、搜索、仓库分析均在 PanelBridge 入口执行私有页零出站；测试断言 Provider/API/会话/截图依赖零调用。
 - `tests/security/redteam-log.md` 记录 12 个注入样例及防护层结果。样例采用确定性恶意工具输出验证最坏情况，不调用真实付费模型，也不宣称模型绝对免疫。
+- 发布前复审发现用户可能误把凭据粘进问题；D-051 将问题脱敏前移到 PanelBridge，使 Session 持久化、Panel 会话快照和 Provider question 都不接收匹配到的明文。
 
 ---
 

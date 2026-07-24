@@ -468,6 +468,7 @@ interface OperationConfirmation {
 - **幻觉处理**：涉及可变数据（是否维护/许可证等）优先用 DOM/API 事实回填，模型不得臆造数字。
 - **仓库分析事实回填（D-048）**：Provider 输出 Schema 不包含 Star/Release/日期/许可证/Issue-PR 等可变事实；最终卡片仅从 `RepositoryAnalysisFacts` 回填这些字段。Provider 失败不阻断事实卡，降级说明明确标记数据源。
 - **Phase 10 安全执行 seam（D-049）**：`sanitizer` 统一字符串与结构化敏感字段遮蔽，Message Router 复用同一字段判定；`ToolRegistry` 统一全部只读工具的白名单、strict zod 参数与逐次确认，搜索执行器只取得搜索子集。PanelBridge 在会话准备、Provider、GitHub API 与截图前先执行私有页阻断。
+- **对话持久化脱敏（D-051）**：PanelBridge 对已校验的问题先脱敏，再把同一结果交给 SessionStore 与 Provider runtime；因此 ContextBuilder 不是问题明文离开临时输入状态前的唯一防线。
 
 ---
 

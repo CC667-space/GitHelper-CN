@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 11 — 测试、打包与 MVP 验收：Phase 10 已通过验收，进入最终汇聚与批量体验复核准备。**
+**Phase 11 — 测试、打包与 MVP 验收：自动验收已通过，等待唯一人工节点 S1–S5 批量体验复核。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -145,10 +145,17 @@
   - 出站泄漏测试覆盖 ContextBuilder 到实际 DeepSeek 请求体；日志覆盖字符串/Error/对象/数组，测试哨兵明文均未出现
   - 12 个 Prompt Injection 样例覆盖 README/Issue/PR/代码/Release/选择/搜索等载体；全部按最坏恶意工具输出被 System 隔离、白名单、Schema、Scheme/Host 或确认层拦截，记录见 `tests/security/redteam-log.md`
   - 验收：typecheck、lint 通过；Vitest 44 files / 186 tests 全过（另 1 个 Phase 9 live test 默认跳过）；build（404 modules）、构建安全扫描与本阶段文件格式检查通过；记录 D-049
+- [x] **Phase 11 — 自动测试、打包与体验复核准备（2026-07-24）完成**：
+  - Playwright 加载真实 `dist` 扩展和隔离 Chrome for Testing；Options 用户点击打开原生 Side Panel API 成功，自动 DOM 断言使用同扩展 Panel 文档（原生 target 不向 Playwright 暴露，边界已记录）
+  - E2E 使用固定 GitHub/API fixture，验证仓库分析卡 API 事实、SPA 后刷新为 Issue #42、Content 实例仍为 1、会话写入及 Panel 重载恢复；全程 Provider 请求 0、页面异常 0
+  - 发布前复审修复 D-051：用户问题先在 PanelBridge 脱敏，再进入 SessionStore/Provider；假 Key 哨兵未进入 storage，Panel 重载后也无明文
+  - S1–S5 自动证据映射完成，见 `scripts/phase11-acceptance-evidence.md`；真实使用与批量复核步骤见 `docs/USER_GUIDE.md`
+  - `dist/` 为可加载扩展；`artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目且根目录 manifest 校验通过，SHA-256 `6ddfb157d3416105aa04a038430c948f0c44d590aa1730d250d2f433ebb96e6e`
+  - 自动门禁：typecheck、lint 通过；Vitest 44 files / 187 tests 全过（另 1 个 Phase 9 live test 默认跳过）；build（404 modules）、构建安全扫描与隔离 Chrome E2E 通过；记录 D-050/D-051
 
 ## 下一任务
-**Phase 11 — 测试、打包与 MVP 验收**（见 EXECUTION_PLAN v1.2）。
-补齐 Playwright 扩展 E2E、S1–S5 自动证据、可加载打包与使用说明；全部自动门禁通过后，在唯一人工节点暂停，请用户进行真实 Chrome 批量体验复核。
+**Phase 11 强制确认节点 ② — S1–S5 批量体验复核**（见 `docs/USER_GUIDE.md` 第 9 节）。
+用户在真实 Chrome 重新加载当前 `dist/` 后，一次性复核 S1–S5；确认全部通过后，执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -165,7 +172,7 @@
 | 8 NL 搜索（MVP 必达） | ✅ 已完成 |
 | 9 一键仓库分析 | ✅ 已完成 |
 | 10 安全加固 + 红队测试 | ✅ 已完成 |
-| 11 测试 + 打包 + MVP 验收 | 🔄 进行中 |
+| 11 测试 + 打包 + MVP 验收 | ⏸ 自动验收通过，待人工复核 |
 
 ## 待处理的强制确认节点
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
@@ -176,7 +183,7 @@
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-无。
+仅等待 Phase 11 规定的真实 Chrome S1–S5 批量体验复核；无其他实现、安全、权限或 Provider 阻塞。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -208,3 +215,4 @@
 - 2026-07-24：Phase 8 通过；本地中文 GitHub 查询转换、仓库/Issue 匿名搜索、只读工具白名单、独立 search 限流桶、网页/DOM 降级与结果卡落地；126 项测试及全套静态/构建验证通过，记录 D-047，准备进入 Phase 9。
 - 2026-07-24：Phase 9 通过；匿名 core 事实聚合、固定结构化分析卡、Provider Schema 降级与事实回填、DOM/限流降级及三仓库真实匿名验收完成；143 项常规测试与独立 live test 通过，记录 D-048，准备进入 Phase 10。
 - 2026-07-24：Phase 10 通过；扩展 sanitizer、统一敏感消息字段、完整只读工具注册表、私有页入口零出站、权限/三种清除/出站体/日志复验及 12 个注入样例完成；186 项常规测试与全套静态/构建验证通过，记录 D-049，进入 Phase 11。
+- 2026-07-24：Phase 11 自动部分通过；真实扩展 fixture E2E、S1–S5 证据、可加载 dist、本地 zip 与使用说明完成，并修复问题明文进入 Session 的发布前缺口（D-050/D-051）；187 项常规测试及全套门禁通过，按强制确认节点 ② 暂停等待批量体验复核。

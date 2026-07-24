@@ -196,6 +196,7 @@ export class PanelBridge {
 
   private async handlePanelMessage(payload: unknown, context: RouteContext): Promise<unknown> {
     const message = panelMessageSchema.parse(payload);
+    const sanitizedQuestion = sanitizeText(message.text).value;
     const requestId = context.requestId;
     const page = await this.dependencies.requestPageInfo(context.signal);
     if (page.pageContext) {
@@ -230,7 +231,7 @@ export class PanelBridge {
     }
     const prepared = await this.dependencies.prepareSession?.(
       page,
-      message.text,
+      sanitizedQuestion,
       currentPreferences,
     );
     if (prepared) {
@@ -253,7 +254,7 @@ export class PanelBridge {
     let answer = '';
     for await (const delta of this.dependencies.streamAnswer({
       requestId,
-      question: message.text,
+      question: sanitizedQuestion,
       page,
       providerId: message.providerId,
       history: prepared?.history,

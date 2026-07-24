@@ -19,6 +19,7 @@ secrets/
 credentials*.json
 
 probe-artifacts/
+artifacts/
 temporary-screenshots/
 browser-data/
 chrome-profile/
