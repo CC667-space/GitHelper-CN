@@ -30,6 +30,7 @@ export interface SelectedRegion {
   htmlOutline: string;
   nearbyContext: string;
   needsVision: boolean;
+  sourceUrl?: string;
   rect: { x: number; y: number; width: number; height: number };
   viewport: { cssWidth: number; cssHeight: number };
   scroll: { x: number; y: number };

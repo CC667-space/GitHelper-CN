@@ -1,22 +1,31 @@
 import {
   PANEL_PORT_NAME,
   panelPickStateSchema,
+  panelRegionStateSchema,
   panelSessionStateSchema,
   providerStateSchema,
   streamEventSchema,
   type PanelSessionState,
   type PanelPickState,
+  type PanelRegionState,
   type ProviderState,
   type StreamEvent,
 } from '../lib/bridge-protocol';
 import { createEnvelope, parseEnvelope } from '../lib/messaging';
-import type { ProviderId, SelectedElement } from '../lib/types';
+import type { ProviderId, SelectedElement, SelectedRegion } from '../lib/types';
 
 export interface PanelConnection {
-  send(text: string, providerId?: ProviderId, selectedElement?: SelectedElement): void;
+  send(
+    text: string,
+    providerId?: ProviderId,
+    selectedElement?: SelectedElement,
+    selectedRegion?: SelectedRegion,
+  ): void;
   abort(requestId: string): void;
   startPick?(): void;
   cancelPick?(): void;
+  startRegion?(): void;
+  cancelRegion?(): void;
   disconnect(): void;
 }
 
@@ -29,6 +38,7 @@ export function connectPanel(
   onConnectionChange: (connected: boolean) => void,
   onSessionState: (state: PanelSessionState) => void = () => undefined,
   onPickState: (state: PanelPickState) => void = () => undefined,
+  onRegionState: (state: PanelRegionState) => void = () => undefined,
 ): PanelConnection {
   let activePort: chrome.runtime.Port | undefined;
   let reconnectAttempt = 0;
@@ -57,6 +67,14 @@ export function connectPanel(
       onPickState(
         parseEnvelope(raw, panelPickStateSchema, {
           expectedType: 'PICK_STATE',
+        }).payload,
+      );
+      return;
+    }
+    if (candidate?.type === 'REGION_STATE') {
+      onRegionState(
+        parseEnvelope(raw, panelRegionStateSchema, {
+          expectedType: 'REGION_STATE',
         }).payload,
       );
       return;
@@ -110,9 +128,14 @@ export function connectPanel(
   openPort();
 
   return {
-    send(text, providerId, selectedElement) {
+    send(text, providerId, selectedElement, selectedRegion) {
       activePort?.postMessage(
-        createEnvelope('PANEL_MESSAGE', { text, providerId, selectedElement }),
+        createEnvelope('PANEL_MESSAGE', {
+          text,
+          providerId,
+          selectedElement,
+          selectedRegion,
+        }),
       );
     },
     abort(requestId) {
@@ -123,6 +146,12 @@ export function connectPanel(
     },
     cancelPick() {
       activePort?.postMessage(createEnvelope('PANEL_PICK_CANCEL', {}));
+    },
+    startRegion() {
+      activePort?.postMessage(createEnvelope('PANEL_REGION_START', {}));
+    },
+    cancelRegion() {
+      activePort?.postMessage(createEnvelope('PANEL_REGION_CANCEL', {}));
     },
     disconnect() {
       stopped = true;

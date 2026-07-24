@@ -239,4 +239,195 @@ describe('Panel → Background → Content → Panel', () => {
       reason: '页面已变化，旧的元素选择未发送',
     });
   });
+
+  it('结构充分的框选不截图；结构不足时只在可信 Background 裁剪并走视觉', async () => {
+    const pageInfo = {
+      url: 'https://github.com/openai/openai-node',
+      title: 'openai/openai-node',
+      placeholder: false,
+      capturedAt: '2026-07-24T00:00:00.000Z',
+      pageContext: {
+        url: 'https://github.com/openai/openai-node',
+        pageType: 'repo' as const,
+        repository: 'openai/openai-node',
+        isPrivate: false,
+        extracted: {},
+        capturedAt: '2026-07-24T00:00:00.000Z',
+      },
+    };
+    const baseRegion = {
+      links: [],
+      codeBlocks: [],
+      buttons: [],
+      nearbyContext: 'README',
+      sourceUrl: pageInfo.url,
+      rect: { x: 10, y: 20, width: 200, height: 100 },
+      viewport: { cssWidth: 800, cssHeight: 600 },
+      scroll: { x: 0, y: 0 },
+      devicePixelRatio: 1,
+      zoomFactor: 1,
+    };
+    const captureRegion = vi.fn(async () => 'data:image/jpeg;base64,CROPPED');
+    const structuredStream = vi.fn(async function* (input: {
+      needsVision?: boolean;
+      images?: string[];
+    }) {
+      expect(input.needsVision).toBe(false);
+      expect(input.images).toBeUndefined();
+      yield '结构化回答';
+    });
+    const structuredBridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(async () => pageInfo),
+      streamAnswer: structuredStream,
+      captureRegion,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+    });
+    await structuredBridge.dispatch(
+      createEnvelope('PANEL_MESSAGE', {
+        text: '解释框选',
+        selectedRegion: {
+          ...baseRegion,
+          text: '足够的结构化内容'.repeat(12),
+          htmlOutline: '<p>',
+          needsVision: false,
+        },
+      }),
+      panelSender,
+    );
+    expect(captureRegion).not.toHaveBeenCalled();
+
+    const visualStream = vi.fn(async function* (input: {
+      needsVision?: boolean;
+      images?: string[];
+    }) {
+      expect(input.needsVision).toBe(true);
+      expect(input.images).toEqual(['data:image/jpeg;base64,CROPPED']);
+      yield '视觉回答';
+    });
+    const visualBridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(async () => pageInfo),
+      prepareSession: vi.fn(async () => ({
+        sessionId: 'session-vision',
+        history: [],
+        preferences: defaultUserPreferences(),
+        snapshot: { sessionId: 'session-vision', messages: [], truncated: false },
+      })),
+      streamAnswer: visualStream,
+      captureRegion,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+    });
+    const visualRegion = {
+      ...baseRegion,
+      text: '',
+      htmlOutline: '<img>',
+      needsVision: true,
+    };
+    await visualBridge.dispatch(
+      createEnvelope('PANEL_MESSAGE', {
+        text: '解释图片',
+        providerId: 'openrouter',
+        selectedRegion: visualRegion,
+      }),
+      panelSender,
+    );
+    expect(captureRegion).toHaveBeenCalledExactlyOnceWith(visualRegion, expect.any(AbortSignal));
+  });
+
+  it('visionEnabled=false 时在截图和 Provider 调用前阻断视觉框选', async () => {
+    const captureRegion = vi.fn();
+    const streamAnswer = vi.fn();
+    const preferences = {
+      ...defaultUserPreferences(),
+      visionEnabled: false,
+    };
+    const prepareSession = vi.fn();
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(async () => ({
+        url: 'https://github.com/example/charts',
+        title: 'charts',
+        placeholder: false,
+        capturedAt: '2026-07-24T00:00:00.000Z',
+        pageContext: {
+          url: 'https://github.com/example/charts',
+          pageType: 'repo' as const,
+          repository: 'example/charts',
+          isPrivate: false,
+          extracted: {},
+          capturedAt: '2026-07-24T00:00:00.000Z',
+        },
+      })),
+      loadPreferences: vi.fn(async () => preferences),
+      prepareSession,
+      streamAnswer,
+      captureRegion,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+    });
+
+    await expect(
+      bridge.dispatch(
+        createEnvelope('PANEL_MESSAGE', {
+          text: '解释图片',
+          selectedRegion: {
+            text: '',
+            links: [],
+            codeBlocks: [],
+            buttons: [],
+            htmlOutline: '<img>',
+            nearbyContext: '',
+            needsVision: true,
+            sourceUrl: 'https://github.com/example/charts',
+            rect: { x: 10, y: 20, width: 200, height: 100 },
+            viewport: { cssWidth: 800, cssHeight: 600 },
+            scroll: { x: 0, y: 0 },
+            devicePixelRatio: 1,
+          },
+        }),
+        panelSender,
+      ),
+    ).rejects.toThrow(/视觉能力已在设置中关闭/);
+    expect(captureRegion).not.toHaveBeenCalled();
+    expect(streamAnswer).not.toHaveBeenCalled();
+    expect(prepareSession).not.toHaveBeenCalled();
+  });
+
+  it('区域框选状态经 Background 从 active 推进到 selected', async () => {
+    const emitRegionState = vi.fn();
+    const region = {
+      text: '足够的结构化内容'.repeat(12),
+      links: [],
+      codeBlocks: [],
+      buttons: [],
+      htmlOutline: '<p>',
+      nearbyContext: 'README',
+      needsVision: false,
+      sourceUrl: 'https://github.com/openai/openai-node',
+      rect: { x: 10, y: 20, width: 200, height: 100 },
+      viewport: { cssWidth: 800, cssHeight: 600 },
+      scroll: { x: 0, y: 0 },
+      devicePixelRatio: 1,
+    };
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(),
+      streamAnswer: vi.fn(),
+      startRegion: vi.fn(async () => ({ status: 'selected' as const, region })),
+      cancelRegion: vi.fn(),
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitRegionState,
+    });
+
+    await bridge.dispatch(
+      createEnvelope('PANEL_REGION_START', {}, { id: 'region-1' }),
+      panelSender,
+    );
+
+    expect(emitRegionState).toHaveBeenNthCalledWith(1, { status: 'active' });
+    expect(emitRegionState).toHaveBeenNthCalledWith(2, {
+      status: 'selected',
+      region,
+    });
+  });
 });

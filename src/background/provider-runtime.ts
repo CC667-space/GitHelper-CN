@@ -5,6 +5,7 @@ import type {
   PageContext,
   ProviderId,
   SelectedElement,
+  SelectedRegion,
   UserPreferences,
 } from '../lib/types';
 import { runCapabilityProbe, type CapabilityProbeReport } from './capability-probe';
@@ -39,6 +40,7 @@ export interface StreamAnswerInput {
   historySummary?: string;
   preferences?: UserPreferences;
   selectedElement?: SelectedElement;
+  selectedRegion?: SelectedRegion;
   signal: AbortSignal;
 }
 
@@ -100,6 +102,7 @@ export class ProviderRuntime {
       historySummary: input.historySummary,
       preferences: input.preferences,
       selectedElement: input.selectedElement,
+      selectedRegion: input.selectedRegion,
     });
     const provider = this.manager.resolve({
       needsVision: input.needsVision ?? false,

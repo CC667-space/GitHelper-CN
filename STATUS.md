@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 7 — 框选区域与视觉输入（MVP 必达）：Phase 6 已通过验收，待阶段提交后自动进入框选与视觉实现。**
+**Phase 8 — 自然语言 GitHub 搜索（MVP 必达）：Phase 7 已通过验收，待阶段提交后自动进入中文搜索实现。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -114,10 +114,17 @@
   - Panel → Background → Content 及返回状态全部使用固定 envelope + request ID + zod；所选元素只由 ContextBuilder 作为不可信页面数据加入 user 上下文
   - 发送前以 `sourceUrl` 对比当前页面；SPA 后旧选择被丢弃并提示，不会发给 Provider
   - 验收：typecheck、lint 通过；Vitest 29 files / 95 tests 全过；build（394 modules）与构建安全扫描通过
+- [x] **Phase 7 — 框选区域与视觉输入（MVP 必达，2026-07-24）通过验收**：
+  - Content `RegionController` 完成 pointer drag 画框、反向拖动坐标归一、Escape/取消/SPA 清理，并上报 rect/viewport/scroll/dpr/zoom/sourceUrl
+  - 区域内文字、链接、代码、按钮、HTML outline 与邻近上下文有界提取；本地统一充分性规则决定 `needsVision`，zod 拒绝字段与内容不一致
+  - 结构充分时只走文本 Provider 且截图调用为 0；结构不足时 Panel 明确提示视觉 Provider 与可能费用，发送动作后才截图
+  - Background 使用 Phase 0 比例法 `captured / viewport CSS` 换算并 clamp，绝不扣 scroll；裁剪缩放为最长边 ≤1600 的临时 JPEG，约 1MB 上限，只在请求生命周期内存在
+  - `visionEnabled=false` 在会话写入、截图和 Provider 前阻断；视觉 Provider 继续受已探针 Capability 护栏；活动页/sourceUrl 二次校验防止截错页
+  - 验收：typecheck、lint 通过；Vitest 32 files / 107 tests 全过；build（397 modules）与构建安全扫描通过
 
 ## 下一任务
-**Phase 7 — 框选区域与视觉输入（MVP 必达）**（见 EXECUTION_PLAN v1.2）。
-实现 drag 框选、结构化优先提取、坐标/dpr/滚动/缩放上报、SW `captureVisibleTab` 裁剪、视觉 Capability/偏好护栏与消耗提示；完成自动测试、文档与本地阶段提交后自动进入 Phase 8。
+**Phase 8 — 自然语言 GitHub 搜索（MVP 必达）**（见 EXECUTION_PLAN v1.2）。
+实现中文 NL→GitHub 搜索语法、searchRepos/searchIssues、匿名 search 桶独立节流、结果渲染与限流降级；完成自动测试、文档与本地阶段提交后自动进入 Phase 9。
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -130,7 +137,7 @@
 | 4 Provider + 能力探针 + 对话 + 手动切换 | ✅ 已完成 |
 | 5 Session + 偏好 + 容量淘汰 | ✅ 已完成 |
 | 6 点击提问（MVP 必达） | ✅ 已完成 |
-| 7 框选 + 视觉（MVP 必达） | ⬜ |
+| 7 框选 + 视觉（MVP 必达） | ✅ 已完成 |
 | 8 NL 搜索（MVP 必达） | ⬜ |
 | 9 一键仓库分析 | ⬜ |
 | 10 安全加固 + 红队测试 | ⬜ |
@@ -173,3 +180,4 @@
 - 2026-07-24：DeepSeek 连续两轮真实对话成功，D-041 通过实测。随后补充 D-042 安全 Markdown/GFM 展示并通过 71 项测试；Phase 4 全部验收通过，准备阶段提交并进入 Phase 5。
 - 2026-07-24：Phase 5 通过；会话持久化/恢复、本地摘要与有限历史、30 天/50 会话/容量淘汰、收紧偏好 Schema、Options 容量显示及 D-033 三种数据清除落地；87 项测试及全套静态/构建验证通过，记录 D-043/D-044，准备进入 Phase 6。
 - 2026-07-24：Phase 6 通过；点击选择叠层、逻辑元素提取、Panel 状态/预览、SelectedElement AI 上下文闭环及 SPA 旧选择阻断落地；95 项测试及全套静态/构建验证通过，记录 D-045，准备进入 Phase 7。
+- 2026-07-24：Phase 7 通过；区域结构化提取、充分性判定、可信截图裁剪、视觉偏好/Capability/费用护栏及截图不持久化落地；107 项测试及全套静态/构建验证通过，记录 D-046，准备进入 Phase 8。

@@ -21,12 +21,16 @@ export function PanelApp({
     pickStatus,
     pickStatusMessage,
     selectedElement,
+    regionStatus,
+    regionStatusMessage,
+    selectedRegion,
     selectedTextProviderId,
     selectedVisionProviderId,
     activeRequestId,
     addUserMessage,
     applyProviderState,
     applyPickState,
+    applyRegionState,
     applySessionState,
     applyStreamEvent,
     selectTextProvider,
@@ -34,6 +38,7 @@ export function PanelApp({
     setConnected,
     setDraft,
     clearSelectedElement,
+    clearSelectedRegion,
   } = usePanelStore();
 
   useEffect(() => {
@@ -48,6 +53,7 @@ export function PanelApp({
       },
       applySessionState,
       applyPickState,
+      applyRegionState,
     );
     connection.current = activeConnection;
     return () => {
@@ -59,6 +65,7 @@ export function PanelApp({
     };
   }, [
     applyPickState,
+    applyRegionState,
     applyProviderState,
     applySessionState,
     applyStreamEvent,
@@ -72,7 +79,14 @@ export function PanelApp({
       return;
     }
     addUserMessage(text);
-    if (selectedElement) {
+    if (selectedRegion) {
+      connection.current.send(
+        text,
+        selectedRegion.needsVision ? selectedVisionProviderId : selectedTextProviderId,
+        undefined,
+        selectedRegion,
+      );
+    } else if (selectedElement) {
       connection.current.send(text, selectedTextProviderId, selectedElement);
     } else {
       connection.current.send(text, selectedTextProviderId);
@@ -178,6 +192,47 @@ export function PanelApp({
               </div>
             </div>
           ) : null}
+          {regionStatus === 'active' ? (
+            <button
+              className="mt-2 w-full rounded-md border border-violet-300 bg-violet-50 px-3 py-2 text-sm text-violet-900"
+              onClick={() => connection.current?.cancelRegion?.()}
+              type="button"
+            >
+              取消区域框选
+            </button>
+          ) : (
+            <button
+              className="mt-2 w-full rounded-md border border-violet-300 bg-violet-50 px-3 py-2 text-sm text-violet-900 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+              disabled={!connected || Boolean(activeRequestId) || pickStatus === 'active'}
+              onClick={() => connection.current?.startRegion?.()}
+              type="button"
+            >
+              {selectedRegion ? '重新框选页面区域' : '框选页面区域提问'}
+            </button>
+          )}
+          {regionStatusMessage ? (
+            <p className="mt-1 text-xs text-violet-700">{regionStatusMessage}</p>
+          ) : null}
+          {selectedRegion ? (
+            <div className="mt-2 rounded-md border border-violet-200 bg-violet-50 p-2 text-xs text-violet-900">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p>
+                    已框选 {Math.round(selectedRegion.rect.width)} ×{' '}
+                    {Math.round(selectedRegion.rect.height)} CSS px
+                  </p>
+                  <p className="mt-1">
+                    {selectedRegion.needsVision
+                      ? '结构化信息不足；发送时会截取该区域并调用视觉 Provider，可能产生费用。'
+                      : '结构化信息充分；本次只发送提取文本，不截图。'}
+                  </p>
+                </div>
+                <button className="shrink-0 underline" onClick={clearSelectedRegion} type="button">
+                  清除
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </header>
 
@@ -251,7 +306,9 @@ export function PanelApp({
         ) : (
           <button
             className="mt-2 w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:bg-slate-400"
-            disabled={!connected || !draft.trim() || pickStatus === 'active'}
+            disabled={
+              !connected || !draft.trim() || pickStatus === 'active' || regionStatus === 'active'
+            }
             type="submit"
           >
             发送

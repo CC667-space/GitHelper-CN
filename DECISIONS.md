@@ -320,3 +320,14 @@
 - **证据**：测试覆盖叠层定位、点击阻断、Escape/外部取消、SelectedElement 完整结构、password 值排除、Panel 状态与消息提交、Background 状态推进、ContextBuilder 隔离及 SPA 旧选择不出站；全量 95 项测试通过。
 - **范围**：Phase 6 冻结核心功能的内部实现；不新增 Chrome 权限、Host、持久化敏感数据或写操作。
 - 状态：代码已验证 ｜ 2026-07-24
+
+## D-046 区域结构充分性与可信截图预算
+- **决策**：
+  - Content 与 Background 共用确定性结构充分性规则：提取文字 ≥80 字符、任一代码块 ≥8 字符、或链接+按钮 ≥2，满足任一即只发结构化文本；否则 `needsVision=true`。消息 zod 校验布尔值与内容一致，防止意外触发或跳过付费视觉。
+  - Content 只上报结构、视口矩形、viewport/scroll/dpr/zoom 与 `sourceUrl`；Background 截图前重新校验活动 GitHub tab URL，使用 D-036 比例法换算且不扣 scroll。
+  - 裁剪最长边限制 1600px，输出临时 JPEG，压缩数据目标约 1MB；Provider transport 仍保留 2MB 请求硬上限。bitmap 在 finally 关闭，截图不进入 storage、Session、Panel 消息或日志。
+  - `visionEnabled=false` 在 Session 写入、截图和 Provider 请求前拒绝；结构不足时 Panel 在发送前显示“视觉 Provider + 可能费用”，用户的发送动作才授权本轮截图与视觉请求。
+- **理由**：结构化优先可减少成本与隐私暴露；统一函数和 Schema 一致性避免 Content/Panel 状态漂移造成隐藏视觉请求。1MB 图像预算为 base64 膨胀和 32KB 文本上下文预留空间。
+- **证据**：测试覆盖 drag/反向坐标、结构化六类字段、充分/不足判定、needsVision 篡改拒绝、Phase 0 坐标比例、越界/取消、bitmap 关闭、零截图文本路径、视觉图像注入、偏好关闭前置阻断与 Panel 费用提示；全量 107 项测试通过。
+- **范围**：Phase 7 冻结核心功能的内部实现；不新增 Chrome 权限、Host、持久数据类别或后台截图能力范围。
+- 状态：代码已验证 ｜ 2026-07-24

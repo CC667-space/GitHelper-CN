@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { hasSufficientStructuredRegion } from './region';
 
 export const PANEL_PORT_NAME = 'git-helper-panel-v1';
 
@@ -17,13 +18,67 @@ export const selectedElementSchema = z
   })
   .strict();
 
+const finiteNumber = z.number().finite();
+const nonNegativeFinite = finiteNumber.nonnegative();
+const positiveFinite = finiteNumber.positive();
+
+export const selectedRegionSchema = z
+  .object({
+    text: z.string().max(8_000),
+    links: z.array(z.string().max(800)).max(12),
+    codeBlocks: z.array(z.string().max(1_500)).max(6),
+    buttons: z.array(z.string().max(500)).max(12),
+    htmlOutline: z.string().max(4_000),
+    nearbyContext: z.string().max(4_000),
+    needsVision: z.boolean(),
+    sourceUrl: z.url().optional(),
+    rect: z
+      .object({
+        x: nonNegativeFinite,
+        y: nonNegativeFinite,
+        width: positiveFinite,
+        height: positiveFinite,
+      })
+      .strict(),
+    viewport: z
+      .object({
+        cssWidth: positiveFinite,
+        cssHeight: positiveFinite,
+      })
+      .strict(),
+    scroll: z
+      .object({
+        x: nonNegativeFinite,
+        y: nonNegativeFinite,
+      })
+      .strict(),
+    devicePixelRatio: positiveFinite.max(10),
+    zoomFactor: positiveFinite.max(10).optional(),
+  })
+  .strict()
+  .superRefine((region, context) => {
+    const expectedNeedsVision = !hasSufficientStructuredRegion(region);
+    if (region.needsVision !== expectedNeedsVision) {
+      context.addIssue({
+        code: 'custom',
+        message: 'needsVision 与结构化内容充分性不一致',
+        path: ['needsVision'],
+      });
+    }
+  });
+
 export const panelMessageSchema = z
   .object({
     text: z.string().trim().min(1).max(8_000),
     providerId: z.enum(['deepseek', 'uuapi', 'openrouter']).optional(),
     selectedElement: selectedElementSchema.optional(),
+    selectedRegion: selectedRegionSchema.optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (value) => !(value.selectedElement && value.selectedRegion),
+    '单次提问不能同时携带元素选择和区域框选',
+  );
 
 export const panelAbortSchema = z
   .object({
@@ -37,6 +92,11 @@ export const panelPickCancelSchema = z.object({}).strict();
 export const contentPickStartSchema = z.object({}).strict();
 export const contentPickCancelSchema = z.object({}).strict();
 export const contentPickCancelResponseSchema = z.object({ cancelled: z.literal(true) }).strict();
+export const panelRegionStartSchema = z.object({}).strict();
+export const panelRegionCancelSchema = z.object({}).strict();
+export const contentRegionStartSchema = z.object({}).strict();
+export const contentRegionCancelSchema = z.object({}).strict();
+export const contentRegionCancelResponseSchema = z.object({ cancelled: z.literal(true) }).strict();
 
 export const pickOutcomeSchema = z.discriminatedUnion('status', [
   z
@@ -59,6 +119,37 @@ export const panelPickStateSchema = z.discriminatedUnion('status', [
     .object({
       status: z.literal('selected'),
       element: selectedElementSchema,
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal('cancelled'),
+      reason: z.string().max(500).optional(),
+    })
+    .strict(),
+]);
+
+export const regionOutcomeSchema = z.discriminatedUnion('status', [
+  z
+    .object({
+      status: z.literal('selected'),
+      region: selectedRegionSchema,
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal('cancelled'),
+      reason: z.string().max(500).optional(),
+    })
+    .strict(),
+]);
+
+export const panelRegionStateSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('active') }).strict(),
+  z
+    .object({
+      status: z.literal('selected'),
+      region: selectedRegionSchema,
     })
     .strict(),
   z
@@ -168,6 +259,8 @@ export type PanelMessagePayload = z.infer<typeof panelMessageSchema>;
 export type PickOutcome = z.infer<typeof pickOutcomeSchema>;
 export type PanelPickState = z.infer<typeof panelPickStateSchema>;
 export type SelectedElementPayload = z.infer<typeof selectedElementSchema>;
+export type RegionOutcome = z.infer<typeof regionOutcomeSchema>;
+export type PanelRegionState = z.infer<typeof panelRegionStateSchema>;
 export type PageInfo = z.infer<typeof pageInfoSchema>;
 export type StreamEvent = z.infer<typeof streamEventSchema>;
 export type ProviderRuntimeView = z.infer<typeof providerRuntimeViewSchema>;

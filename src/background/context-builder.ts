@@ -1,4 +1,10 @@
-import type { Message, PageContext, SelectedElement, UserPreferences } from '../lib/types';
+import type {
+  Message,
+  PageContext,
+  SelectedElement,
+  SelectedRegion,
+  UserPreferences,
+} from '../lib/types';
 import { assertPublicContext } from './outbound-policy';
 import { sanitizeText, sanitizeUnknown, type SanitizerFinding } from './sanitizer';
 
@@ -28,6 +34,7 @@ export interface ConversationContext {
   historySummary?: string;
   preferences?: UserPreferences;
   selectedElement?: SelectedElement;
+  selectedRegion?: SelectedRegion;
 }
 
 function truncateUtf8(value: string, maxBytes: number): { value: string; truncated: boolean } {
@@ -77,6 +84,7 @@ export function buildMinimalContext(
     pageSummary: page.pageSummary,
     capturedAt: page.capturedAt,
     selectedElement: conversation.selectedElement,
+    selectedRegion: conversation.selectedRegion,
   };
   const sanitizedPage = sanitizeUnknown(allowedPageData);
   const sanitizedHistory = sanitizeUnknown({

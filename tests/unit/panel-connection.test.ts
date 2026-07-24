@@ -150,4 +150,44 @@ describe('Panel connection lifecycle', () => {
     expect(onPickState).toHaveBeenCalledWith(expect.objectContaining({ status: 'selected' }));
     connection.disconnect();
   });
+
+  it('收发区域框选协议消息', () => {
+    const fake = createFakePort();
+    vi.stubGlobal('chrome', {
+      runtime: {
+        connect: vi.fn(() => fake.port),
+      },
+    });
+    const onRegionState = vi.fn();
+    const connection = connectPanel(vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), onRegionState);
+    connection.startRegion?.();
+    connection.cancelRegion?.();
+    expect(fake.postMessage.mock.calls.map(([message]) => message.type)).toEqual([
+      'PANEL_REGION_START',
+      'PANEL_REGION_CANCEL',
+    ]);
+
+    fake.emitMessage(
+      createEnvelope('REGION_STATE', {
+        status: 'selected',
+        region: {
+          text: '结构化内容',
+          links: [],
+          codeBlocks: ['pnpm install'],
+          buttons: [],
+          htmlOutline: '<p>',
+          nearbyContext: 'README',
+          needsVision: false,
+          sourceUrl: 'https://github.com/openai/openai-node',
+          rect: { x: 10, y: 20, width: 200, height: 100 },
+          viewport: { cssWidth: 800, cssHeight: 600 },
+          scroll: { x: 0, y: 0 },
+          devicePixelRatio: 1,
+          zoomFactor: 1,
+        },
+      }),
+    );
+    expect(onRegionState).toHaveBeenCalledWith(expect.objectContaining({ status: 'selected' }));
+    connection.disconnect();
+  });
 });

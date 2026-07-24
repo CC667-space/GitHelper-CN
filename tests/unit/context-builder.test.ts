@@ -69,6 +69,21 @@ describe('context-builder and private outbound guard', () => {
         nearbyContext: 'Repository navigation',
         pageType: 'repo',
       },
+      selectedRegion: {
+        text: '框选中的说明文字',
+        links: [],
+        codeBlocks: [],
+        buttons: [],
+        htmlOutline: '<p>',
+        nearbyContext: 'README',
+        needsVision: false,
+        sourceUrl: 'https://github.com/openai/openai-node',
+        rect: { x: 10, y: 20, width: 200, height: 100 },
+        viewport: { cssWidth: 800, cssHeight: 600 },
+        scroll: { x: 0, y: 100 },
+        devicePixelRatio: 1.5,
+        zoomFactor: 1,
+      },
     });
 
     expect(built.messages).toHaveLength(2);
@@ -77,6 +92,7 @@ describe('context-builder and private outbound guard', () => {
     expect(built.messages[1]?.content).toContain('Windows 11');
     expect(built.messages[1]?.content).toContain('Issues 42');
     expect(built.messages[1]?.content).toContain('selectedElement');
+    expect(built.messages[1]?.content).toContain('框选中的说明文字');
     expect(built.messages[1]?.content).not.toContain('sk-abcdefghijklmnopqrstuvwxyz');
   });
 });

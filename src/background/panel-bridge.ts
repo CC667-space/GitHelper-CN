@@ -2,27 +2,43 @@ import {
   contentPickCancelSchema,
   contentPickCancelResponseSchema,
   contentPickStartSchema,
+  contentRegionCancelResponseSchema,
+  contentRegionCancelSchema,
+  contentRegionStartSchema,
   pageInfoSchema,
   panelPickCancelSchema,
   panelPickStartSchema,
   panelPickStateSchema,
+  panelRegionCancelSchema,
+  panelRegionStartSchema,
+  panelRegionStateSchema,
   panelSessionStateSchema,
   panelAbortSchema,
   PANEL_PORT_NAME,
   panelMessageSchema,
   pickOutcomeSchema,
+  regionOutcomeSchema,
   streamEventSchema,
   type PageInfo,
   type PanelSessionState,
   type PanelPickState,
+  type PanelRegionState,
   type PickOutcome,
+  type RegionOutcome,
   type ProviderRuntimeView,
   type StreamEvent,
 } from '../lib/bridge-protocol';
 import { createEnvelope, MAX_MESSAGE_BYTES, parseEnvelope, type Envelope } from '../lib/messaging';
 import { MessageRouter, type RouteContext } from './router';
 import { sanitizeText } from './sanitizer';
-import type { Message, ProviderId, SelectedElement, UserPreferences } from '../lib/types';
+import type {
+  Message,
+  ProviderId,
+  SelectedElement,
+  SelectedRegion,
+  UserPreferences,
+} from '../lib/types';
+import { captureSelectedRegion } from './capture';
 import { preferencesStore } from './prefs-store';
 import { sessionStore } from './session-store';
 
@@ -45,17 +61,29 @@ export interface PanelBridgeDependencies {
     historySummary?: string;
     preferences?: UserPreferences;
     selectedElement?: SelectedElement;
+    selectedRegion?: SelectedRegion;
+    needsVision?: boolean;
+    images?: string[];
     signal: AbortSignal;
   }): AsyncIterable<string>;
-  prepareSession?(page: PageInfo, question: string): Promise<PreparedPanelSession>;
+  prepareSession?(
+    page: PageInfo,
+    question: string,
+    preferences?: UserPreferences,
+  ): Promise<PreparedPanelSession>;
+  loadPreferences?(): Promise<UserPreferences>;
   saveAssistant?(sessionId: string, content: string): Promise<void>;
   startPick?(signal: AbortSignal): Promise<PickOutcome>;
   cancelPick?(): Promise<void>;
+  startRegion?(signal: AbortSignal): Promise<RegionOutcome>;
+  cancelRegion?(): Promise<void>;
+  captureRegion?(region: SelectedRegion, signal: AbortSignal): Promise<string>;
   abort(requestId: string): boolean;
   providerViews?(): Promise<ProviderRuntimeView[]>;
   emit(event: Envelope<StreamEvent>): void;
   emitSessionState?(state: PanelSessionState): void;
   emitPickState?(state: PanelPickState): void;
+  emitRegionState?(state: PanelRegionState): void;
 }
 
 export class PanelBridge {
@@ -93,6 +121,19 @@ export class PanelBridge {
             return { cancelled: true };
           },
         },
+        PANEL_REGION_START: {
+          source: 'extension',
+          payloadSchema: panelRegionStartSchema,
+          handler: (_payload, context) => this.handleRegionStart(context),
+        },
+        PANEL_REGION_CANCEL: {
+          source: 'extension',
+          payloadSchema: panelRegionCancelSchema,
+          handler: async () => {
+            await this.dependencies.cancelRegion?.();
+            return { cancelled: true };
+          },
+        },
       },
       runtimeId,
       { maxPayloadBytes: MAX_MESSAGE_BYTES, timeoutMs: 90_000 },
@@ -117,7 +158,28 @@ export class PanelBridge {
         reason: '页面已变化，旧的元素选择未发送',
       });
     }
-    const prepared = await this.dependencies.prepareSession?.(page, message.text);
+    const selectedRegion =
+      message.selectedRegion?.sourceUrl && message.selectedRegion.sourceUrl !== page.url
+        ? undefined
+        : message.selectedRegion;
+    if (message.selectedRegion && !selectedRegion) {
+      this.dependencies.emitRegionState?.({
+        status: 'cancelled',
+        reason: '页面已变化，旧的区域框选未发送',
+      });
+    }
+    const currentPreferences =
+      selectedRegion?.needsVision && this.dependencies.loadPreferences
+        ? await this.dependencies.loadPreferences()
+        : undefined;
+    if (selectedRegion?.needsVision && currentPreferences?.visionEnabled === false) {
+      throw new Error('视觉能力已在设置中关闭；请启用后重新框选');
+    }
+    const prepared = await this.dependencies.prepareSession?.(
+      page,
+      message.text,
+      currentPreferences,
+    );
     if (prepared) {
       this.dependencies.emitSessionState?.(prepared.snapshot);
     }
@@ -127,6 +189,14 @@ export class PanelBridge {
       kind: 'context',
       text: page.title || page.url,
     });
+    const needsVision = selectedRegion?.needsVision ?? false;
+    if (needsVision && prepared?.preferences.visionEnabled === false) {
+      throw new Error('视觉能力已在设置中关闭；请启用后重新框选');
+    }
+    const images =
+      needsVision && selectedRegion
+        ? [await this.requireCaptureRegion(selectedRegion, context.signal)]
+        : undefined;
     let answer = '';
     for await (const delta of this.dependencies.streamAnswer({
       requestId,
@@ -137,6 +207,9 @@ export class PanelBridge {
       historySummary: prepared?.historySummary,
       preferences: prepared?.preferences,
       selectedElement,
+      selectedRegion,
+      needsVision,
+      images,
       signal: context.signal,
     })) {
       answer += delta;
@@ -176,6 +249,39 @@ export class PanelBridge {
     } finally {
       context.signal.removeEventListener('abort', cancelOnAbort);
     }
+  }
+
+  private async handleRegionStart(context: RouteContext): Promise<RegionOutcome> {
+    if (!this.dependencies.startRegion || !this.dependencies.emitRegionState) {
+      throw new Error('区域框选能力尚未注册');
+    }
+    this.dependencies.emitRegionState({ status: 'active' });
+    const cancelOnAbort = () => {
+      void this.dependencies.cancelRegion?.();
+    };
+    context.signal.addEventListener('abort', cancelOnAbort, { once: true });
+    try {
+      const outcome = regionOutcomeSchema.parse(
+        await this.dependencies.startRegion(context.signal),
+      );
+      this.dependencies.emitRegionState(outcome);
+      return outcome;
+    } catch (error: unknown) {
+      this.dependencies.emitRegionState({
+        status: 'cancelled',
+        reason: (error instanceof Error ? error.message : String(error)).slice(0, 500),
+      });
+      throw error;
+    } finally {
+      context.signal.removeEventListener('abort', cancelOnAbort);
+    }
+  }
+
+  private requireCaptureRegion(region: SelectedRegion, signal: AbortSignal): Promise<string> {
+    if (!this.dependencies.captureRegion) {
+      throw new Error('可信截图能力尚未注册');
+    }
+    return this.dependencies.captureRegion(region, signal);
   }
 }
 
@@ -240,6 +346,48 @@ export async function cancelActivePagePick(): Promise<void> {
   }
 }
 
+export async function requestActivePageRegion(signal: AbortSignal): Promise<RegionOutcome> {
+  if (signal.aborted) {
+    throw signal.reason;
+  }
+  const tab = await activeGitHubTab();
+  const request = createEnvelope('REGION_START_REQUEST', contentRegionStartSchema.parse({}));
+  const abortPromise = new Promise<never>((_resolve, reject) => {
+    signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+  });
+  const raw = await Promise.race([chrome.tabs.sendMessage(tab.id!, request), abortPromise]);
+  const response = parseEnvelope(raw, regionOutcomeSchema, {
+    expectedType: 'REGION_START_RESPONSE',
+  });
+  if (response.id !== request.id) {
+    throw new Error('Content 区域框选响应 request ID 不匹配');
+  }
+  return response.payload;
+}
+
+export async function cancelActivePageRegion(): Promise<void> {
+  const tab = await activeGitHubTab();
+  const request = createEnvelope('REGION_CANCEL_REQUEST', contentRegionCancelSchema.parse({}));
+  const raw = await chrome.tabs.sendMessage(tab.id!, request);
+  const response = parseEnvelope(raw, contentRegionCancelResponseSchema, {
+    expectedType: 'REGION_CANCEL_RESPONSE',
+  });
+  if (response.id !== request.id) {
+    throw new Error('Content 取消框选响应 request ID 不匹配');
+  }
+}
+
+export async function captureActivePageRegion(
+  region: SelectedRegion,
+  signal: AbortSignal,
+): Promise<string> {
+  const tab = await activeGitHubTab();
+  if (region.sourceUrl && tab.url !== region.sourceUrl) {
+    throw new Error('活动页面已变化，拒绝截取旧区域');
+  }
+  return await captureSelectedRegion(tab, region, signal);
+}
+
 function errorStreamEvent(error: unknown, requestId?: string): Envelope<StreamEvent> {
   return createEnvelope('STREAM_EVENT', {
     requestId: requestId ?? crypto.randomUUID(),
@@ -260,7 +408,8 @@ export function registerPanelPortBridge(
     const preferences = preferencesStore();
     const bridge = new PanelBridge(chrome.runtime.id, {
       requestPageInfo: requestActivePageInfo,
-      prepareSession: async (page, question) => {
+      loadPreferences: () => preferences.read(),
+      prepareSession: async (page, question, currentPreferences) => {
         if (!page.pageContext) {
           throw new Error('当前页面上下文尚未就绪');
         }
@@ -269,7 +418,7 @@ export function registerPanelPortBridge(
           sessionId: prepared.session.sessionId,
           history: prepared.history,
           historySummary: prepared.historySummary,
-          preferences: await preferences.read(),
+          preferences: currentPreferences ?? (await preferences.read()),
           snapshot: panelSessionStateSchema.parse(sessions.panelSnapshot(prepared.session)),
         };
       },
@@ -278,6 +427,9 @@ export function registerPanelPortBridge(
       },
       startPick: requestActivePagePick,
       cancelPick: cancelActivePagePick,
+      startRegion: requestActivePageRegion,
+      cancelRegion: cancelActivePageRegion,
+      captureRegion: captureActivePageRegion,
       streamAnswer: async function* (input) {
         if (!input.page.pageContext) {
           throw new Error('当前页面上下文尚未就绪');
@@ -291,6 +443,9 @@ export function registerPanelPortBridge(
           historySummary: input.historySummary,
           preferences: input.preferences,
           selectedElement: input.selectedElement,
+          selectedRegion: input.selectedRegion,
+          needsVision: input.needsVision,
+          images: input.images,
           signal: input.signal,
         });
       },
@@ -301,6 +456,8 @@ export function registerPanelPortBridge(
         port.postMessage(createEnvelope('SESSION_STATE', panelSessionStateSchema.parse(state))),
       emitPickState: (state) =>
         port.postMessage(createEnvelope('PICK_STATE', panelPickStateSchema.parse(state))),
+      emitRegionState: (state) =>
+        port.postMessage(createEnvelope('REGION_STATE', panelRegionStateSchema.parse(state))),
     });
     const hydration = requestActivePageInfo(new AbortController().signal)
       .then(async (page) => {
@@ -315,6 +472,7 @@ export function registerPanelPortBridge(
       .catch(() => undefined);
     port.onDisconnect.addListener(() => {
       void cancelActivePagePick().catch(() => undefined);
+      void cancelActivePageRegion().catch(() => undefined);
     });
     void runtime
       .views()

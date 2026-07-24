@@ -142,9 +142,14 @@ password input 不读取 value。`sourceUrl` 与发送时页面不一致则丢�
 ```
 用户点"框选提问" → Content 进入 drag 模式画矩形
   → 优先提取矩形内文字/链接/代码/按钮/HTML 结构/邻近上下文 → SelectedRegion
-  → 若结构化信息不足 → 提示后走截图流程(3.5)
+  → 本地充分性规则: 文字≥80 / 代码≥8 / 链接+按钮≥2，任一满足即不截图
+  → 若结构化信息不足 → Panel 明确提示视觉 Provider 与可能费用
+    → 用户发送后走截图流程(3.5)
     → 视觉 Provider(Capability 护栏) → AI 请求流
 ```
+
+`needsVision` 不是可自由信任的布尔值：Content 与 Background 共用同一充分性函数，消息 zod
+要求字段与实际结构一致。`visionEnabled=false` 在会话写入、截图和 Provider 调用前阻断（D-046）。
 
 ### 3.5 截图流程（v1.2 修正坐标换算方法论，P0-4 / D-029）
 职责划分：
@@ -157,6 +162,11 @@ password input 不读取 value。`sourceUrl` 与发送时页面不一致则丢�
    - 2026-07-24 实测：Windows 1.5× DPI + Chrome 125% zoom + 页面滚动 + Side Panel 开启时，截图 `1560×1347 px`、viewport `832×718 CSS px`，`scaleX=1.875`、`scaleY≈1.8760446`；三个不同位置元素均像素级对齐。完整证据见 `scripts/probe-results.md`。
 4. 截图不落盘、不持久保存、用后即弃（P1-1）。
 5. **Phase 0 探针 B 必须覆盖**：Windows 高 DPI、浏览器缩放、页面滚动、`devicePixelRatio`、Side Panel 开启时的可见区域变化、GitHub 固定页头/动态布局，并在真实 GitHub 页面取 3 个不同位置元素验证裁剪对齐。
+
+**Phase 7 实现定稿（D-046）**：裁剪前再次确认活动 GitHub tab 与 `SelectedRegion.sourceUrl`
+一致；裁剪结果最长边不超过 1600px，输出临时 JPEG，目标约 1MB，以给 2MB Provider 请求上限
+预留 base64 膨胀和文本上下文空间。图片只保存在 Background 当前函数/Provider 请求的内存引用中，
+不进入 storage、Session、Panel 消息或日志。
 
 ### 3.6 Session 保存与恢复流程
 ```
@@ -288,6 +298,7 @@ interface SelectedRegion {
   text: string; links: string[]; codeBlocks: string[];
   buttons: string[]; htmlOutline: string; nearbyContext: string;
   needsVision: boolean;
+  sourceUrl?: string;                    // 截图前活动页二次校验
   // 截图所需坐标信息(Content 上报, SW 裁剪用; 换算方法以 Phase 0 探针 B 结论为准, D-029):
   rect: { x:number; y:number; width:number; height:number };  // 视口坐标(getBoundingClientRect 语义)
   viewport: { cssWidth:number; cssHeight:number };            // 视口 CSS 尺寸(用于 scaleX/scaleY)

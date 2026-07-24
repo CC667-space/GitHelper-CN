@@ -3,12 +3,13 @@ import { create } from 'zustand';
 import type {
   PanelSessionState,
   PanelPickState,
+  PanelRegionState,
   ProviderRuntimeView,
   ProviderState,
   StreamEvent,
 } from '../lib/bridge-protocol';
 import type { ProviderId } from '../lib/types';
-import type { SelectedElement } from '../lib/types';
+import type { SelectedElement, SelectedRegion } from '../lib/types';
 
 interface PanelMessage {
   id: string;
@@ -27,6 +28,9 @@ interface PanelState {
   pickStatus: 'idle' | 'active' | 'selected';
   pickStatusMessage?: string;
   selectedElement?: SelectedElement;
+  regionStatus: 'idle' | 'active' | 'selected';
+  regionStatusMessage?: string;
+  selectedRegion?: SelectedRegion;
   pageLabel: string;
   providers: ProviderRuntimeView[];
   selectedTextProviderId?: ProviderId;
@@ -38,6 +42,8 @@ interface PanelState {
   applySessionState(state: PanelSessionState): void;
   applyPickState(state: PanelPickState): void;
   clearSelectedElement(): void;
+  applyRegionState(state: PanelRegionState): void;
+  clearSelectedRegion(): void;
   applyStreamEvent(event: StreamEvent): void;
   selectTextProvider(providerId: ProviderId): void;
   selectVisionProvider(providerId: ProviderId): void;
@@ -49,6 +55,7 @@ export const usePanelStore = create<PanelState>((set) => ({
   messages: [],
   sessionHistoryTruncated: false,
   pickStatus: 'idle',
+  regionStatus: 'idle',
   pageLabel: '等待读取当前 GitHub 页面',
   providers: [],
   setConnected: (connected) => set({ connected }),
@@ -95,6 +102,9 @@ export const usePanelStore = create<PanelState>((set) => ({
             pickStatus: 'active',
             pickStatusMessage: '请在 GitHub 页面点击要提问的元素',
             selectedElement: undefined,
+            regionStatus: 'idle',
+            regionStatusMessage: undefined,
+            selectedRegion: undefined,
           }
         : state.status === 'selected'
           ? {
@@ -113,6 +123,35 @@ export const usePanelStore = create<PanelState>((set) => ({
       pickStatus: 'idle',
       pickStatusMessage: undefined,
       selectedElement: undefined,
+    }),
+  applyRegionState: (state) =>
+    set(
+      state.status === 'active'
+        ? {
+            regionStatus: 'active',
+            regionStatusMessage: '请在 GitHub 页面拖动框选区域',
+            selectedRegion: undefined,
+            pickStatus: 'idle',
+            pickStatusMessage: undefined,
+            selectedElement: undefined,
+          }
+        : state.status === 'selected'
+          ? {
+              regionStatus: 'selected',
+              regionStatusMessage: undefined,
+              selectedRegion: state.region,
+            }
+          : {
+              regionStatus: 'idle',
+              regionStatusMessage: state.reason,
+              selectedRegion: undefined,
+            },
+    ),
+  clearSelectedRegion: () =>
+    set({
+      regionStatus: 'idle',
+      regionStatusMessage: undefined,
+      selectedRegion: undefined,
     }),
   applyStreamEvent: (event) =>
     set((state) => {
