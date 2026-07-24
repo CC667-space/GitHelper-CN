@@ -178,4 +178,115 @@ describe('GitHubApiClient', () => {
     await client.searchRepositories('cached', signal);
     expect(fetchMock).toHaveBeenCalledOnce();
   });
+
+  it('聚合仓库详情、语言、最新 Release 与开放 PR，并缓存五分钟', async () => {
+    const coreHeaders = {
+      'Content-Type': 'application/json',
+      'X-RateLimit-Resource': 'core',
+      'X-RateLimit-Remaining': '55',
+      'X-RateLimit-Reset': '1784883600',
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            full_name: 'react/react',
+            html_url: 'https://github.com/react/react',
+            description: 'The library for web and native user interfaces.',
+            topics: ['react', 'javascript', 'ui'],
+            default_branch: 'main',
+            language: 'JavaScript',
+            stargazers_count: 240_000,
+            forks_count: 49_000,
+            subscribers_count: 6_600,
+            watchers_count: 240_000,
+            open_issues_count: 1_100,
+            archived: false,
+            license: { name: 'MIT License', spdx_id: 'MIT' },
+            pushed_at: '2026-07-23T00:00:00.000Z',
+            updated_at: '2026-07-24T00:00:00.000Z',
+          }),
+          { status: 200, headers: coreHeaders },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ JavaScript: 900, TypeScript: 100 }), {
+          status: 200,
+          headers: coreHeaders,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            name: 'React 19.1',
+            tag_name: 'v19.1.0',
+            published_at: '2026-07-20T00:00:00.000Z',
+            html_url: 'https://github.com/react/react/releases/tag/v19.1.0',
+          }),
+          { status: 200, headers: coreHeaders },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ id: 1 }]), {
+          status: 200,
+          headers: {
+            ...coreHeaders,
+            Link: '<https://api.github.com/repositories/10270250/pulls?state=open&per_page=1&page=75>; rel="last"',
+          },
+        }),
+      );
+    const setup = dependencies(fetchMock);
+    const client = new GitHubApiClient(setup.dependencies);
+    const first = await client.getRepositoryBundle('react/react', new AbortController().signal);
+    const second = await client.getRepositoryBundle('react/react', new AbortController().signal);
+
+    expect(first).toMatchObject({
+      details: {
+        fullName: 'react/react',
+        stars: 240_000,
+        license: { spdxId: 'MIT' },
+      },
+      languages: { JavaScript: 900, TypeScript: 100 },
+      latestRelease: { tag: 'v19.1.0' },
+      openPullRequests: 75,
+    });
+    expect(second).toEqual(first);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('仓库没有 Release 时返回缺字段而非失败', async () => {
+    const details = {
+      full_name: 'octocat/Hello-World',
+      html_url: 'https://github.com/octocat/Hello-World',
+      description: null,
+      topics: [],
+      default_branch: 'master',
+      language: null,
+      stargazers_count: 1,
+      forks_count: 1,
+      watchers_count: 1,
+      open_issues_count: 0,
+      archived: false,
+      license: null,
+      pushed_at: null,
+      updated_at: '2026-07-24T00:00:00.000Z',
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(details), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 404 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
+    const setup = dependencies(fetchMock);
+    const client = new GitHubApiClient(setup.dependencies);
+
+    await expect(
+      client.getRepositoryBundle('octocat/Hello-World', new AbortController().signal),
+    ).resolves.toMatchObject({
+      details: { fullName: 'octocat/Hello-World' },
+      languages: {},
+      openPullRequests: 0,
+    });
+  });
 });

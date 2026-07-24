@@ -5,6 +5,7 @@ import type { GitHubSearchItem, ResolvedSearchTarget } from '../lib/github-searc
 const GITHUB_API_ORIGIN = 'https://api.github.com';
 const RATE_LIMIT_STORAGE_KEY = 'github:rate-limits:v1';
 const CACHE_TTL_MS = 60_000;
+const REPOSITORY_CACHE_TTL_MS = 5 * 60_000;
 
 export type GitHubRateLimitResource = 'core' | 'search' | 'code_search';
 
@@ -23,6 +24,41 @@ interface RateLimitStorage {
 interface SearchResponse {
   totalCount: number;
   items: GitHubSearchItem[];
+}
+
+export interface RepositoryApiDetails {
+  fullName: string;
+  url: string;
+  description?: string;
+  topics: string[];
+  defaultBranch: string;
+  primaryLanguage?: string;
+  stars: number;
+  forks: number;
+  watchers: number;
+  combinedOpenCount: number;
+  archived: boolean;
+  license?: {
+    name: string;
+    spdxId?: string;
+  };
+  pushedAt?: string;
+  updatedAt?: string;
+}
+
+export interface RepositoryApiRelease {
+  name: string;
+  tag: string;
+  publishedAt?: string;
+  url?: string;
+}
+
+export interface RepositoryApiBundle {
+  details: RepositoryApiDetails;
+  languages: Record<string, number>;
+  latestRelease?: RepositoryApiRelease;
+  openPullRequests?: number;
+  degradedNotice?: string;
 }
 
 export interface GitHubApiDependencies {
@@ -81,6 +117,48 @@ const issueSearchResponseSchema = z
   })
   .passthrough();
 
+const repositoryDetailsSchema = z
+  .object({
+    full_name: z.string().min(1).max(500),
+    html_url: z.url(),
+    description: z.string().max(2_000).nullable(),
+    topics: z.array(z.string().max(100)).max(100).default([]),
+    default_branch: z.string().min(1).max(300),
+    language: z.string().max(100).nullable(),
+    stargazers_count: z.number().int().nonnegative(),
+    forks_count: z.number().int().nonnegative(),
+    subscribers_count: z.number().int().nonnegative().optional(),
+    watchers_count: z.number().int().nonnegative(),
+    open_issues_count: z.number().int().nonnegative(),
+    archived: z.boolean(),
+    license: z
+      .object({
+        name: z.string().min(1).max(300),
+        spdx_id: z.string().max(100).nullable(),
+      })
+      .passthrough()
+      .nullable(),
+    pushed_at: z.iso.datetime().nullable(),
+    updated_at: z.iso.datetime().nullable(),
+  })
+  .passthrough();
+
+const repositoryLanguagesSchema = z.record(
+  z.string().min(1).max(100),
+  z.number().int().nonnegative(),
+);
+
+const repositoryReleaseSchema = z
+  .object({
+    name: z.string().max(300).nullable(),
+    tag_name: z.string().min(1).max(200),
+    published_at: z.iso.datetime().nullable(),
+    html_url: z.url(),
+  })
+  .passthrough();
+
+const repositoryPullsSchema = z.array(z.object({ id: z.number().int() }).passthrough()).max(100);
+
 function defaultDependencies(): GitHubApiDependencies {
   return {
     fetch: (input, init) => fetch(input, init),
@@ -132,6 +210,34 @@ function repositoryFromApiUrl(value: string): string {
     : '未知仓库';
 }
 
+function repositoryPath(repository: string): string {
+  const match = /^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/u.exec(repository.trim());
+  if (!match?.[1] || !match[2]) {
+    throw new Error('仓库名必须为 owner/repository');
+  }
+  return `${encodeURIComponent(match[1])}/${encodeURIComponent(match[2])}`;
+}
+
+function linkLastPage(linkHeader: string | null): number | undefined {
+  if (!linkHeader) {
+    return undefined;
+  }
+  for (const part of linkHeader.split(',')) {
+    if (!/rel="last"/u.test(part)) {
+      continue;
+    }
+    const urlMatch = /<([^>]+)>/u.exec(part)?.[1];
+    if (!urlMatch) {
+      continue;
+    }
+    const page = Number(new URL(urlMatch).searchParams.get('page'));
+    if (Number.isSafeInteger(page) && page >= 0) {
+      return page;
+    }
+  }
+  return undefined;
+}
+
 async function readableApiError(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as { message?: unknown };
@@ -174,6 +280,10 @@ export class GitHubApiError extends Error {
 
 export class GitHubApiClient {
   private readonly cache = new Map<string, { expiresAt: number; value: SearchResponse }>();
+  private readonly repositoryCache = new Map<
+    string,
+    { expiresAt: number; value: RepositoryApiBundle }
+  >();
 
   constructor(private readonly dependencies: GitHubApiDependencies = defaultDependencies()) {}
 
@@ -183,6 +293,90 @@ export class GitHubApiClient {
 
   searchIssues(query: string, signal: AbortSignal): Promise<SearchResponse> {
     return this.search('issues', query, signal);
+  }
+
+  async getRepositoryBundle(repository: string, signal: AbortSignal): Promise<RepositoryApiBundle> {
+    const path = repositoryPath(repository);
+    const cacheKey = repository.toLowerCase();
+    const now = this.dependencies.now();
+    const cached = this.repositoryCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      return cached.value;
+    }
+    const detailsResult = await this.requestCore(`/repos/${path}`, repositoryDetailsSchema, signal);
+    const detailsData = detailsResult.data;
+    const details: RepositoryApiDetails = {
+      fullName: detailsData.full_name,
+      url: detailsData.html_url,
+      description: detailsData.description ?? undefined,
+      topics: detailsData.topics.slice(0, 20),
+      defaultBranch: detailsData.default_branch,
+      primaryLanguage: detailsData.language ?? undefined,
+      stars: detailsData.stargazers_count,
+      forks: detailsData.forks_count,
+      watchers: detailsData.subscribers_count ?? detailsData.watchers_count,
+      combinedOpenCount: detailsData.open_issues_count,
+      archived: detailsData.archived,
+      license: detailsData.license
+        ? {
+            name: detailsData.license.name,
+            spdxId: detailsData.license.spdx_id ?? undefined,
+          }
+        : undefined,
+      pushedAt: detailsData.pushed_at ?? undefined,
+      updatedAt: detailsData.updated_at ?? undefined,
+    };
+    let languages: Record<string, number> = {};
+    let latestRelease: RepositoryApiRelease | undefined;
+    let openPullRequests: number | undefined;
+    let degradedNotice: string | undefined;
+    let cacheExpiresAt = now + REPOSITORY_CACHE_TTL_MS;
+    try {
+      languages = (
+        await this.requestCore(`/repos/${path}/languages`, repositoryLanguagesSchema, signal)
+      ).data;
+      const release = await this.requestCore(
+        `/repos/${path}/releases/latest`,
+        repositoryReleaseSchema,
+        signal,
+        true,
+      );
+      if (release.data) {
+        latestRelease = {
+          name: release.data.name?.trim() || release.data.tag_name,
+          tag: release.data.tag_name,
+          publishedAt: release.data.published_at ?? undefined,
+          url: release.data.html_url,
+        };
+      }
+      const pulls = await this.requestCore(
+        `/repos/${path}/pulls?state=open&per_page=1`,
+        repositoryPullsSchema,
+        signal,
+      );
+      openPullRequests = linkLastPage(pulls.headers.get('Link')) ?? pulls.data.length;
+    } catch (error: unknown) {
+      degradedNotice =
+        error instanceof GitHubRateLimitError
+          ? `${error.message}；已保留此前取得的仓库事实并停止后续 core 请求。`
+          : `部分 GitHub API 字段不可用：${error instanceof Error ? error.message : String(error)}`;
+      cacheExpiresAt =
+        error instanceof GitHubRateLimitError
+          ? Math.min(cacheExpiresAt, Math.max(now + 1_000, error.retryAt))
+          : Math.min(cacheExpiresAt, now + 60_000);
+    }
+    const bundle = {
+      details,
+      languages,
+      latestRelease,
+      openPullRequests,
+      degradedNotice,
+    };
+    this.repositoryCache.set(cacheKey, {
+      expiresAt: cacheExpiresAt,
+      value: bundle,
+    });
+    return bundle;
   }
 
   private async search(
@@ -228,6 +422,56 @@ export class GitHubApiClient {
         : this.parseIssues(await response.json());
     this.cache.set(cacheKey, { expiresAt: now + CACHE_TTL_MS, value });
     return value;
+  }
+
+  private requestCore<Output>(
+    path: string,
+    schema: z.ZodType<Output>,
+    signal: AbortSignal,
+  ): Promise<{ data: Output; headers: Headers }>;
+  private requestCore<Output>(
+    path: string,
+    schema: z.ZodType<Output>,
+    signal: AbortSignal,
+    allowNotFound: true,
+  ): Promise<{ data: Output | undefined; headers: Headers }>;
+  private async requestCore<Output>(
+    path: string,
+    schema: z.ZodType<Output>,
+    signal: AbortSignal,
+    allowNotFound = false,
+  ): Promise<{ data: Output; headers: Headers } | { data: undefined; headers: Headers }> {
+    const now = this.dependencies.now();
+    await this.assertBucketAvailable('core', now);
+    const url = new URL(path, GITHUB_API_ORIGIN);
+    if (url.origin !== GITHUB_API_ORIGIN) {
+      throw new Error('GitHub API 路径越出固定 Host');
+    }
+    const response = await this.dependencies.fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      signal,
+    });
+    const resource = await this.updateRateLimitState(response, 'core', now);
+    if (allowNotFound && response.status === 404) {
+      return { data: undefined, headers: response.headers };
+    }
+    if (!response.ok) {
+      const remaining = headerInteger(response.headers, 'X-RateLimit-Remaining');
+      if ((response.status === 403 || response.status === 429) && remaining === 0) {
+        const stored = await this.readStorage();
+        const retryAt = stored.buckets[resource]?.blockedUntil ?? now + 60_000;
+        throw new GitHubRateLimitError(resource, retryAt);
+      }
+      throw new GitHubApiError(response.status, await readableApiError(response));
+    }
+    return {
+      data: schema.parse(await response.json()),
+      headers: response.headers,
+    };
   }
 
   private parseRepositories(raw: unknown): SearchResponse {

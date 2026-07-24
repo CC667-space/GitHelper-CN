@@ -237,4 +237,45 @@ describe('Panel connection lifecycle', () => {
     );
     connection.disconnect();
   });
+
+  it('收发仓库一键分析协议消息', () => {
+    const fake = createFakePort();
+    vi.stubGlobal('chrome', {
+      runtime: {
+        connect: vi.fn(() => fake.port),
+      },
+    });
+    const onAnalysisState = vi.fn();
+    const connection = connectPanel(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      onAnalysisState,
+    );
+    connection.analyzeRepository?.('deepseek');
+    expect(fake.postMessage.mock.calls.map(([message]) => message.type)).toEqual([
+      'PANEL_ANALYZE_REPOSITORY',
+    ]);
+    expect(fake.postMessage.mock.calls[0]?.[0].payload).toEqual({
+      providerId: 'deepseek',
+    });
+
+    fake.emitMessage(
+      createEnvelope('REPOSITORY_ANALYSIS_STATE', {
+        status: 'error',
+        requestId: 'analysis-1',
+        error: '当前页面不是仓库',
+      }),
+    );
+    expect(onAnalysisState).toHaveBeenCalledWith({
+      status: 'error',
+      requestId: 'analysis-1',
+      error: '当前页面不是仓库',
+    });
+    connection.disconnect();
+  });
 });

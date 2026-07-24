@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 9 — 一键仓库分析：Phase 8 已通过验收，待阶段提交后自动进入仓库事实聚合与结构化卡片实现。**
+**Phase 10 — 安全加固与红队测试：Phase 9 已通过验收，待阶段提交后自动进入后期安全加固。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -128,10 +128,19 @@
   - search 桶受限时显示可读恢复时间、本地 GitHub 搜索页 DOM 结果（若有）与安全 `https://github.com/search` 入口；结果和降级 URL 经共享 Schema 限定为 GitHub HTTPS
   - Panel 展示简短查询解释、实际 GitHub 语法、总数和仓库/Issue 结果卡；打开结果统一走安全消息路由
   - 验收：typecheck、lint 通过；Vitest 37 files / 126 tests 全过；build（402 modules）与构建安全扫描通过
+- [x] **Phase 9 — 一键仓库分析（2026-07-24）通过验收**：
+  - 固定 `RepositoryAnalysisCard` Schema 覆盖用途、语言、平台、安装、Release、更新、Star/Fork/Watch、归档、许可证、Issue/PR、难度、风险与下一步；每项都有长度/条数边界
+  - 匿名 core API 聚合仓库详情、语言、最新 Release 与开放 PR；结合 `open_issues_count` 回填 Issue/PR 分项，缓存 5 分钟，部分失败保留已有事实
+  - 可变数字、日期、许可证与归档状态只由 DOM/API 事实层写入；Provider 仅生成用途/平台/难度/风险/下一步，不能覆盖事实字段
+  - structuredOutput 已验证时请求 `json_object`；未验证时使用严格 Prompt + 本地 zod，非法 JSON 仅重试一次；网络/Provider 错误不重复调用并降级本地确定性说明
+  - README 安装命令优先于 Provider 建议；缺 Release/许可证/语言时固定卡片保留并显示未知/风险；core 限流直接走 DOM，不重复 API 请求
+  - GitHub 重定向以 API `full_name/html_url` 回填 canonical 仓库；历史名 `facebook/react` → `react/react` 已有回归
+  - 真实匿名验收：`react/react`、`microsoft/vscode`、`rust-lang/rust` 三库全部生成卡片，未命中 core 限流；证据见 `scripts/phase9-live-evidence.md`
+  - 常规验收：typecheck、lint 通过；Vitest 40 files / 143 tests 全过（另 1 个 live test 默认跳过、单独真实运行通过）；build（404 modules）与构建安全扫描通过
 
 ## 下一任务
-**Phase 9 — 一键仓库分析**（见 EXECUTION_PLAN v1.2）。
-聚合公开仓库 DOM 与匿名 GitHub API 事实，输出固定结构化中文卡片；补齐缓存、core 限流降级、Provider structuredOutput 降级与至少 3 个公开仓库的客观验收，完成后自动进入 Phase 10。
+**Phase 10 — 安全加固与红队测试**（见 EXECUTION_PLAN v1.2）。
+完善 sanitizer、工具白名单/Scheme、私有页面零出站、权限、三种数据清除与出站/日志泄漏复验；记录不少于 10 个 Prompt Injection 红队样例，全部通过后自动进入 Phase 11。
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -146,7 +155,7 @@
 | 6 点击提问（MVP 必达） | ✅ 已完成 |
 | 7 框选 + 视觉（MVP 必达） | ✅ 已完成 |
 | 8 NL 搜索（MVP 必达） | ✅ 已完成 |
-| 9 一键仓库分析 | ⬜ |
+| 9 一键仓库分析 | ✅ 已完成 |
 | 10 安全加固 + 红队测试 | ⬜ |
 | 11 测试 + 打包 + MVP 验收 | ⬜ |
 
@@ -189,3 +198,4 @@
 - 2026-07-24：Phase 6 通过；点击选择叠层、逻辑元素提取、Panel 状态/预览、SelectedElement AI 上下文闭环及 SPA 旧选择阻断落地；95 项测试及全套静态/构建验证通过，记录 D-045，准备进入 Phase 7。
 - 2026-07-24：Phase 7 通过；区域结构化提取、充分性判定、可信截图裁剪、视觉偏好/Capability/费用护栏及截图不持久化落地；107 项测试及全套静态/构建验证通过，记录 D-046，准备进入 Phase 8。
 - 2026-07-24：Phase 8 通过；本地中文 GitHub 查询转换、仓库/Issue 匿名搜索、只读工具白名单、独立 search 限流桶、网页/DOM 降级与结果卡落地；126 项测试及全套静态/构建验证通过，记录 D-047，准备进入 Phase 9。
+- 2026-07-24：Phase 9 通过；匿名 core 事实聚合、固定结构化分析卡、Provider Schema 降级与事实回填、DOM/限流降级及三仓库真实匿名验收完成；143 项常规测试与独立 live test 通过，记录 D-048，准备进入 Phase 10。

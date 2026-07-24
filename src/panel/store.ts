@@ -5,6 +5,7 @@ import type {
   PanelPickState,
   PanelRegionState,
   PanelSearchState,
+  PanelRepositoryAnalysisState,
   ProviderRuntimeView,
   ProviderState,
   StreamEvent,
@@ -12,6 +13,7 @@ import type {
 import type { ProviderId } from '../lib/types';
 import type { SelectedElement, SelectedRegion } from '../lib/types';
 import type { GitHubSearchResult, SearchTarget } from '../lib/github-search';
+import type { RepositoryAnalysisCard } from '../lib/repository-analysis';
 
 interface PanelMessage {
   id: string;
@@ -38,6 +40,9 @@ interface PanelState {
   searchStatus: 'idle' | 'searching' | 'done' | 'error';
   searchError?: string;
   searchResult?: GitHubSearchResult;
+  analysisStatus: 'idle' | 'analyzing' | 'done' | 'error';
+  analysisError?: string;
+  analysisCard?: RepositoryAnalysisCard;
   pageLabel: string;
   providers: ProviderRuntimeView[];
   selectedTextProviderId?: ProviderId;
@@ -54,6 +59,7 @@ interface PanelState {
   setSearchDraft(value: string): void;
   setSearchTarget(value: SearchTarget): void;
   applySearchState(state: PanelSearchState): void;
+  applyRepositoryAnalysisState(state: PanelRepositoryAnalysisState): void;
   applyStreamEvent(event: StreamEvent): void;
   selectTextProvider(providerId: ProviderId): void;
   selectVisionProvider(providerId: ProviderId): void;
@@ -69,6 +75,7 @@ export const usePanelStore = create<PanelState>((set) => ({
   searchDraft: '',
   searchTarget: 'auto',
   searchStatus: 'idle',
+  analysisStatus: 'idle',
   pageLabel: '等待读取当前 GitHub 页面',
   providers: [],
   setConnected: (connected) => set({ connected }),
@@ -186,6 +193,26 @@ export const usePanelStore = create<PanelState>((set) => ({
               searchStatus: 'error',
               searchError: state.error,
               searchResult: undefined,
+            },
+    ),
+  applyRepositoryAnalysisState: (state) =>
+    set(
+      state.status === 'analyzing'
+        ? {
+            analysisStatus: 'analyzing',
+            analysisError: undefined,
+            analysisCard: undefined,
+          }
+        : state.status === 'done'
+          ? {
+              analysisStatus: 'done',
+              analysisError: undefined,
+              analysisCard: state.card,
+            }
+          : {
+              analysisStatus: 'error',
+              analysisError: state.error,
+              analysisCard: undefined,
             },
     ),
   applyStreamEvent: (event) =>

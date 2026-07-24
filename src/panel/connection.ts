@@ -3,6 +3,7 @@ import {
   panelPickStateSchema,
   panelRegionStateSchema,
   panelSearchStateSchema,
+  panelRepositoryAnalysisStateSchema,
   panelSessionStateSchema,
   providerStateSchema,
   streamEventSchema,
@@ -10,6 +11,7 @@ import {
   type PanelPickState,
   type PanelRegionState,
   type PanelSearchState,
+  type PanelRepositoryAnalysisState,
   type ProviderState,
   type StreamEvent,
 } from '../lib/bridge-protocol';
@@ -31,6 +33,7 @@ export interface PanelConnection {
   cancelRegion?(): void;
   search?(naturalLanguage: string, target: SearchTarget): void;
   openGitHubPage?(url: string): void;
+  analyzeRepository?(providerId?: ProviderId): void;
   disconnect(): void;
 }
 
@@ -45,6 +48,7 @@ export function connectPanel(
   onPickState: (state: PanelPickState) => void = () => undefined,
   onRegionState: (state: PanelRegionState) => void = () => undefined,
   onSearchState: (state: PanelSearchState) => void = () => undefined,
+  onRepositoryAnalysisState: (state: PanelRepositoryAnalysisState) => void = () => undefined,
 ): PanelConnection {
   let activePort: chrome.runtime.Port | undefined;
   let reconnectAttempt = 0;
@@ -89,6 +93,14 @@ export function connectPanel(
       onSearchState(
         parseEnvelope(raw, panelSearchStateSchema, {
           expectedType: 'SEARCH_STATE',
+        }).payload,
+      );
+      return;
+    }
+    if (candidate?.type === 'REPOSITORY_ANALYSIS_STATE') {
+      onRepositoryAnalysisState(
+        parseEnvelope(raw, panelRepositoryAnalysisStateSchema, {
+          expectedType: 'REPOSITORY_ANALYSIS_STATE',
         }).payload,
       );
       return;
@@ -177,6 +189,9 @@ export function connectPanel(
     },
     openGitHubPage(url) {
       activePort?.postMessage(createEnvelope('PANEL_OPEN_GITHUB_PAGE', { url }));
+    },
+    analyzeRepository(providerId) {
+      activePort?.postMessage(createEnvelope('PANEL_ANALYZE_REPOSITORY', { providerId }));
     },
     disconnect() {
       stopped = true;

@@ -153,6 +153,13 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
 - GitHub API 响应视为不可信远端数据，只投影最多 10 条有限字段；结果 URL 与降级 URL必须再次满足 `https://github.com/*` Schema，不能把 API 响应变成任意导航。
 - `core/search/code_search` 限流状态只保存数值配额与时间，不含页面内容或凭据；search 受限时不重复出站，本地 DOM 结果仅作为纯文本渲染。
 
+### 8.3 仓库分析事实与 Provider 边界（D-048）
+- 私有/无权限 PageContext 在 GitHub API 与 Provider 之前统一零出站；仓库名必须通过 `owner/repository` 格式校验，API 路径由 Background 固定构造。
+- README/描述/Topic 即使来自公开仓库仍是不可信数据：发送 Provider 前经 sanitizer，只放 user 角色并带不可信边界；Provider 输出经固定 zod Schema，不直接渲染 HTML。
+- Star、Release、日期、归档、许可证、Issue/PR 等事实字段不在 Provider 输出 Schema 中，最终只能由 DOM/API 回填，避免 Prompt Injection 或模型幻觉改写事实。
+- Provider 非法 JSON 最多再请求一次；网络/鉴权/限流错误不自动重试。core 限流时不继续撞同桶，转为 DOM 有限降级。
+- 仓库卡、core 缓存和限流状态不保存 README 正文、Provider Key 或 GitHub Token；v1 仍无 GitHub Token。
+
 ## 8.5 数据清除（v1.2，D-033）
 
 三种**相互独立**的清除操作，Options 页分别提供入口：

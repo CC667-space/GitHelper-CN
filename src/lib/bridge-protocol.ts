@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { hasSufficientStructuredRegion } from './region';
 import { githubWebUrlSchema, githubSearchResultSchema, searchTargetSchema } from './github-search';
+import { repositoryAnalysisCardSchema } from './repository-analysis';
 
 export const PANEL_PORT_NAME = 'git-helper-panel-v1';
 
@@ -111,6 +112,12 @@ export const panelOpenGitHubPageSchema = z
   })
   .strict();
 
+export const panelAnalyzeRepositoryRequestSchema = z
+  .object({
+    providerId: z.enum(['deepseek', 'uuapi', 'openrouter']).optional(),
+  })
+  .strict();
+
 export const panelSearchStateSchema = z.discriminatedUnion('status', [
   z
     .object({
@@ -123,6 +130,29 @@ export const panelSearchStateSchema = z.discriminatedUnion('status', [
       status: z.literal('done'),
       requestId: z.string().min(1).max(128),
       result: githubSearchResultSchema,
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal('error'),
+      requestId: z.string().min(1).max(128),
+      error: z.string().min(1).max(1_000),
+    })
+    .strict(),
+]);
+
+export const panelRepositoryAnalysisStateSchema = z.discriminatedUnion('status', [
+  z
+    .object({
+      status: z.literal('analyzing'),
+      requestId: z.string().min(1).max(128),
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal('done'),
+      requestId: z.string().min(1).max(128),
+      card: repositoryAnalysisCardSchema,
     })
     .strict(),
   z
@@ -299,6 +329,7 @@ export type RegionOutcome = z.infer<typeof regionOutcomeSchema>;
 export type PanelRegionState = z.infer<typeof panelRegionStateSchema>;
 export type PanelSearchRequest = z.infer<typeof panelSearchRequestSchema>;
 export type PanelSearchState = z.infer<typeof panelSearchStateSchema>;
+export type PanelRepositoryAnalysisState = z.infer<typeof panelRepositoryAnalysisStateSchema>;
 export type PageInfo = z.infer<typeof pageInfoSchema>;
 export type StreamEvent = z.infer<typeof streamEventSchema>;
 export type ProviderRuntimeView = z.infer<typeof providerRuntimeViewSchema>;

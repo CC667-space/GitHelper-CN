@@ -342,3 +342,14 @@
 - **证据**：7 组转换测试含 5 组代表性中文查询；API 测试覆盖仓库/Issue 投影、三桶独立、Remaining/Reset/Retry-After、限流零重试、到点恢复与缓存；工具、集成和 UI 测试覆盖白名单、Schema、解释、结果卡及网页/DOM 降级。全量 126 项测试通过。
 - **范围**：Phase 8 冻结核心功能的内部实现；不新增 Provider 调用、GitHub Token、Chrome 权限、Host、写操作或外部导航能力。
 - 状态：代码已验证 ｜ 2026-07-24
+
+## D-048 仓库分析采用事实层与解释层分离
+- **决策**：
+  - `RepositoryAnalysisCard` 为固定本地 Schema。Star/Fork/Watch、Release、日期、归档、许可证、Issue/PR 与语言比例属于**事实层**，只能由公开 DOM/匿名 GitHub API 写入；Provider 只生成用途、平台、安装建议、难度、风险与下一步，最终组装时不能覆盖事实字段。
+  - core 聚合固定访问仓库详情、languages、latest release、open pulls；`open_issues_count - openPullRequests` 得到开放 Issue。完整结果内存缓存 5 分钟；部分失败保留已取得事实，限流缓存不超过 retryAt，core 阻断时直接使用 DOM。
+  - README 提取到的安装命令优先于 Provider；缺字段保留固定卡片并显示“未获取/未知”，不让模型补造。API 重定向时以 `full_name/html_url` 作为 canonical 仓库身份。
+  - Provider 已验证 structured output 时请求 `json_object`；未验证时使用严格 Prompt + 本地 zod。仅 Schema 不合法时再尝试一次；网络、鉴权、限流等 Provider 错误不自动重复调用，随后由上层生成本地确定性说明。
+- **理由**：可变事实必须可追溯，模型适合解释而不适合作为数字来源；分层组装既保留 AI 的中文可读性，也让 Provider 失败、缺字段和限流时仍能生成有边界的卡片。
+- **证据**：单元/集成/UI 测试覆盖三仓库固定快照、事实回填、README 安装优先、缺字段、core 限流零重试、Provider structured/prompt 两路、非法 JSON 单次重试、网络错误零重试、私有页面零出站、canonical 重定向和卡片渲染。匿名真实测试 `react/react`、`microsoft/vscode`、`rust-lang/rust` 全部通过，见 `scripts/phase9-live-evidence.md`。
+- **范围**：Phase 9 既定功能的内部实现；不新增 GitHub Token、Host、Chrome 权限、写操作或持久页面内容。
+- 状态：代码与真实匿名 API 已验证 ｜ 2026-07-24

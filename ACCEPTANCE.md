@@ -31,6 +31,7 @@
 - credential-store：Options 上下文只 write/delete、Background 只 read/inject（读写路径唯一）；普通 storage 接口读不到凭据；**构建期 import 边界：`src/content/**` 引用 credential-store 触发 lint 报错（D-028）**
 - tools registry：zod 校验通过/拒绝、白名单外拒绝、**openGitHubPage 仅接受 `https://github.com/*`、非 https Scheme（javascript/data/file/chrome/chrome-extension/blob）全部拒绝（D-013R）**
 - github-api：**限流分桶（core/search/code_search）、X-RateLimit-Resource/Remaining/Reset 与 Retry-After 解析、限流后不指数重试（mock 计时断言）、到点恢复（D-032）**
+- repository-analysis：固定 Schema；DOM/API 事实回填；README 安装优先；缺 Release/许可证/语言降级；core 限流零重试；Provider structuredOutput 与 Prompt+zod 单次重试；网络错误不重试；canonical 仓库重定向
 - storage：读写、schemaVersion、迁移、getBytesInUse 容量检查、淘汰顺序
 - session-store：CRUD、同页面/同仓库关联、30 天过期、50 会话上限、摘要触发、Provider/Panel 上下文长度控制、容量淘汰顺序
 - prefs-store：合法偏好持久化；运行时拒绝 `downloads:auto` 和非 `deny` 的 `accountChanges`
@@ -51,6 +52,7 @@
 - Panel 点击选择状态覆盖 active/selected/cancelled；已选元素随问题提交，旧页面选择被清除
 - Panel 框选状态覆盖 active/selected/cancelled；结构充分提示“不截图”，不足时在提交前提示视觉 Provider 与可能费用
 - Panel 中文搜索覆盖自动/仓库/Issue 目标、查询解释与语法、仓库/Issue 结果卡、限流提示、本地 DOM 结果与安全网页入口；搜索链不调用 AI Provider
+- Panel 一键仓库分析覆盖运行/完成/错误、固定字段卡片、数据源、缺字段与 degradedNotice；数字事实以卡片字段直接呈现
 
 ### 3. 扩展集成测试
 - Panel→BG→Content→Panel 消息往返（经来源+Schema 校验）
@@ -59,6 +61,7 @@
 - 点击选择集成链断言 SelectedElement 经 Content→Background→Panel 后作为不可信数据进入 AI 请求，且 SPA 后旧 `sourceUrl` 不出站
 - 框选集成链断言充分结构只走文本；不足结构由 Background 裁剪后才携图走视觉；`visionEnabled=false` 时截图/Provider/会话写入均为零
 - 搜索集成链断言 Panel→Background→只读工具→匿名 API→Panel；打开结果只接受 `https://github.com/*`
+- 仓库分析链断言当前 PageContext→core/Provider→固定卡片；私有页面 core/Provider 均零调用；Provider 不能覆盖 API 数字事实
 
 ### 4. E2E（Playwright，加载扩展，Phase 11）
 - 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片
@@ -112,7 +115,7 @@
 | 6 | pick 进出、选中结构正确、基于元素回答 |
 | 7 | 框选结构提取、充分不截图/不足时 SW 截图裁剪对齐、visionEnabled 开关、截图不持久保存 |
 | 8 | ≥5 组查询转换正确、仓库/Issue 搜索返回并渲染；core/search/code_search 独立持久化，search 限流零重试且到点恢复，网页/本地 DOM 降级可读 |
-| 9 | ≥3 仓库完整卡片、数字来自事实、缺字段降级、匿名限额降级提示正常 |
+| 9 | ≥3 个真实公开仓库完整卡片、数字来自 DOM/API 事实、Provider structuredOutput 降级、缺字段与匿名 core 限额降级提示正常 |
 | 10 | 安全客观项全过（含 Scheme 拒绝、import 边界、三种清除）+ 红队记录 ≥10 样例 |
 | 11 | 全测试绿、打包可加载、S1-S5 证据齐全（前置：Phase 6/7/8 已完成）｜ **人工：S1-S5 批量体验复核** |
 

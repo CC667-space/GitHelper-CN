@@ -15,6 +15,8 @@ import {
   panelSearchRequestSchema,
   panelSearchStateSchema,
   panelOpenGitHubPageSchema,
+  panelAnalyzeRepositoryRequestSchema,
+  panelRepositoryAnalysisStateSchema,
   panelSessionStateSchema,
   panelAbortSchema,
   PANEL_PORT_NAME,
@@ -27,6 +29,7 @@ import {
   type PanelPickState,
   type PanelRegionState,
   type PanelSearchState,
+  type PanelRepositoryAnalysisState,
   type PickOutcome,
   type RegionOutcome,
   type ProviderRuntimeView,
@@ -48,6 +51,9 @@ import { sessionStore } from './session-store';
 import type { GitHubSearchResult, SearchTarget } from '../lib/github-search';
 import { GitHubSearchExecutor } from './tools/executors';
 import { assertPublicContext } from './outbound-policy';
+import type { RepositoryAnalysisCard } from '../lib/repository-analysis';
+import { RepositoryAnalysisExecutor } from './repository-analysis';
+import { GitHubApiClient } from './github-api';
 
 interface PreparedPanelSession {
   sessionId: string;
@@ -91,6 +97,12 @@ export interface PanelBridgeDependencies {
     page: PageInfo;
     signal: AbortSignal;
   }): Promise<GitHubSearchResult>;
+  analyzeRepository?(input: {
+    page: PageInfo;
+    providerId?: ProviderId;
+    requestId: string;
+    signal: AbortSignal;
+  }): Promise<RepositoryAnalysisCard>;
   openGitHubPage?(url: string): Promise<void>;
   abort(requestId: string): boolean;
   providerViews?(): Promise<ProviderRuntimeView[]>;
@@ -99,6 +111,7 @@ export interface PanelBridgeDependencies {
   emitPickState?(state: PanelPickState): void;
   emitRegionState?(state: PanelRegionState): void;
   emitSearchState?(state: PanelSearchState): void;
+  emitRepositoryAnalysisState?(state: PanelRepositoryAnalysisState): void;
 }
 
 export class PanelBridge {
@@ -165,6 +178,11 @@ export class PanelBridge {
             await this.dependencies.openGitHubPage(url);
             return { opened: true };
           },
+        },
+        PANEL_ANALYZE_REPOSITORY: {
+          source: 'extension',
+          payloadSchema: panelAnalyzeRepositoryRequestSchema,
+          handler: (payload, context) => this.handleRepositoryAnalysis(payload, context),
         },
       },
       runtimeId,
@@ -350,6 +368,45 @@ export class PanelBridge {
       return { accepted: false, requestId: context.requestId };
     }
   }
+
+  private async handleRepositoryAnalysis(
+    payload: unknown,
+    context: RouteContext,
+  ): Promise<unknown> {
+    const request = panelAnalyzeRepositoryRequestSchema.parse(payload);
+    if (!this.dependencies.analyzeRepository || !this.dependencies.emitRepositoryAnalysisState) {
+      throw new Error('仓库分析能力尚未注册');
+    }
+    this.dependencies.emitRepositoryAnalysisState({
+      status: 'analyzing',
+      requestId: context.requestId,
+    });
+    try {
+      const page = await this.dependencies.requestPageInfo(context.signal);
+      const card = await this.dependencies.analyzeRepository({
+        page,
+        providerId: request.providerId,
+        requestId: context.requestId,
+        signal: context.signal,
+      });
+      this.dependencies.emitRepositoryAnalysisState({
+        status: 'done',
+        requestId: context.requestId,
+        card,
+      });
+      return { accepted: true, requestId: context.requestId };
+    } catch (error: unknown) {
+      const message = sanitizeText(
+        error instanceof Error ? error.message : String(error),
+      ).value.slice(0, 1_000);
+      this.dependencies.emitRepositoryAnalysisState({
+        status: 'error',
+        requestId: context.requestId,
+        error: message,
+      });
+      return { accepted: false, requestId: context.requestId };
+    }
+  }
 }
 
 export async function requestActivePageInfo(signal: AbortSignal): Promise<PageInfo> {
@@ -466,7 +523,18 @@ function errorStreamEvent(error: unknown, requestId?: string): Envelope<StreamEv
 export function registerPanelPortBridge(
   runtime: import('./provider-runtime').ProviderRuntime,
 ): void {
-  const searchExecutor = new GitHubSearchExecutor();
+  const githubApi = new GitHubApiClient();
+  const searchExecutor = new GitHubSearchExecutor(githubApi);
+  const repositoryAnalyzer = new RepositoryAnalysisExecutor(
+    githubApi,
+    async (facts, signal, manualProviderId, requestId) =>
+      await runtime.generateRepositoryInsights({
+        requestId: requestId ?? crypto.randomUUID(),
+        facts,
+        manualProviderId,
+        signal,
+      }),
+  );
   chrome.runtime.onConnect.addListener((port) => {
     if (port.name !== PANEL_PORT_NAME) {
       port.disconnect();
@@ -510,6 +578,18 @@ export function registerPanelPortBridge(
           signal,
         });
       },
+      analyzeRepository: async ({ page, providerId, requestId, signal }) => {
+        if (!page.pageContext) {
+          throw new Error('当前页面上下文尚未就绪');
+        }
+        assertPublicContext(page.pageContext);
+        return await repositoryAnalyzer.analyze({
+          page: page.pageContext,
+          manualProviderId: providerId,
+          requestId,
+          signal,
+        });
+      },
       openGitHubPage: async (url) => {
         await chrome.tabs.create({ url });
       },
@@ -543,6 +623,13 @@ export function registerPanelPortBridge(
         port.postMessage(createEnvelope('REGION_STATE', panelRegionStateSchema.parse(state))),
       emitSearchState: (state) =>
         port.postMessage(createEnvelope('SEARCH_STATE', panelSearchStateSchema.parse(state))),
+      emitRepositoryAnalysisState: (state) =>
+        port.postMessage(
+          createEnvelope(
+            'REPOSITORY_ANALYSIS_STATE',
+            panelRepositoryAnalysisStateSchema.parse(state),
+          ),
+        ),
     });
     const hydration = requestActivePageInfo(new AbortController().signal)
       .then(async (page) => {

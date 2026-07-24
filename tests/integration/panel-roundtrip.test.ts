@@ -507,4 +507,74 @@ describe('Panel → Background → Content → Panel', () => {
       }),
     );
   });
+
+  it('一键仓库分析经当前 PageContext 执行并推回固定卡片', async () => {
+    const emitRepositoryAnalysisState = vi.fn();
+    const card = {
+      repository: 'react/react',
+      url: 'https://github.com/react/react',
+      purpose: '用于构建用户界面。',
+      languages: [{ name: 'JavaScript', percent: 100 }],
+      platforms: ['Web/Browser'],
+      installation: { steps: ['npm install react'], source: 'readme' as const },
+      release: null,
+      activity: {},
+      popularity: { stars: 240_000 },
+      archived: false,
+      license: { name: 'MIT License', spdxId: 'MIT' },
+      issuesAndPullRequests: { openIssues: 1_000, openPullRequests: 100 },
+      difficulty: { level: '入门' as const, reason: '标准 npm 安装。' },
+      risks: ['需核对版本兼容性。'],
+      nextSteps: ['阅读快速开始。'],
+      generatedAt: '2026-07-24T00:00:00.000Z',
+      sources: { dom: true, githubApi: true, provider: true },
+    };
+    const analyzeRepository = vi.fn(async () => card);
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(async () => ({
+        url: 'https://github.com/react/react',
+        title: 'react/react',
+        placeholder: false,
+        capturedAt: '2026-07-24T00:00:00.000Z',
+        pageContext: {
+          url: 'https://github.com/react/react',
+          pageType: 'repo' as const,
+          repository: 'react/react',
+          isPrivate: false,
+          extracted: {},
+          capturedAt: '2026-07-24T00:00:00.000Z',
+        },
+      })),
+      streamAnswer: vi.fn(),
+      analyzeRepository,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitRepositoryAnalysisState,
+    });
+
+    await bridge.dispatch(
+      createEnvelope(
+        'PANEL_ANALYZE_REPOSITORY',
+        { providerId: 'deepseek' },
+        { id: 'analysis-roundtrip' },
+      ),
+      panelSender,
+    );
+
+    expect(analyzeRepository).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: 'deepseek',
+        requestId: 'analysis-roundtrip',
+      }),
+    );
+    expect(emitRepositoryAnalysisState).toHaveBeenNthCalledWith(1, {
+      status: 'analyzing',
+      requestId: 'analysis-roundtrip',
+    });
+    expect(emitRepositoryAnalysisState).toHaveBeenNthCalledWith(2, {
+      status: 'done',
+      requestId: 'analysis-roundtrip',
+      card,
+    });
+  });
 });

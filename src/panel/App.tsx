@@ -6,6 +6,14 @@ import { connectPanel, type PanelConnection } from './connection';
 import { MarkdownMessage } from './MarkdownMessage';
 import { usePanelStore } from './store';
 
+function displayDate(value?: string): string {
+  return value ? new Date(value).toLocaleDateString('zh-CN') : '未获取';
+}
+
+function displayCount(value?: number): string {
+  return value === undefined ? '未获取' : value.toLocaleString('zh-CN');
+}
+
 export function PanelApp({
   connect = connectPanel,
 }: {
@@ -30,6 +38,9 @@ export function PanelApp({
     searchStatus,
     searchError,
     searchResult,
+    analysisStatus,
+    analysisError,
+    analysisCard,
     selectedTextProviderId,
     selectedVisionProviderId,
     activeRequestId,
@@ -39,6 +50,7 @@ export function PanelApp({
     applyRegionState,
     applySessionState,
     applySearchState,
+    applyRepositoryAnalysisState,
     applyStreamEvent,
     selectTextProvider,
     selectVisionProvider,
@@ -64,6 +76,7 @@ export function PanelApp({
       applyPickState,
       applyRegionState,
       applySearchState,
+      applyRepositoryAnalysisState,
     );
     connection.current = activeConnection;
     return () => {
@@ -77,6 +90,7 @@ export function PanelApp({
     applyPickState,
     applyRegionState,
     applySearchState,
+    applyRepositoryAnalysisState,
     applyProviderState,
     applySessionState,
     applyStreamEvent,
@@ -254,6 +268,181 @@ export function PanelApp({
           ) : null}
         </div>
       </header>
+
+      <section className="border-b border-slate-200 bg-white p-3" data-testid="repository-analysis">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">当前仓库分析</h2>
+          <button
+            className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:bg-slate-400"
+            disabled={!connected || analysisStatus === 'analyzing' || Boolean(activeRequestId)}
+            onClick={() => connection.current?.analyzeRepository?.(selectedTextProviderId)}
+            type="button"
+          >
+            {analysisStatus === 'analyzing' ? '分析中…' : '一键分析'}
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-slate-500">
+          数字事实来自当前页面与匿名 GitHub API；解释会调用所选文本 Provider，可能消耗额度。
+        </p>
+        {analysisError ? (
+          <p className="mt-2 rounded-md bg-rose-50 p-2 text-xs text-rose-800">{analysisError}</p>
+        ) : null}
+        {analysisCard ? (
+          <article
+            className="mt-3 space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/30 p-3 text-xs"
+            data-testid="repository-analysis-card"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h3 className="break-words text-sm font-semibold">{analysisCard.repository}</h3>
+                <p className="mt-1 text-slate-600">{analysisCard.purpose}</p>
+              </div>
+              <button
+                className="shrink-0 rounded border border-emerald-400 px-2 py-1 text-emerald-900"
+                onClick={() => connection.current?.openGitHubPage?.(analysisCard.url)}
+                type="button"
+              >
+                打开仓库
+              </button>
+            </div>
+
+            <dl className="grid grid-cols-2 gap-2">
+              <div className="rounded bg-white p-2">
+                <dt className="text-slate-500">Star / Fork / Watch</dt>
+                <dd className="mt-1 font-medium">
+                  {displayCount(analysisCard.popularity.stars)} /{' '}
+                  {displayCount(analysisCard.popularity.forks)} /{' '}
+                  {displayCount(analysisCard.popularity.watchers)}
+                </dd>
+              </div>
+              <div className="rounded bg-white p-2">
+                <dt className="text-slate-500">开放 Issue / PR</dt>
+                <dd className="mt-1 font-medium">
+                  {displayCount(analysisCard.issuesAndPullRequests.openIssues)} /{' '}
+                  {displayCount(analysisCard.issuesAndPullRequests.openPullRequests)}
+                </dd>
+              </div>
+              <div className="rounded bg-white p-2">
+                <dt className="text-slate-500">最后推送</dt>
+                <dd className="mt-1 font-medium">{displayDate(analysisCard.activity.pushedAt)}</dd>
+              </div>
+              <div className="rounded bg-white p-2">
+                <dt className="text-slate-500">归档 / 许可证</dt>
+                <dd className="mt-1 font-medium">
+                  {analysisCard.archived === null
+                    ? '归档状态未知'
+                    : analysisCard.archived
+                      ? '已归档'
+                      : '未归档'}
+                  {' · '}
+                  {analysisCard.license?.spdxId ?? analysisCard.license?.name ?? '未获取'}
+                </dd>
+              </div>
+            </dl>
+
+            <section>
+              <h4 className="font-medium">语言</h4>
+              {analysisCard.languages.length ? (
+                <ul className="mt-1 space-y-1">
+                  {analysisCard.languages.map((language) => (
+                    <li className="flex justify-between gap-2" key={language.name}>
+                      <span>{language.name}</span>
+                      <span>{language.percent.toFixed(1)}%</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-1 text-slate-500">未获取语言数据</p>
+              )}
+            </section>
+
+            <section>
+              <h4 className="font-medium">平台</h4>
+              <p className="mt-1 text-slate-600">
+                {analysisCard.platforms.join(' / ') || '未可靠识别'}
+              </p>
+            </section>
+
+            <section>
+              <h4 className="font-medium">
+                安装
+                <span className="ml-1 font-normal text-slate-500">
+                  （
+                  {analysisCard.installation.source === 'readme'
+                    ? 'README 提取'
+                    : analysisCard.installation.source === 'provider'
+                      ? 'Provider 建议'
+                      : '未获取'}
+                  ）
+                </span>
+              </h4>
+              {analysisCard.installation.steps.length ? (
+                <ol className="mt-1 list-decimal space-y-1 pl-4">
+                  {analysisCard.installation.steps.map((step, index) => (
+                    <li className="break-words" key={`${index}:${step.slice(0, 40)}`}>
+                      <code>{step}</code>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="mt-1 text-slate-500">未找到可靠安装步骤</p>
+              )}
+            </section>
+
+            <section className="rounded bg-white p-2">
+              <h4 className="font-medium">最新 Release</h4>
+              {analysisCard.release ? (
+                <p className="mt-1 text-slate-600">
+                  {analysisCard.release.name} ({analysisCard.release.tag}) ·{' '}
+                  {displayDate(analysisCard.release.publishedAt)}
+                </p>
+              ) : (
+                <p className="mt-1 text-slate-500">未找到正式 Release</p>
+              )}
+            </section>
+
+            <section>
+              <h4 className="font-medium">上手难度：{analysisCard.difficulty.level}</h4>
+              <p className="mt-1 text-slate-600">{analysisCard.difficulty.reason}</p>
+            </section>
+
+            <section>
+              <h4 className="font-medium">风险</h4>
+              {analysisCard.risks.length ? (
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                  {analysisCard.risks.map((risk, index) => (
+                    <li key={`${index}:${risk.slice(0, 40)}`}>{risk}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-1 text-slate-500">
+                  当前有限数据中未识别出明确风险；仍需自行核对。
+                </p>
+              )}
+            </section>
+
+            <section>
+              <h4 className="font-medium">建议下一步</h4>
+              <ol className="mt-1 list-decimal space-y-1 pl-4 text-slate-700">
+                {analysisCard.nextSteps.map((step, index) => (
+                  <li key={`${index}:${step.slice(0, 40)}`}>{step}</li>
+                ))}
+              </ol>
+            </section>
+
+            <p className="text-slate-500">
+              数据源：DOM {analysisCard.sources.dom ? '✓' : '—'} · GitHub API{' '}
+              {analysisCard.sources.githubApi ? '✓' : '—'} · Provider{' '}
+              {analysisCard.sources.provider ? '✓' : '—'}
+            </p>
+            {analysisCard.degradedNotice ? (
+              <p className="rounded bg-amber-50 p-2 text-amber-900">
+                {analysisCard.degradedNotice}
+              </p>
+            ) : null}
+          </article>
+        ) : null}
+      </section>
 
       <section className="border-b border-slate-200 bg-white p-3" data-testid="github-search">
         <div className="flex items-center justify-between gap-2">

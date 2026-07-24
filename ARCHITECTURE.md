@@ -205,6 +205,20 @@ password input 不读取 value。`sourceUrl` 与发送时页面不一致则丢�
 同桶限流后到点前直接降级且不重试。API 与网页 URL 都由 Background 固定构造，Panel 不能要求
 Background fetch 任意 URL；结果打开只接受 `https://github.com/*`。
 
+**Phase 9 仓库分析实现（D-048）**：
+```
+当前公开 PageContext(DOM) + GitHub core API(详情/语言/Release/PR)
+  → RepositoryAnalysisFacts（数字与可变状态的唯一事实源）
+  → Provider 只生成定性 RepositoryInsights
+      structuredOutput 可用 → json_object + zod
+      不可用 → 严格 Prompt + zod，非法 JSON 最多重试一次
+  → 本地事实回填覆盖 → 固定 RepositoryAnalysisCard → Panel
+  └─ core/Provider/字段失败 → DOM/本地确定性卡片 + 明确 degradedNotice
+```
+README 中有界提取的安装命令优先于 Provider 建议；API 重定向以 `full_name/html_url`
+规范化仓库身份。完整 core 聚合缓存 5 分钟，限流阻断状态继续由 D-032 三桶持久化。
+Provider 输入仍是带不可信标记并经 sanitizer 处理的 user 数据，绝不进入 System 指令。
+
 ### 3.8 确认流程（OperationConfirmation，v1.1 收紧 C-3）
 需确认操作弹出：操作说明 + 影响 + 推荐选择 + **[允许本次] / [拒绝]** 两项。
 **不提供"始终允许该类操作"**——高风险权限不能一次点击永久放开。`operationPolicy` 只在允许的枚举范围内配置（见 §5 UserPreferences）。
@@ -452,6 +466,7 @@ interface OperationConfirmation {
 - **参数验证**：zod，越权即拒绝并回中文错误。
 - **Prompt Injection 防护**：页面数据永不进 system 角色；显式标注不可信；白名单+确认策略（SECURITY §7）。
 - **幻觉处理**：涉及可变数据（是否维护/许可证等）优先用 DOM/API 事实回填，模型不得臆造数字。
+- **仓库分析事实回填（D-048）**：Provider 输出 Schema 不包含 Star/Release/日期/许可证/Issue-PR 等可变事实；最终卡片仅从 `RepositoryAnalysisFacts` 回填这些字段。Provider 失败不阻断事实卡，降级说明明确标记数据源。
 
 ---
 
