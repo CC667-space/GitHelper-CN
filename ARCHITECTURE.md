@@ -1,0 +1,439 @@
+# ARCHITECTURE.md — 系统架构、数据模型与权限设计
+
+> 依附于 `PROJECT_BASELINE.md`。架构级方向变更须确认；内部实现变更记 `DECISIONS.md`。
+> v1.1（2026-07-24）：按修订任务单 P0-1/3/4/6/7、C-1/3、P1-1/3/4 修订。
+> v1.2（2026-07-24）：截图坐标换算改由 Phase 0 探针 B 实测决定（D-029）；工具白名单 openPage 拆分限域（D-013R）；GitHub API 限流按 resource 分桶（D-032）；manifest 增加 `minimum_chrome_version: "114"`（D-035）；数据清除三分（D-033）。
+
+---
+
+## 1. 整体架构（MV3 四端）
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                        Chrome 浏览器                            │
+│                                                                │
+│  ┌─────────────────┐         ┌──────────────────────────────┐ │
+│  │  GitHub 页面     │         │   Side Panel (React UI)       │ │
+│  │  Content Script  │◄──────► │   - 会话/消息流                │ │
+│  │  (不可信边界,     │  msg    │   - Provider 手动切换下拉      │ │
+│  │   无凭据访问)     │         │   - 点击/框选触发按钮          │ │
+│  │  - 页面类型识别   │         │   - 一键仓库分析               │ │
+│  │  - DOM 解析      │         │   - 截图裁剪(可信上下文)       │ │
+│  │  - 点击/框选叠层  │         └───────────────┬──────────────┘ │
+│  │  - 高亮/滚动     │                         │ msg             │
+│  │  - 选区坐标上报   │                         │                 │
+│  └────────┬────────┘                         ▼                 │
+│           │ msg        ┌────────────────────────────────────┐ │
+│           └──────────► │   Background Service Worker         │ │
+│                        │   (消息路由中枢 / 无常驻状态)         │ │
+│                        │   - MessageRouter(来源+Schema校验)   │ │
+│                        │   - ContextBuilder(数据最小化)       │ │
+│                        │   - Sanitizer(敏感信息遮蔽)          │ │
+│                        │   - ProviderManager(Capability路由)  │ │
+│                        │   - CredentialStore(凭据独立访问)    │ │
+│                        │   - GitHubApiClient(匿名+限流+缓存)  │ │
+│                        │   - ToolExecutor(白名单)             │ │
+│                        │   - captureVisibleTab(截图)          │ │
+│                        │   - SessionStore / PrefsStore        │ │
+│                        └───────────────┬────────────────────┘ │
+│                                        │ HTTPS(仅白名单Host)    │
+│                       ┌────────────────┼───────────────┐       │
+│                       ▼                ▼               ▼       │
+│               DeepSeek API      UUAPI(uuapi.net)   OpenRouter  │
+│               (文本默认)         (高质量/视觉)       (兜底)      │
+│                       [固定端点预设, 不可自定义 Base URL]        │
+│                                                                │
+│                     GitHub REST API (匿名, 无 Token)           │
+│                                                                │
+│  ┌──────────────┐                                              │
+│  │ Options 页    │  Provider/Key/偏好/数据清除/数据流向披露      │
+│  └──────────────┘                                              │
+└──────────────────────────────────────────────────────────────┘
+  持久层：chrome.storage.local — setAccessLevel('TRUSTED_CONTEXTS')
+         (凭据与普通数据分区; Content Script 无访问权)
+```
+
+**为什么 Background 做中枢**：凭据与网络调用集中一处，统一遮蔽/限流/Host 白名单；Content Script 运行在网页边界附近，视为**不可信上下文**，不持有任何凭据（SECURITY 第 3 节）。
+
+---
+
+## 2. 模块职责
+
+| 模块 | 位置 | 职责 |
+|---|---|---|
+| `content/detector` | content | 按 URL+DOM 特征识别 GitHub 页面类型 |
+| `content/parsers/*` | content | 每页面类型一个解析器，产出结构化 PageContext |
+| `content/selection` | content | 点击提问叠层 + 框选叠层，产出 SelectedElement / SelectedRegion；框选时上报矩形坐标 + 滚动 + 缩放 + devicePixelRatio |
+| `content/actions` | content | 高亮、滚动到元素（**不含截图**，见 3.5） |
+| `content/spa-watcher` | content | 监听 SPA 路由变化，触发上下文刷新（见 3.10） |
+| `background/router` | bg | 消息路由中枢：来源校验 + 消息 Schema 校验 + 载荷/超时限制 |
+| `background/context-builder` | bg | 组装最小化上下文 |
+| `background/sanitizer` | bg | 发送前敏感信息检测与遮蔽 |
+| `background/provider-manager` | bg | Provider 实例化、Capability 路由、手动覆盖、视觉护栏、Host 白名单 |
+| `background/providers/*` | bg | DeepSeek / UUAPI / OpenRouter 实现（各自声明 Capabilities） |
+| `background/credential-store` | bg | 凭据独立存储访问接口；仅可信上下文可导入（Options 只 write/delete，Background 只 read/inject；Content Script 禁止导入，lint 边界保护，D-028） |
+| `background/capture` | bg | `captureVisibleTab` 截图 + 按 Content 上报的坐标裁剪 |
+| `background/github-api` | bg | 匿名 REST 请求、按 resource 分桶限流（core/search/code_search）、缓存、降级（D-032） |
+| `background/tools` | bg | 工具白名单注册 + zod 参数校验 + 执行分发 |
+| `background/session-store` | bg | 会话 CRUD、摘要、上下文长度控制、容量淘汰 |
+| `background/prefs-store` | bg | 长期偏好读写 |
+| `panel/*` | panel | React UI（可信上下文）：会话、消息流、Provider 下拉、分析面板、确认弹窗 |
+| `options/*` | options | Provider/Key/偏好/数据清除/数据流向披露 |
+| `lib/storage` | shared | chrome.storage 封装 + schemaVersion + 迁移 + 容量检查 |
+| `lib/messaging` | shared | 类型化消息协议（版本/请求ID/Schema/最大载荷/超时/错误类型） |
+| `lib/logger` | shared | 分级日志（强制脱敏） |
+| `lib/types` | shared | 全局数据模型类型 |
+
+---
+
+## 3. 关键流程
+
+### 3.1 消息流（统一信封，P1-3）
+所有跨端消息用类型化信封：
+```ts
+interface Envelope<T> {
+  v: 1;                 // 协议版本
+  id: string;           // 请求 ID（关联响应）
+  type: string;         // 固定消息类型
+  payload: T;           // 经 zod 校验
+  timestamp: string;
+}
+```
+- 收端（尤其 SW）**必须**：校验 `sender` 来源（github.com tab 的 content script / 本扩展页面）、校验 payload Schema、拒绝超过最大载荷的消息、有超时与类型化错误。
+- **SW 不接受 Content Script 提供的任意 URL 代为 fetch**；出站域名必须命中 Provider Host 白名单或 `api.github.com`。
+- 凭据永不出现在消息载荷中。
+- Panel↔Background 用长连接 `chrome.runtime.connect`（流式 token 推送）。
+
+### 3.2 AI 请求流
+```
+用户在 Panel 提问
+  → Panel 发 ASK 消息(含当前 Provider 手动选择) 给 Background
+  → Background 向 Content 请求当前 PageContext（DOM 优先; 私有页面→零出站阻断）
+  → ContextBuilder 组装最小上下文
+  → Sanitizer 遮蔽敏感信息
+  → ProviderManager 选定 Provider(手动优先→默认路由; Capability 校验:
+      需要视觉但该 Provider capabilities.supportsVision=false → 阻止并提示)
+  → CredentialStore 取 Key(仅此处) → Provider.chatStream() 直连预设 Host
+  → token 流式回传 Panel 渲染(支持 Abort/超时/最大负载)
+  → 若模型请求工具调用 → ToolExecutor 校验+执行 → 结果回灌模型
+  → 完成后写入 SessionStore
+```
+
+### 3.3 点击提问流
+```
+用户点"点击提问" → Panel 通知 Content 进入 pick 模式
+  → Content 叠层高亮可选元素 → 用户点击目标
+  → Content 提取 SelectedElement(类型/文字/href/属性/邻近上下文/页面类型)
+  → 回传 Panel 展示"已选中" → 用户提问 → 走 AI 请求流
+```
+
+### 3.4 框选提问流
+```
+用户点"框选提问" → Content 进入 drag 模式画矩形
+  → 优先提取矩形内文字/链接/代码/按钮/HTML 结构/邻近上下文 → SelectedRegion
+  → 若结构化信息不足 → 提示后走截图流程(3.5)
+    → 视觉 Provider(Capability 护栏) → AI 请求流
+```
+
+### 3.5 截图流程（v1.2 修正坐标换算方法论，P0-4 / D-029）
+职责划分：
+1. **Content Script（不可信侧）只负责**：选择遮罩、记录框选矩形（视口坐标）、上报页面滚动位置 / 浏览器缩放 / `devicePixelRatio` / 视口 CSS 尺寸 / 选区 DOM 内容。**不调用截图 API**。
+2. **Background SW（可信侧）负责**：调用 `chrome.tabs.captureVisibleTab()` 获取可见区截图 → 按坐标换算裁剪 → 压缩 → base64 → 决定是否发送给视觉 Provider。
+3. **坐标换算方法（v1.2 关键约束）**：
+   - **最终换算公式不在规划期写死，由 Phase 0 探针 B 在真实环境实测后定稿**（记入 `scripts/probe-results.md` 并回写本节）。
+   - 探针 B 的**首选假设**：用**截图实际像素尺寸 ÷ 视口 CSS 尺寸**计算 `scaleX` / `scaleY`（`scaleX = capturedWidth / viewportCssWidth`，`scaleY` 同理），以此替代直接乘 dpr×zoom 的推导——它天然吸收 DPI、浏览器缩放与 Side Panel 挤压视口的综合影响。
+   - **注意**：若选区矩形来自 `getBoundingClientRect()`，其坐标已是**视口坐标**，**不得默认再次扣除 scroll 偏移**；只有当坐标来源是文档坐标时才涉及滚动换算。是否需要滚动补偿由探针 B 结论决定。
+4. 截图不落盘、不持久保存、用后即弃（P1-1）。
+5. **Phase 0 探针 B 必须覆盖**：Windows 高 DPI、浏览器缩放、页面滚动、`devicePixelRatio`、Side Panel 开启时的可见区域变化、GitHub 固定页头/动态布局，并在真实 GitHub 页面取 3 个不同位置元素验证裁剪对齐。
+
+### 3.6 Session 保存与恢复流程
+```
+首次提问 → 若无活动会话则新建(sessionId, pageUrl, pageType, repository)
+  → 每轮追加 message → updatedAt 刷新
+  → 页面变化(SPA) → 若仓库/页面类型变 → 询问是否新建或关联新会话
+  → 对话超阈值 → 生成 pageSummary/历史摘要压缩上下文
+  → 重开 Panel → 按 pageUrl/repository 匹配最近会话恢复
+  → 30 天过期清理 / 容量超限淘汰(见 §8) / 用户手动删除
+```
+
+### 3.7 工具调用流程
+```
+模型输出 tool_call → ToolExecutor 查白名单
+  → zod 校验参数 → 按 operationPolicy 分类:
+      downloads/外链 → 弹 OperationConfirmation(逐次确认, 无"始终允许")
+      accountChanges → 直接拒绝(deny)
+  → 通过 → 分发到 Content(高亮/滚动/打开页面) 或 Background(搜索/API)
+  → 返回 ToolResult → 回灌模型继续
+```
+
+### 3.8 确认流程（OperationConfirmation，v1.1 收紧 C-3）
+需确认操作弹出：操作说明 + 影响 + 推荐选择 + **[允许本次] / [拒绝]** 两项。
+**不提供"始终允许该类操作"**——高风险权限不能一次点击永久放开。`operationPolicy` 只在允许的枚举范围内配置（见 §5 UserPreferences）。
+
+### 3.9 错误恢复流程
+- 网络中断/超时：指数退避重试（上限 N 次），失败给中文可读错误 + 重试按钮；请求支持 Abort。
+- Provider 报错（鉴权/额度/限流）：明确提示是哪家、什么错，建议手动切换 Provider。
+- GitHub API 超限（v1.2 细化，D-032）：**按 resource 分桶节流**（`core` / `search` / `code_search` 各自独立配额）；读取 `X-RateLimit-Resource` / `X-RateLimit-Remaining` / `X-RateLimit-Reset` 与 `Retry-After` 头；**限流（403/429 且 Remaining=0）时不得持续指数重试**，等到 Reset/Retry-After 时间点后才恢复；`search` 受限时降级为打开 GitHub 网页搜索或本地 DOM 结果，`core` 受限时降级纯 DOM 并提示。
+- Service Worker 被回收：状态在 storage，唤醒后由消息重建，不丢会话。
+
+### 3.10 GitHub SPA 页面变化处理（v1.1，P1-4）
+- **检测**：拦截 `history.pushState/replaceState` + `popstate` + Turbo 事件（GitHub 用 turbo 导航）+ `MutationObserver` 兜底。
+- **去抖**：URL 变化后去抖（~300ms）再触发重新解析，避免连续导航重复解析。
+- **重复初始化保护**：content script 入口幂等（挂载前检查全局标记），SPA 导航不重复注入叠层。
+- **状态清理**：页面切换时清理旧选择状态（pick/框选叠层、已选元素）、使旧 PageContext 失效。
+- **Session 关联**：同仓库内页面切换 → 会话延续并更新 pageUrl；跨仓库/跨页面类型 → 询问新建或关联。
+
+---
+
+## 4. 项目目录结构（v1.1：根目录即 `C:\AI_GitHelper-CN`，无嵌套项目根）
+
+```
+C:\AI_GitHelper-CN\              ← 唯一项目根 = Git 仓库根
+├─ PROJECT_BASELINE.md 等 8 份规划文件（唯一权威版本, 不复制到别处）
+├─ references/
+│  └─ Claude_Prompt.md           # 原始需求 Prompt, 仅历史追溯
+├─ .git/  .gitignore
+├─ manifest.config.ts            # CRXJS manifest 定义
+├─ vite.config.ts
+├─ package.json / pnpm-lock.yaml
+├─ tsconfig.json
+├─ .nvmrc / .eslintrc / .prettierrc
+├─ src/
+│  ├─ background/
+│  │  ├─ index.ts                # SW 入口: setAccessLevel + 注册 router
+│  │  ├─ router.ts               # 来源校验 + Schema 校验
+│  │  ├─ context-builder.ts
+│  │  ├─ sanitizer.ts
+│  │  ├─ provider-manager.ts     # Capability 路由 + Host 白名单
+│  │  ├─ credential-store.ts     # 凭据访问接口(Options 只写删/BG 只读注入/Content 禁导入, D-028)
+│  │  ├─ capture.ts              # captureVisibleTab + 裁剪
+│  │  ├─ providers/
+│  │  │  ├─ base.ts              # OpenAI 兼容基类 + Capabilities 声明
+│  │  │  ├─ deepseek.ts / uuapi.ts / openrouter.ts
+│  │  ├─ github-api.ts           # 匿名 + RateLimit 节流 + 缓存
+│  │  ├─ tools/
+│  │  │  ├─ registry.ts          # 白名单 + zod schema
+│  │  │  └─ executors.ts
+│  │  ├─ session-store.ts
+│  │  └─ prefs-store.ts
+│  ├─ content/
+│  │  ├─ index.ts                # 幂等入口
+│  │  ├─ detector.ts / spa-watcher.ts
+│  │  ├─ parsers/ (repo/issue/pr/releases/blob/search/common)
+│  │  ├─ selection/ (pick.ts / region.ts)   # region 上报坐标+dpr+滚动+缩放
+│  │  └─ actions.ts              # 高亮/滚动(无截图)
+│  ├─ panel/
+│  │  ├─ index.html / main.tsx / App.tsx
+│  │  ├─ components/
+│  │  └─ store.ts                # Zustand(不含凭据)
+│  ├─ options/
+│  │  ├─ index.html / main.tsx
+│  │  └─ components/             # 含数据流向披露组件
+│  ├─ lib/
+│  │  ├─ storage.ts / messaging.ts / logger.ts / types.ts
+│  │  └─ github/ (page-type, url-parse)
+│  └─ locales/zh-CN.ts
+├─ tests/
+│  ├─ unit/ (parsers, sanitizer, provider, tools, credential)
+│  ├─ fixtures/ (GitHub 页面 HTML 快照)
+│  └─ e2e/ (Playwright)
+├─ scripts/                      # 构建/辅助脚本
+├─ dist/                         # 构建产物(gitignore)
+└─ docs/                         # (可选)仅面向使用者的派生文档, 不放规划文件副本
+```
+
+**C-1 约束**：8 份规划文件只在根目录保留唯一权威版本；`docs/` 若存在，只放派生使用文档，不得复制规划文件。
+
+---
+
+## 5. 数据模型（TypeScript，权威定义，v1.1 修订）
+
+```ts
+// 临时页面上下文（不落库）
+interface PageContext {
+  url: string;
+  pageType: 'repo'|'issue'|'pr'|'releases'|'blob'|'search'|'code'|'other';
+  repository?: string;           // "owner/repo"
+  isPrivate: boolean;            // true → 零出站阻断(SECURITY §4)
+  issueOrPrNumber?: number;
+  extracted: Record<string, unknown>;
+  pageSummary?: string;
+  capturedAt: string;
+}
+
+interface SelectedElement {
+  tag: string; role?: string; text: string;
+  href?: string; attrs: Record<string,string>;
+  nearbyContext: string; pageType: PageContext['pageType'];
+}
+
+interface SelectedRegion {
+  text: string; links: string[]; codeBlocks: string[];
+  buttons: string[]; htmlOutline: string; nearbyContext: string;
+  needsVision: boolean;
+  // 截图所需坐标信息(Content 上报, SW 裁剪用; 换算方法以 Phase 0 探针 B 结论为准, D-029):
+  rect: { x:number; y:number; width:number; height:number };  // 视口坐标(getBoundingClientRect 语义)
+  viewport: { cssWidth:number; cssHeight:number };            // 视口 CSS 尺寸(用于 scaleX/scaleY)
+  scroll: { x:number; y:number };                             // 仅供探针 B 结论需要时使用
+  devicePixelRatio: number;
+  zoomFactor?: number;
+}
+
+interface Message {
+  id: string; role: 'user'|'assistant'|'tool'|'system';
+  content: string; toolCall?: ToolCall; toolResult?: ToolResult;
+  createdAt: string;
+}
+
+interface Session {
+  schemaVersion: number;
+  sessionId: string; pageUrl: string; pageType: string;
+  repository?: string; messages: Message[];
+  pageSummary?: string; updatedAt: string; createdAt: string;
+}
+
+interface UserPreferences {
+  schemaVersion: number;
+  language: 'zh-CN';
+  technicalLevel: 'beginner'|'intermediate'|'advanced';
+  operatingSystem: string;
+  explanationPreference: string;
+  operationPolicy: {              // v1.1 收紧(C-3)
+    navigation: 'auto'|'confirm';
+    search: 'auto'|'confirm';
+    downloads: 'confirm'|'deny';  // 无 'auto'
+    accountChanges: 'deny';       // 固定 deny, v1 不实现账号写入
+  };
+  visionEnabled: boolean;         // 默认 true
+  // v1.1: 移除 allowPrivateRepos(v1 完全不支持私有仓库)
+}
+
+// v1.1: 凭据与配置分离(P0-1)
+interface ProviderCredential {    // 仅 credential-store 可读写
+  providerId: 'deepseek'|'uuapi'|'openrouter';
+  apiKey: string;
+}
+
+interface ProviderConfig {        // 不含 Key
+  id: 'deepseek'|'uuapi'|'openrouter';
+  label: string;
+  apiHost: string;               // 固定预设(P0-3), 用户不可改:
+                                 // deepseek: https://api.deepseek.com
+                                 // uuapi:    https://uuapi.net
+                                 // openrouter: https://openrouter.ai
+  textModel: string;             // 可配置，不硬编码
+  visionModel?: string;
+  capabilities: ProviderCapabilities;
+  keyMasked?: string;            // 仅显示用(尾4位), Background 计算下发
+}
+
+// v1.1: Provider 能力模型(P0-6)
+interface ProviderCapabilities {
+  supportsStreaming: boolean;
+  supportsVision: boolean;
+  supportsToolCalls: boolean;
+  supportsStructuredOutput: boolean;
+  supportsUsage: boolean;
+  supportsAbort: boolean;
+  imageInputFormat: 'openai_image_url' | 'none';
+  toolCallStreamingFormat: 'openai_delta' | 'none';
+  errorResponseFormat: 'openai' | 'custom';
+  probedAt?: string;             // 能力探针最近验证时间; 未探针的能力不得当既定事实
+}
+
+interface ProviderRouting {
+  textProviderId: ProviderConfig['id'];    // 默认 'deepseek'
+  visionProviderId: ProviderConfig['id'];  // 默认 'uuapi'
+  fallbackProviderId: ProviderConfig['id'];// 默认 'openrouter'
+  manualOverrideId?: ProviderConfig['id']; // Side Panel 手动选择，优先级最高
+}
+
+interface AIRequest {
+  providerId: string; model: string;
+  messages: Message[]; needsVision: boolean;
+  images?: string[];
+  timeoutMs: number; maxPayloadBytes: number; // P0-5 地基
+}
+interface AIResponse {
+  content: string; toolCalls?: ToolCall[];
+  usage?: { promptTokens:number; completionTokens:number };
+  providerId: string; model: string;
+}
+
+interface ToolCall { name: string; args: Record<string,unknown>; }
+interface ToolResult { name: string; ok: boolean; data?: unknown; error?: string; }
+
+interface OperationConfirmation {
+  action: string; description: string; impact: string;
+  recommended: 'allow'|'deny';
+  category: 'download'|'external';  // v1.1: 'account' 类直接 deny, 不进确认流
+  // v1.1: 无 alwaysAllow 字段(C-3)
+}
+
+// v1.1: 移除 GitHubTokenConfig(P0-7, v1 无 Token)
+```
+
+---
+
+## 6. Chrome 权限设计（最小化，v1.1 复审）
+
+| 权限 | 是否 v1 必需 | 为什么 | 更小方案 / 复审结论（Phase 0 探针最终确认） |
+|---|---|---|---|
+| `sidePanel` | 是 | 主界面 | 无替代 |
+| `storage` | 是 | 会话/偏好/凭据 | 初始化即 `setAccessLevel('TRUSTED_CONTEXTS')` |
+| `activeTab` | 是 | 用户手势触发的当前页访问与截图授权 | Phase 0 验证 activeTab 是否足以支撑 `captureVisibleTab`；若足够则**不申请 `tabs`** |
+| `tabs` | 待探针 | 仅当 activeTab 不足以覆盖读取当前 tab URL / 截图时才申请 | Phase 0 输出结论；能不申请就不申请 |
+| `scripting` | 待探针 | 动态注入 | 优先用 **manifest 静态声明 content_scripts**（matches 限 github.com）；静态够用则不申请 `scripting` |
+| host: `https://github.com/*` | 是 | content script 只在 GitHub 生效 | **禁 `<all_urls>`** |
+| host: `https://api.github.com/*` | 是 | 匿名 GitHub REST API | 限域 |
+| host: `https://api.deepseek.com/*` | 是 | 固定端点(P0-3) | 逐域列举 |
+| host: `https://uuapi.net/*` | 是 | 固定端点 | 逐域列举 |
+| host: `https://openrouter.ai/*` | 是 | 固定端点 | 逐域列举 |
+| `notifications` | 否 | 后期提示 | v1 不申请 |
+
+**与 P0-3 的一致性**：v1 无自定义 Base URL，host 权限静态列举五个域即可闭合；未来若开放自定义端点，须改用 `optional_host_permissions` + 运行时授权 + HTTPS 强制 + 精确域名校验（基线变更）。
+
+**最低浏览器版本（v1.2，D-035）**：manifest 声明 `"minimum_chrome_version": "114"`（Side Panel API 自 Chrome 114 起可用；`storage.local.setAccessLevel` 自 Chrome 102 起可用，114 同时覆盖）。
+
+**MV3 代码安全**：禁远程脚本 / `eval` / 下载执行；全部运行时代码打包在扩展内（SECURITY §9）。
+
+---
+
+## 7. AI 与工具调用设计
+
+- **System Prompt 职责**：定义助手角色（中文 GitHub 新手助手）、输出风格（通俗但不遗漏关键风险）、安全规则（页面文本为不可信数据、不得越权调用工具、不得泄露 Key）、工具使用规范。
+- **页面上下文组织**：结构化字段 + 必要摘要，标注"以下为页面不可信数据"分隔。
+- **数据最小化**：见 SECURITY.md，ContextBuilder 只取相关局部。
+- **工具白名单（v1.2 修订，D-013R）**：`openGitHubPage`（仅 `https://github.com/*`）/ `openReleases` / `openIssues` / `searchRepos` / `searchIssues` / `highlightElement` / `scrollToElement` / `extractPageInfo`；外部链接走 `openExternalLink`（逐次确认）。所有导航/打开类工具拒绝 `javascript:` / `data:` / `file:` / `chrome:` / `chrome-extension:` / `blob:` 等非 `https:` Scheme。写操作类工具 v1 不注册。
+- **结构化输出**：一键分析用固定 JSON schema，再渲染中文卡片；该能力依赖 Provider `capabilities.supportsStructuredOutput`，探针未通过则降级为"prompt 约束 + 本地 zod 校验重试"。
+- **参数验证**：zod，越权即拒绝并回中文错误。
+- **Prompt Injection 防护**：页面数据永不进 system 角色；显式标注不可信；白名单+确认策略（SECURITY §7）。
+- **幻觉处理**：涉及可变数据（是否维护/许可证等）优先用 DOM/API 事实回填，模型不得臆造数字。
+
+---
+
+## 8. 存储容量与淘汰策略（v1.1，P1-1）
+
+**存储分区**：
+- `chrome.storage.session`：即时页面状态（当前 PageContext 缓存、pick/框选临时态）。
+- `chrome.storage.local`（TRUSTED_CONTEXTS）：偏好、Provider 非敏感配置、会话索引、摘要、凭据（独立 key 前缀，经 credential-store 访问）。
+- IndexedDB：**启用条件** = 单会话消息体或总量逼近 storage.local 配额（见硬上限）时启用，存长会话正文；v1 先不启用，封装层预留。
+- 截图：**只在内存/请求生命周期内使用，不持久保存**。
+
+**限额（v1 初始值，可在 DECISIONS 调整）**：
+| 项 | 值 |
+|---|---|
+| 单会话最大消息数 | 200 条（超出触发摘要压缩） |
+| 单条消息最大长度 | 16 KB（超长截断+提示） |
+| 页面上下文最大长度 | 32 KB |
+| 对话摘要触发 | 消息数 > 40 或估算 token > 8k |
+| 最近会话保留数量 | 50 个 |
+| 保留期 | 30 天 |
+| 总存储软上限 | 6 MB（达到→提示+优先淘汰） |
+| 总存储硬上限 | 9 MB（storage.local 配额 10MB 的 90%；达到→强制淘汰） |
+
+**淘汰顺序**（超限时从先到后）：过期会话（>30 天）→ 最旧的超量会话（>50 个）→ 已摘要会话的原始消息正文（保留摘要）→ 页面摘要缓存。用户偏好与凭据**永不自动淘汰**。
+
+**容量检查**：`lib/storage` 封装 `chrome.storage.local.getBytesInUse()`，写入前检查，Options 页显示当前用量 + 手动清除入口。
+
+**数据清除（v1.2，D-033）**：Options 页提供三个独立入口——① 清除会话/偏好（不动凭据）；② 删除单个 Provider Key（经 credential-store）；③ 明确二次确认后清除全部本地数据（会话+偏好+全部凭据）。每种清除配套"目标无残留、非目标完好"断言测试。

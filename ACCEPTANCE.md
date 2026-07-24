@@ -1,0 +1,111 @@
+# ACCEPTANCE.md — 验收标准与测试方案
+
+> 每个阶段的验收必须客观、可自动判定（除明确标注的人工体验节点）。
+> Agent 完成阶段后自测通过即记 STATUS 并继续，不等人工。
+> v1.1（2026-07-24）：新增 Phase 0 探针/1.5 安全地基验收；安全表述客观化（P1-2）；移除 Token/私有仓库开关项；C-2 明确核心功能阻塞最终 MVP。
+> v1.2（2026-07-24）：修正凭据"明文不出现于 DOM/状态"为可实现表述（D-028）；Phase 4 可用性判定（D-031）；限流分桶用例（D-032）；Scheme 拒绝用例（D-013R）；三种数据清除用例（D-033）。
+
+---
+
+## 一、总验收（MVP 成功标准，对应 BASELINE 第 11 节）
+
+| # | 闭环 | 客观判定 |
+|---|---|---|
+| S1 | 公开仓库一键分析 | 对 ≥3 个真实公开仓库产出完整结构化中文卡片，关键数字来自 DOM/API |
+| S2 | 点击/框选提问 | 选中元素/区域后得到基于该内容的中文回答；集成测试断言选中数据结构 |
+| S3 | NL→搜索 | ≥5 组中文查询转出合理 GitHub 语法并返回结果 |
+| S4 | 会话保存恢复 | 保存后重开 Panel 可恢复；过期清理与容量淘汰生效 |
+| S5 | 敏感信息遮蔽 | 构造含 Key/Token/私钥的内容，出站请求体被遮蔽、日志无明文 |
+
+**C-2 约束**：S2（点击+框选）与 S3（NL 搜索）是冻结核心功能，**必须在 Phase 11 前完成**；缺任何一项不得进行 MVP 验收，删减须经用户确认（基线变更）。
+
+---
+
+## 二、测试层次
+
+### 1. 单元测试（Vitest）
+- parsers：各页面类型对 fixtures 的识别与字段提取
+- sanitizer：各类凭据正/反/边界/组合用例
+- provider：mock HTTP，断言请求组装、apiHost 固定预设、model、错误映射（**三个适配器全部有 mock 测试，D-031**）
+- provider-manager：默认路由、手动覆盖优先、Capability 护栏（vision 阻断）、探针失败 Provider 被禁用标记
+- credential-store：Options 上下文只 write/delete、Background 只 read/inject（读写路径唯一）；普通 storage 接口读不到凭据；**构建期 import 边界：`src/content/**` 引用 credential-store 触发 lint 报错（D-028）**
+- tools registry：zod 校验通过/拒绝、白名单外拒绝、**openGitHubPage 仅接受 `https://github.com/*`、非 https Scheme（javascript/data/file/chrome/chrome-extension/blob）全部拒绝（D-013R）**
+- github-api：**限流分桶（core/search/code_search）、X-RateLimit-Resource/Remaining/Reset 与 Retry-After 解析、限流后不指数重试（mock 计时断言）、到点恢复（D-032）**
+- storage：读写、schemaVersion、迁移、getBytesInUse 容量检查、淘汰顺序
+- session-store：CRUD、过期、摘要触发、上下文长度控制
+- context-builder：只含允许字段、不含整页
+- messaging：信封版本/请求 ID、Schema 校验、超载荷拒绝、超时
+
+### 2. 组件测试（Vitest + Testing Library）
+- Panel 消息流渲染、Provider 下拉切换（不可用 Provider 置灰）、确认弹窗（**断言无"始终允许"选项**）
+- Options 表单读写、Key 录入与掩码（**可实现表述，D-028**）：录入用 password input；**保存成功后输入框与受控状态被清空**（断言 value === ''）；**已保存 Key 不回显明文**——保存后重新打开 Options，DOM/组件状态中只有掩码（尾 4 位），无完整 Key 字符串；Zustand store 全量序列化后不含已存 Key 明文
+- Options 三种数据清除入口分别可用（D-033）、数据流向披露展示
+
+### 3. 扩展集成测试
+- Panel→BG→Content→Panel 消息往返（经来源+Schema 校验）
+- 非法来源消息被拒；白名单外域名 fetch 被拒
+- 点击选择数据结构、框选坐标/dpr/滚动上报结构
+
+### 4. E2E（Playwright，加载扩展，Phase 11）
+- 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片
+- SPA 导航后上下文刷新且无重复初始化
+- 会话恢复
+
+### 5. 专项安全测试（Phase 1.5 地基 + Phase 10 加固）
+
+**客观机制项（自动测试可判定，P1-2）**：
+- 网页内容未进入 System Prompt（组装单测）
+- 页面内容带"不可信数据"标注
+- 白名单外工具调用被拒绝
+- 工具参数经 zod Schema 校验
+- 高风险工具（写操作/账号类）不可用
+- 敏感字段被遮蔽（S5 系列用例）
+- 非法输出被拒绝
+- 用户数据未发送到未授权端点（出站域名白名单断言）
+- content script 上下文读取凭据存储失败（setAccessLevel 生效）
+- `src/content/**` 导入 credential-store 被 lint 拒绝（import 边界，D-028）
+- 消息载荷/日志/UI 持久状态无已保存 Key 明文（唯一合法明文窗口 = 录入时 password input，保存后清空）
+- 导航/打开类工具拒绝非 https Scheme（javascript/data/file/chrome 等）
+- 私有仓库/无权限页面零出站
+- 构建产物无 eval/new Function/远程脚本引用
+
+**评估项（红队测试，不宣称绝对免疫）**：
+- ≥10 个 Prompt Injection 攻击样例（藏于 README/Issue/代码注释的指令覆盖、Key 诱导、越权工具诱导等），逐一记录模型实际行为与防护层拦截情况于 `tests/security/redteam-log.md`
+- **验收标准是"记录完整、机制层全部拦截"，而非"模型绝对不受影响"**
+
+### 6. 韧性测试
+- API 错误（401/429/500）→ 可读中文提示 + 建议切换 Provider
+- 网络中断 → 退避重试 → 失败可重试；请求可 Abort、有超时
+- 长对话 → 摘要触发、上下文不超限
+- GitHub 匿名 API 限流（D-032）→ 按 resource 分桶节流；限流后**不指数重试**，等 Reset/Retry-After 恢复；search 受限降级网页搜索/本地 DOM，core 受限降级纯 DOM
+- Service Worker 回收 → 唤醒后会话不丢
+- 存储逼近软/硬上限 → 提示与淘汰按序执行
+- 单个 Provider 真实探针失败（D-031）→ 记录 + UI 禁用 + 不阻塞；仅全路线失败才暂停
+
+---
+
+## 三、每阶段验收速查
+
+| Phase | 关键验收（全部自动，除标注） |
+|---|---|
+| 0 | build 成功（manifest 含 minimum_chrome_version "114"）、扩展加载无错、探针 A（基础）/B（截图坐标换算实测定稿并回写 ARCH）/C（权限复审）/D（setAccessLevel）全部有结论、Git 基线提交存在、权限清单定稿 |
+| 1 | 类型编译通过、storage/messaging/logger 单测通过、权限与 ARCH 一致、无规划文件副本 |
+| 1.5 | 安全地基用例全过：凭据隔离、Host 白名单 fetch、消息来源+Schema 校验、日志脱敏、私有阻断骨架、CSP 扫描、Abort/超时/载荷限制 |
+| 2 | Panel 打开、三端消息往返集成测试通过、非法消息被拒 |
+| 3 | fixtures 页面识别/解析正确、SPA 去抖刷新且不重复初始化、私有页面阻断、失败不抛异常 |
+| 4 | 三适配器 mock 测试全过、能力探针报告产出、手动切换生效、Capability 护栏生效、凭据隔离通过、录入后输入框清空+无明文回显；真实端点：≥1 文本 + ≥1 视觉 Provider 可用即达标（单家失败记录+禁用不阻塞，全路线失败才暂停，D-031）｜ **人工：真实 Key 填入 + 真实端点探针 + 手测对话** |
+| 5 | 会话恢复、过期+容量淘汰、偏好读写（operationPolicy 收紧类型）、三种清除各自"目标无残留、非目标完好"（D-033） |
+| 6 | pick 进出、选中结构正确、基于元素回答 |
+| 7 | 框选结构提取、充分不截图/不足时 SW 截图裁剪对齐、visionEnabled 开关、截图不持久保存 |
+| 8 | ≥5 组查询转换正确、搜索返回、search 桶限流降级（不指数重试） |
+| 9 | ≥3 仓库完整卡片、数字来自事实、缺字段降级、匿名限额降级提示正常 |
+| 10 | 安全客观项全过（含 Scheme 拒绝、import 边界、三种清除）+ 红队记录 ≥10 样例 |
+| 11 | 全测试绿、打包可加载、S1-S5 证据齐全（前置：Phase 6/7/8 已完成）｜ **人工：S1-S5 批量体验复核** |
+
+---
+
+## 四、人工体验节点（仅 2 个）
+1. Phase 4：真实 Provider Key 填入后跑真实端点能力探针 + 手测一次对话（验证真实厂商连通）。
+2. Phase 11：S1–S5 五条闭环批量体验复核（验证真实交互观感）。
+
+其余全部由自动测试 + 构建证据判定。

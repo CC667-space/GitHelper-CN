@@ -1,0 +1,213 @@
+# EXECUTION_PLAN.md — 阶段化执行方案
+
+> 依附 `PROJECT_BASELINE.md`。执行 Agent 按阶段顺序推进，阶段内自主执行，仅在"强制确认节点"暂停。
+> 每完成一个阶段更新 `STATUS.md` 并创建阶段 Commit（见"Git 治理"）。验收标准细节见 `ACCEPTANCE.md`。
+> v1.1（2026-07-24）：新增 Phase 1.5 安全地基、Phase 0 技术探针扩充、Git 治理、移除 Token/私有仓库相关内容。
+> v1.2（2026-07-24）：探针 B 改为实测定稿坐标换算（D-029）；Phase 4 单 Provider 失败不阻塞（D-031）；限流分桶（D-032）；数据清除三分（D-033）；DeepSeek 模型策略（D-034）；minimum_chrome_version 114（D-035）。
+
+---
+
+## 阶段总览与依赖图
+
+```
+Phase 0 (基线检查 + 环境 + 技术探针 + Git 初始化)
+   │
+Phase 1 (仓库结构 + 扩展骨架)
+   │
+Phase 1.5 (安全地基)  ◄── 必须先于任何真实 API 调用
+   │
+Phase 2 (Side Panel + 消息通信[含协议安全])
+   │
+Phase 3 (页面识别 + 上下文读取 + SPA 处理) ◄── 关键路径
+   │
+Phase 4 (Provider 抽象 + 能力探针 + 文本对话 + 手动切换) ◄── 关键路径
+   │
+Phase 5 (Session + 偏好 + 容量淘汰)
+   │
+   ├── Phase 6 (点击提问) ──┐  三个功能阶段相互独立
+   ├── Phase 7 (框选+视觉) ─┤  （建议顺序 6→7→8）
+   └── Phase 8 (NL 搜索) ───┘
+   │
+Phase 9 (一键仓库分析)   ← 依赖 3/4，可与 6-8 并行
+   │
+Phase 10 (安全加固 + 红队测试)
+   │
+Phase 11 (测试/打包/MVP 验收)  ← 汇聚，含唯一批量体验复核
+```
+
+**关键路径**：0 → 1 → 1.5 → 2 → 3 → 4 → 9 → 11。
+
+**早期演示 vs 最终 MVP（C-2，重要）**：
+- Phase 6（点击提问）、Phase 7（框选提问）、Phase 8（NL 搜索）**可以不阻塞早期技术 Demo**（Phase 4 后即可演示对话，Phase 9 后即可演示分析）；
+- 但它们是**冻结的 v1 核心功能，必须阻塞最终 MVP 验收**——Phase 11 完成时三者必须全部实现并通过验收；
+- 若确需删减任何一项，属**基线变更**，必须暂停请用户确认，不得静默降级。
+
+---
+
+## Git 治理（P0-8，贯穿全程）
+
+- **工作目录固定**：`C:\AI_GitHelper-CN`（唯一项目根 = Git 仓库根，禁止嵌套项目根）。
+- **首轮初始化**（Phase 0 内完成）：若尚非 Git 仓库 → `git init` → 建 `.gitignore`（至少排除：`node_modules/`、`dist/`、`.env`、`.env.*`、任何密钥文件、临时截图、测试输出、构建缓存、浏览器本地数据副本）→ 将 8 份冻结规划文件 + `references/` 作为**基线提交**。
+- **阶段提交**：每 Phase 通过验收后：更新 `STATUS.md` → 更新必要文档 → 记录测试证据 → 创建本地 Commit，信息格式 `Phase N: <完成内容摘要>`。
+- **回滚**：阶段失败先修复；无法安全修复 → 回退到最近通过验收的阶段 Commit，在 STATUS 记录回退原因；**禁止**用删测试/降标准过关。
+- **未经用户明确授权，禁止**：添加 Remote、Push、Force Push、创建远程仓库、公开 Release、发布扩展、修改工作目录外文件、修改系统代理、修改全局 Chrome/Node 配置、安装来源不明脚本。
+- **每轮执行开始前检查**：当前目录正确 → 规划文件齐全 → `git status` 干净或差异可解释 → 读 STATUS 确认当前阶段 → 上一阶段验收已通过 → 无未记录的基线变更。
+
+---
+
+## 通用规则（每个阶段都适用）
+
+**允许 Agent 自主**：创建/重构文件、补类型、写改测试、修普通 TS/lint 错、调目录、选内部依赖、修自身引入的问题、更新技术文档。
+**每阶段禁止**：改产品目标/MVP 范围、改安全权限边界、加写操作、扩展到非 GitHub 站点、删关键测试、降验收标准、无记录换核心依赖、一次性重写全项目、复制规划文件形成第二套权威版本。
+**每阶段产物**：代码 + 通过的自动测试 + 更新的 `STATUS.md` + 阶段 Commit。
+
+---
+
+## Phase 0 — 基线检查、环境与技术探针
+- **目标**：只读基线检查通过，工具链跑通，关键技术假设经真实探针验证，Git 基线建立。
+- **前置**：无。
+- **任务**：
+  1. **只读基线检查**：确认 8 份规划文件齐全一致、工作目录正确、`references/Claude_Prompt.md` 就位。
+  2. **Git 初始化**（见"Git 治理"）：init + .gitignore + 规划文件基线提交。
+  3. 初始化 pnpm 项目、Node 版本锁、TS/ESLint/Prettier 配置。
+  4. 建 Vite + CRXJS 最小 MV3 扩展（空 background + 静态 content script + 空 side panel，manifest 含 `minimum_chrome_version: "114"`，D-035），`pnpm build` 后可在 Chrome 开发者模式加载。
+  5. **技术探针 A（基础）**：(a) side panel 打开；(b) content script 在 `github.com` 注入；(c) 读到当前 tab URL。
+  6. **技术探针 B（截图坐标，P0-4 / D-029）**：验证 `captureVisibleTab` 由 SW 调用的完整链路，**实测定稿坐标换算方法**（不预设公式）：
+     - 首选假设：`scaleX = 截图实际像素宽 / 视口 CSS 宽`（`scaleY` 同理），对比验证 dpr×zoom 推导；
+     - `getBoundingClientRect()` 为视口坐标，验证**不额外扣 scroll** 是否正确；
+     - 覆盖：Windows 高 DPI、浏览器缩放、页面滚动、`devicePixelRatio`、Side Panel 开启时可见区域、GitHub 固定页头；在真实 GitHub 页面取 3 个不同位置元素验证裁剪对齐；
+     - 结论（最终公式 + 是否需要滚动/页头补偿）写入 `scripts/probe-results.md` 并**回写 ARCHITECTURE §3.5**。
+  7. **技术探针 C（权限复审）**：验证 `activeTab` 是否足以支撑用户手势触发的截图；静态 content_scripts 是否够用（能否不申请 `scripting`/`tabs`）。输出最终权限清单，回写 ARCHITECTURE §6。
+  8. **技术探针 D（存储访问级）**：验证 `chrome.storage.local.setAccessLevel('TRUSTED_CONTEXTS')` 生效——从 content script 上下文读取应失败。
+- **产物**：可加载空扩展 + 探针 A-D 证据（截图/日志，记入 `scripts/probe-results.md`）+ Git 基线提交。
+- **验收**：build 成功；扩展加载无报错；探针 A-D 全部有明确结论；权限清单定稿。
+- **失败处理**：CRXJS 冲突 → 回退 D-002 备选；探针 B 坐标换算不可行 → 记录并将框选截图降级为"可见区整截 + 视觉模型内定位"，记 DECISIONS（不改产品范围）。
+- **强制确认节点**：无。**自动进入 Phase 1**。
+
+## Phase 1 — 仓库结构与扩展骨架
+- **目标**：完整目录结构 + 四端入口 + 共享库骨架。
+- **任务**：
+  1. 按 ARCHITECTURE §4 建目录与空模块（`src/`、`tests/`、`scripts/`；`lib/types.ts` 落地 §5 数据模型，**含 ProviderCapabilities / ProviderCredential，不含 GitHubTokenConfig / allowPrivateRepos**）。
+  2. 实现 `lib/storage`（schemaVersion + 迁移骨架 + getBytesInUse 容量检查）、`lib/messaging`（信封含版本/请求ID）、`lib/logger`（强制脱敏）。
+  3. manifest 按 Phase 0 探针定稿的最小权限声明，host 严格限五域。
+- **产物**：骨架代码 + 数据模型类型 + 共享库 + 单测（storage/messaging/logger）。
+- **验收**：类型编译通过；单测通过；权限清单与 ARCHITECTURE 一致；无 docs/ 规划文件副本。
+- **自动进入 Phase 1.5**。
+
+## Phase 1.5 — 安全地基（P0-5，新增；必须先于任何真实 API 调用）
+- **目标**：把 SECURITY §10 "早期安全地基"全部落地并可测试。
+- **任务**：
+  1. SW 启动即 `setAccessLevel('TRUSTED_CONTEXTS')`；`credential-store` 独立凭据接口（Options 只 write/delete，Background 只 read/inject，Content 禁止导入 + lint import 边界，D-028）。
+  2. Provider API Host 白名单常量 + 出站 fetch 封装（白名单外域名直接拒绝，含单测）。
+  3. `router` 消息来源验证（sender 校验）+ 消息类型/参数 zod Schema 验证 + 最大载荷 + 超时。
+  4. 基础 `sanitizer`（核心凭据模式）+ 日志脱敏管道。
+  5. 私有仓库阻断策略骨架（isPrivate → 零出站 + 提示）。
+  6. System Prompt 与网页内容隔离的组装约定（页面数据永不进 system 角色）。
+  7. CSP 与无远程代码检查（构建产物扫描脚本：无 eval/new Function/远程 script）。
+  8. 请求取消（AbortController）、超时、最大负载限制封装。
+- **产物**：安全地基模块 + 全部配套单测。
+- **验收**：ACCEPTANCE "Phase 1.5" 全部用例通过（含：content script 上下文读凭据失败、白名单外 fetch 被拒、非法来源消息被拒、日志无明文 Key）。
+- **自动进入 Phase 2**。
+
+## Phase 2 — Side Panel 与消息通信
+- **目标**：Panel UI 骨架 + 三端消息全链路（走 Phase 1.5 的安全信封）。
+- **任务**：
+  1. React + Tailwind + Zustand 搭 Panel 骨架（会话区/输入区/顶部 Provider 下拉占位）。
+  2. Panel↔BG 长连接（流式回推占位）；BG↔Content 请求-响应。
+  3. Content 响应"取当前页面信息"返回占位数据。
+  4. Options 页骨架（含数据流向披露区占位）。
+- **验收**：Panel 打开；一条消息完成 Panel→BG→Content→Panel 往返（经来源+Schema 校验）；集成测试断言往返与非法消息被拒。
+- **自动进入 Phase 3**。
+
+## Phase 3 — GitHub 页面识别与上下文读取（关键路径）
+- **目标**：识别页面类型 + DOM 优先解析 PageContext + SPA 变化跟踪。
+- **任务**：
+  1. `detector` 按 URL+DOM 识别 repo/issue/pr/releases/blob/search 等。
+  2. 各 `parsers/*` 产出结构化数据（容错、失败降级）。
+  3. `spa-watcher`（P1-4）：pushState/replaceState/popstate/turbo 事件 + MutationObserver 兜底；解析去抖；入口幂等防重复初始化；页面切换清理旧选择状态、失效旧上下文。
+  4. 私有仓库/无权限页面检测（isPrivate → 走 Phase 1.5 阻断策略）。
+- **产物**：解析器 + 基于真实页面 HTML fixtures 的单测。
+- **验收**：fixtures 各页面类型正确识别解析；SPA 切换触发去抖刷新且不重复初始化；私有页面被阻断；解析失败不抛未捕获异常。
+- **失败处理**：某页面类型解析不稳 → 降级纯文本提取，记 STATUS，不阻塞。
+- **自动进入 Phase 4**。
+
+## Phase 4 — Provider 抽象 + 能力探针 + 文本对话 + 手动切换（关键路径）
+- **目标**：三 Provider 适配器全部完成（代码+Mock 测试）、能力经探针验证、可手动切换、文本对话流式闭环。
+- **任务**：
+  1. `providers/base` 公共协议骨架（chat/chatStream/abort/capabilities，OpenAI 兼容组装）+ deepseek/uuapi/openrouter **独立适配器**（可覆写请求头/模型映射/流式解析/工具调用格式/错误格式，D-007R/D-030；**固定 apiHost 预设，无自定义 Base URL**；model 可配置）。
+  2. **DeepSeek 模型策略（D-034）**：不使用 `deepseek-chat`/`deepseek-reasoner` 别名（2026-07-24 15:59 UTC 已停用）；推荐预填 `deepseek-v4-flash`，下拉保留 `deepseek-v4-pro`；模型名非冻结常量，实际可用性经配置/模型列表接口/探针确认；推荐模型不可用 → 提示改选，不阻塞。
+  3. 每 Provider 声明 `ProviderCapabilities`；实现**能力探针**（D-021）：文本、流式、取消、图片输入、工具调用、结构化输出、错误/限流响应格式。探针结果写入 `capabilities.probedAt`，未验证能力不得使用。
+  4. `provider-manager`：默认路由 + **手动覆盖优先** + Capability 护栏（needsVision 而 supportsVision=false → 阻止并提示）+ 不可用 Provider 禁用标记。
+  5. `context-builder` 最小上下文（接 sanitizer）。
+  6. Panel 顶部 **Provider 手动切换下拉**（文本/视觉分列，显示当前 model 与 Host，不可用 Provider 置灰）。
+  7. Options：各 Provider Key 录入（password input，保存后立即清空；经 credential-store，UI 只见掩码、无明文回显）、model 选择、**数据流向披露**（当前 Provider/Host/模型/数据去向/是否中转/换端点风险）。
+  8. 流式渲染 + Abort + 错误处理（鉴权/额度/限流可读提示 + 建议切换）。
+- **产物**：文本对话可用 + 探针报告 + 单测（provider mock、路由、护栏、凭据隔离）。
+- **验收**：三适配器 mock 全部跑通请求组装/流式/取消路径；手动切换生效；Capability 护栏生效；凭据隔离测试通过（消息载荷/UI 状态/日志无已存明文 Key）。
+- **可用性判定与失败处理（D-031）**：
+  - 真实端点只强制**至少一个文本 Provider + 一个视觉 Provider 可用**；
+  - 单个外部 Provider 真实探针失败 → 记录原因 + UI 禁用该 Provider → **继续，不阻塞**；
+  - **所有**文本路线或**所有**视觉路线均失败 → 暂停找用户（外部依赖阻塞）。
+- **强制确认节点 ①**：**首次填入真实 DeepSeek/UUAPI/OpenRouter Key** → 暂停，交用户填入；随后对真实端点跑一轮能力探针 + 手测一次真实对话。
+- 确认后**自动进入 Phase 5**。
+
+## Phase 5 — Session 与本地偏好
+- **目标**：会话 CRUD + 恢复 + 摘要 + 偏好管理 + 容量淘汰 + 数据清除。
+- **任务**：
+  1. `session-store`：新建/继续/最近/删除/页面关联/30 天过期。
+  2. 长对话摘要 + 上下文长度控制。
+  3. **容量与淘汰**（P1-1，按 ARCHITECTURE §8）：限额常量、getBytesInUse 检查、淘汰顺序实现、Options 显示用量。
+  4. `prefs-store` + Options 偏好表单（技术水平/系统/解释偏好/operationPolicy【收紧版：downloads 无 auto、accountChanges 固定 deny】/visionEnabled）。
+  5. 数据清除三分（D-033）：清除会话/偏好（不动 Key）、单独删 Provider Key、二次确认清除全部本地数据。
+- **验收**：会话保存后重开 Panel 可恢复；过期与超限淘汰生效；偏好读写生效；三种清除各自"目标无残留、非目标完好"；operationPolicy 类型不允许非法值。
+- **自动进入 Phase 6**。
+
+## Phase 6 — 点击元素提问（MVP 必达，C-2）
+- **目标**：pick 模式选中元素并提问。
+- **任务**：`selection/pick` 叠层高亮 + 提取 SelectedElement + 接入 AI 流；SPA 切换清理 pick 状态。
+- **验收**：能进入/退出 pick 模式；选中元素结构提取正确；提问得到基于该元素的回答；集成测试断言选中数据结构。
+- **自动进入 Phase 7**。
+
+## Phase 7 — 框选区域与视觉输入（MVP 必达，C-2）
+- **目标**：drag 框选 + 结构化优先 + 不足时截图走视觉。
+- **任务**：`selection/region` 画框 + 结构化提取 + 坐标/dpr/滚动/缩放上报；**SW 侧 `capture` 模块** captureVisibleTab + 裁剪（P0-4 职责划分）；视觉 Provider 调用（Capability 护栏 + 消耗提示 + visionEnabled 开关）。
+- **验收**：框选提取结构化数据；结构充分时不截图；不足时 SW 截图裁剪对齐（复用 Phase 0 探针 B 的验证方法）并走视觉 Provider；visionEnabled=false 时禁用视觉；截图不持久保存。
+- **自动进入 Phase 8**。
+
+## Phase 8 — 自然语言 GitHub 搜索（MVP 必达，C-2）
+- **目标**：中文 NL → GitHub 搜索语句/API 参数 → 结果。
+- **任务**：搜索工具（searchRepos/searchIssues，匿名 API + **search 桶独立节流**，D-032）+ NL 转换 prompt + 结果渲染；公开搜索自动执行；展示简短查询解释；search 桶受限时降级为打开 GitHub 网页搜索或本地 DOM 结果。
+- **验收**：≥5 组中文查询转出合理 GitHub 语法；仓库/Issue 搜索返回结果；search 限流降级可读且不指数重试。
+- **自动进入 Phase 9**。
+
+## Phase 9 — 一键仓库分析（关键路径）
+- **目标**：结构化中文仓库分析卡片。
+- **任务**：聚合 DOM + **匿名** GitHub API（缓存 + 按 resource 分桶节流，D-032）→ 固定 JSON schema（用途/语言/平台/安装/Release/更新/Star/归档/许可证/Issue-PR/难度/风险/下一步）→ 渲染中文卡片；可变数据事实回填防幻觉；structuredOutput 能力不可用时按 D-021 降级。
+- **验收**：≥3 个真实公开仓库产出完整卡片；关键数字来自 DOM/API；缺字段优雅降级；匿名限额撞墙时降级提示正常。
+- **注**：v1 无 GitHub Token 节点（D-022）。若实测匿名限额确实阻塞 MVP → 暂停，作为基线变更请用户评估 Token 引入。
+- **自动进入 Phase 10**。
+
+## Phase 10 — 安全加固与红队测试
+- **目标**：SECURITY §10 "后期安全加固"全部完成。
+- **任务**：完善 sanitizer 规则集；Prompt Injection **红队测试**（构造攻击样例 + 记录结果，见 P1-2 表述边界）；私有页面零出站复验；工具白名单越权测试（含非 https Scheme 拒绝：javascript/data/file/chrome 等，D-013R）；权限复查（对照 Phase 0 探针 C 结论）；三种数据清除测试（D-033）；泄漏检查（出站体/日志扫描）。
+- **产物**：安全测试套件 + 红队测试记录（`tests/security/redteam-log.md`）。
+- **验收**：ACCEPTANCE 安全用例全部通过；红队记录含 ≥10 个攻击样例与结果。
+- **自动进入 Phase 11**。
+
+## Phase 11 — 测试、打包与 MVP 验收（汇聚）
+- **目标**：整体测试通过 + 可分发扩展包 + 唯一一次批量体验复核。
+- **前置**：**Phase 6/7/8 必须已完成并通过验收**（C-2：核心功能不得缺席最终 MVP）。
+- **任务**：补齐单元/组件/集成/E2E（Playwright 加载扩展）；`pnpm build` 产出可加载包（`dist/`）；跑通成功标准 S1-S5；整理使用说明（放 `docs/`，属派生文档）。
+- **验收**：ACCEPTANCE 全绿；打包可加载；S1-S5 每条有证据。
+- **强制确认节点 ②（批量体验复核）**：交用户在真实 Chrome 手工体验 S1-S5 闭环，确认 MVP 达标。这是**唯一的人工体验验收节点**。
+
+---
+
+## 强制确认节点清单（v1.2）
+1. **Phase 4**：首次填入真实 AI Provider Key（凭据）—— 必需。
+2. **Phase 11**：MVP 批量体验复核（真实交互验收）—— 必需。
+3. **条件性**：匿名 GitHub API 限额被实测证明阻塞 MVP → 评估 Token（基线变更）；**所有**文本 Provider 或**所有**视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停。
+
+**注意（D-031）**：单个 Provider 探针失败**不是**暂停节点——记录、禁用、继续。
+
+其余一切（建文件、重构、修错、加测试、选内部依赖、调结构）**一律自主执行，不得暂停找用户**。
