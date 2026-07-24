@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 3 已通过验收。下一步进入 Phase 4（Provider + 能力探针 + 文本对话）。**
+**Phase 4 无凭据工作已全部完成，已到强制确认节点 ①：等待用户在扩展 Options 页填入真实 Provider API Key。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -68,15 +68,24 @@
   - SPA watcher 覆盖 pushState/replaceState/popstate/turbo/MutationObserver，300ms 去抖；URL 变化立即失效旧上下文、清理选择态；Content 入口幂等
   - 8 个 GitHub 精简 HTML fixture 覆盖六种公开页面及私有/无权限边界
   - 验收：typecheck、lint 通过；Vitest 16 files / 42 tests 全过；build 与构建安全扫描通过；隔离 Chrome 实测 Content 注入、Side Panel 与探针均通过
+- [x] **Phase 4 — 不需要真实凭据的全部工作（2026-07-24）**：
+  - 公共 Provider 协议与 DeepSeek / UUAPI / OpenRouter 三个独立适配器完成；固定 endpoint、model 映射、非流式/SSE、usage、工具调用、错误/限流映射和 request ID 取消均有 Mock
+  - DeepSeek 拒绝停用别名与图像输入；UUAPI/OpenRouter 支持 OpenAI image_url 组装但在真实探针前不声明视觉可用
+  - Provider Manager 完成文本/视觉默认路由、手动覆盖优先、未探针阻断、视觉 Capability 护栏和单 Provider 失败禁用
+  - 能力探针框架覆盖模型列表、文本、流式、取消、视觉、工具、结构化输出、usage、错误格式；真实限流只在实际遇到时标记，不主动制造限流
+  - Panel 已接真实流式 runtime、文本/视觉 Provider 分列、不可用项置灰、停止生成；Options 已接 Key password input、保存即清空、Background 掩码回读、model 配置与完整数据流向披露
+  - UUAPI model 留空时真实探针先尝试 `/v1/models` 自动选择；用户也可在同一 Options 页面覆盖 model ID
+  - 当前真实能力一律记录为“未探针”，证据与后续更新位置：`scripts/provider-probe-report.md`
+  - 无凭据验收：Node 24.18.0 下 typecheck、lint 通过；Vitest 20 files / 58 tests 全过；build 与构建安全扫描通过；隔离 Chrome 实测 SW/Options/Panel/Content 加载、TRUSTED_CONTEXTS 与权限探针均通过
 
 ## 下一任务
-**Phase 4 — Provider 抽象、能力探针与文本对话**（见 EXECUTION_PLAN v1.2）。
-执行 Agent 应继续：
-1. 完成公共 Provider 协议及 DeepSeek/UUAPI/OpenRouter 三个独立适配器
-2. 完成能力探针、Provider Manager 手动覆盖/禁用/Capability 护栏
-3. 接入 Panel Provider 切换、流式渲染、取消与可读错误
-4. 完成 Options Key 录入/清空/掩码、模型配置与数据流向披露
-5. 完成全部 Mock、路由与凭据隔离测试；在首次需要填入真实 Key 时触发强制确认节点
+**Phase 4 强制确认节点 ①**（见 EXECUTION_PLAN v1.2）。
+用户只需在已构建扩展的 **GitHelper-CN 设置（Options）→ Provider 与 API Key** 中填入真实 Key 并点击各卡片的“保存 Key”；不要把 Key 发到聊天、文件或日志。模型可保持已填默认值；UUAPI 留空时后续探针会先尝试自动发现。
+
+用户完成后回复“已填入”，执行 Agent 将自动：
+1. 运行三家真实端点能力探针并更新 `provider:probes:v1` 与探针报告
+2. 按 D-031 记录/禁用单家失败；验证至少一个文本和一个视觉 Provider
+3. 手测一次真实流式对话，完成 Phase 4 验收与阶段 Commit，然后自动进入 Phase 5
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -86,7 +95,7 @@
 | 1.5 安全地基 | ✅ 已完成 |
 | 2 Side Panel + 消息通信 | ✅ 已完成 |
 | 3 页面识别 + 上下文 + SPA | ✅ 已完成 |
-| 4 Provider + 能力探针 + 对话 + 手动切换 | ⬜ |
+| 4 Provider + 能力探针 + 对话 + 手动切换 | ⏸ 无凭据实现完成，等待真实 Key |
 | 5 Session + 偏好 + 容量淘汰 | ⬜ |
 | 6 点击提问（MVP 必达） | ⬜ |
 | 7 框选 + 视觉（MVP 必达） | ⬜ |
@@ -95,13 +104,13 @@
 | 10 安全加固 + 红队测试 | ⬜ |
 | 11 测试 + 打包 + MVP 验收 | ⬜ |
 
-## 待处理的强制确认节点（尚未触发）
-- ⏸ Phase 4：填入真实 Provider Key（必需）
+## 待处理的强制确认节点
+- ⏸ **当前已触发** — Phase 4：填入真实 Provider Key（必需）
 - ⏸ Phase 11：MVP 批量体验复核（必需）
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-无。
+仅有计划内强制确认节点：真实 Provider Key 必须由用户本人在扩展 Options 页录入。代码、Mock、构建和本地浏览器加载无其他阻塞。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -113,3 +122,4 @@
 - 2026-07-24：Phase 1.5 通过；凭据隔离、Host 白名单、安全消息路由、脱敏、私有上下文零出站、Prompt 隔离及构建扫描落地，25 项单测通过。
 - 2026-07-24：Phase 2 通过；Panel/Options UI 骨架、三端安全通信、页面信息往返及流式占位落地，29 项单测与真实浏览器加载复验通过。
 - 2026-07-24：Phase 3 通过；六类页面解析、有限降级、私有/无权限零出站、SPA 去抖与 Content 幂等入口落地，42 项单测及真实浏览器复验通过。
+- 2026-07-24：Phase 4 无凭据工作完成；三适配器、能力探针框架、Manager/Panel/Options/凭据 UI 与 58 项测试通过，按强制确认节点 ① 暂停等待用户在 Options 页录入真实 Key。

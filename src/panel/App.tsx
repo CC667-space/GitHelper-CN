@@ -1,27 +1,38 @@
 import React, { useEffect, useRef } from 'react';
 
+import type { ProviderId } from '../lib/types';
 import { connectPanel, type PanelConnection } from './connection';
 import { usePanelStore } from './store';
 
-export function PanelApp(): React.JSX.Element {
+export function PanelApp({
+  connect = connectPanel,
+}: {
+  connect?: typeof connectPanel;
+}): React.JSX.Element {
   const connection = useRef<PanelConnection>();
   const {
     connected,
     draft,
     messages,
     pageLabel,
-    providerLabel,
+    providers,
+    selectedTextProviderId,
+    selectedVisionProviderId,
+    activeRequestId,
     addUserMessage,
+    applyProviderState,
     applyStreamEvent,
+    selectTextProvider,
+    selectVisionProvider,
     setConnected,
     setDraft,
   } = usePanelStore();
 
   useEffect(() => {
-    const activeConnection = connectPanel(applyStreamEvent, setConnected);
+    const activeConnection = connect(applyStreamEvent, applyProviderState, setConnected);
     connection.current = activeConnection;
     return () => activeConnection.disconnect();
-  }, [applyStreamEvent, setConnected]);
+  }, [applyProviderState, applyStreamEvent, connect, setConnected]);
 
   function submit(): void {
     const text = draft.trim();
@@ -29,7 +40,7 @@ export function PanelApp(): React.JSX.Element {
       return;
     }
     addUserMessage(text);
-    connection.current.send(text);
+    connection.current.send(text, selectedTextProviderId);
   }
 
   return (
@@ -45,17 +56,52 @@ export function PanelApp(): React.JSX.Element {
             title={connected ? 'Background 已连接' : 'Background 未连接'}
           />
         </div>
-        <label className="mt-3 block text-xs font-medium text-slate-600" htmlFor="provider">
-          当前 Provider
-        </label>
-        <select
-          className="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-2 py-2 text-sm"
-          disabled
-          id="provider"
-          value="placeholder"
-        >
-          <option value="placeholder">{providerLabel}</option>
-        </select>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <label className="block text-xs font-medium text-slate-600">
+            文本 Provider
+            <select
+              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
+              onChange={(event) => selectTextProvider(event.target.value as ProviderId)}
+              value={selectedTextProviderId ?? ''}
+            >
+              <option disabled value="">
+                尚未配置
+              </option>
+              {providers.map((provider) => (
+                <option
+                  disabled={provider.availability !== 'available'}
+                  key={provider.id}
+                  value={provider.id}
+                >
+                  {provider.label} · {provider.textModel || '未填 model'}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-xs font-medium text-slate-600">
+            视觉 Provider
+            <select
+              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
+              onChange={(event) => selectVisionProvider(event.target.value as ProviderId)}
+              value={selectedVisionProviderId ?? ''}
+            >
+              <option disabled value="">
+                尚未验证
+              </option>
+              {providers.map((provider) => (
+                <option
+                  disabled={
+                    provider.availability !== 'available' || !provider.capabilities.supportsVision
+                  }
+                  key={provider.id}
+                  value={provider.id}
+                >
+                  {provider.label} · {provider.visionModel || '未填 model'}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <p className="mt-2 truncate text-xs text-slate-500" title={pageLabel}>
           {pageLabel}
         </p>
@@ -104,13 +150,23 @@ export function PanelApp(): React.JSX.Element {
           placeholder="问问当前 GitHub 页面……"
           value={draft}
         />
-        <button
-          className="mt-2 w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:bg-slate-400"
-          disabled={!connected || !draft.trim()}
-          type="submit"
-        >
-          发送
-        </button>
+        {activeRequestId ? (
+          <button
+            className="mt-2 w-full rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700"
+            onClick={() => connection.current?.abort(activeRequestId)}
+            type="button"
+          >
+            停止生成
+          </button>
+        ) : (
+          <button
+            className="mt-2 w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:bg-slate-400"
+            disabled={!connected || !draft.trim()}
+            type="submit"
+          >
+            发送
+          </button>
+        )}
       </form>
     </main>
   );

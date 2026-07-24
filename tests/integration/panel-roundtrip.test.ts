@@ -32,6 +32,10 @@ describe('Panel → Background → Content → Panel', () => {
     });
     const bridge = new PanelBridge(runtimeId, {
       requestPageInfo: contentHandler,
+      streamAnswer: async function* () {
+        yield '当前页面信息往返成功。';
+      },
+      abort: vi.fn(() => false),
       emit: (event) => emitted.push(event),
     });
 
@@ -54,6 +58,8 @@ describe('Panel → Background → Content → Panel', () => {
   it('拒绝伪造扩展来源和非法消息 Schema', async () => {
     const bridge = new PanelBridge(runtimeId, {
       requestPageInfo: vi.fn(),
+      streamAnswer: vi.fn(),
+      abort: vi.fn(() => false),
       emit: vi.fn(),
     });
     const valid = createEnvelope('PANEL_MESSAGE', { text: 'hello' });

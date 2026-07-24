@@ -13,6 +13,8 @@ export type RouteSource = 'content' | 'extension' | 'either';
 export interface RouteContext {
   sender: chrome.runtime.MessageSender;
   signal: AbortSignal;
+  requestId: string;
+  type: string;
 }
 
 export interface RouteDefinition {
@@ -118,7 +120,14 @@ export class MessageRouter {
     });
     const controller = new AbortController();
     const result = await withTimeout(
-      Promise.resolve(route.handler(envelope.payload, { sender, signal: controller.signal })),
+      Promise.resolve(
+        route.handler(envelope.payload, {
+          sender,
+          signal: controller.signal,
+          requestId: envelope.id,
+          type: envelope.type,
+        }),
+      ),
       this.options.timeoutMs,
     ).catch((error: unknown) => {
       controller.abort(error);

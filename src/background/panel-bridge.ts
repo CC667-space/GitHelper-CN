@@ -1,17 +1,29 @@
 import {
   pageInfoSchema,
+  panelAbortSchema,
   PANEL_PORT_NAME,
   panelMessageSchema,
   streamEventSchema,
   type PageInfo,
+  type ProviderRuntimeView,
   type StreamEvent,
 } from '../lib/bridge-protocol';
-import { createEnvelope, parseEnvelope, type Envelope } from '../lib/messaging';
+import { createEnvelope, MAX_MESSAGE_BYTES, parseEnvelope, type Envelope } from '../lib/messaging';
 import { MessageRouter, type RouteContext } from './router';
 import { sanitizeText } from './sanitizer';
+import type { ProviderId } from '../lib/types';
 
 export interface PanelBridgeDependencies {
   requestPageInfo(signal: AbortSignal): Promise<PageInfo>;
+  streamAnswer(input: {
+    requestId: string;
+    question: string;
+    page: PageInfo;
+    providerId?: ProviderId;
+    signal: AbortSignal;
+  }): AsyncIterable<string>;
+  abort(requestId: string): boolean;
+  providerViews?(): Promise<ProviderRuntimeView[]>;
   emit(event: Envelope<StreamEvent>): void;
 }
 
@@ -29,8 +41,17 @@ export class PanelBridge {
           payloadSchema: panelMessageSchema,
           handler: (payload, context) => this.handlePanelMessage(payload, context),
         },
+        PANEL_ABORT: {
+          source: 'extension',
+          payloadSchema: panelAbortSchema,
+          handler: (payload) => {
+            const request = panelAbortSchema.parse(payload);
+            return { aborted: this.dependencies.abort(request.requestId) };
+          },
+        },
       },
       runtimeId,
+      { maxPayloadBytes: MAX_MESSAGE_BYTES, timeoutMs: 90_000 },
     );
   }
 
@@ -40,7 +61,7 @@ export class PanelBridge {
 
   private async handlePanelMessage(payload: unknown, context: RouteContext): Promise<unknown> {
     const message = panelMessageSchema.parse(payload);
-    const requestId = crypto.randomUUID();
+    const requestId = context.requestId;
     this.emit({ requestId, kind: 'start' });
     const page = await this.dependencies.requestPageInfo(context.signal);
     this.emit({
@@ -48,11 +69,15 @@ export class PanelBridge {
       kind: 'context',
       text: page.title || page.url,
     });
-    this.emit({
+    for await (const delta of this.dependencies.streamAnswer({
       requestId,
-      kind: 'delta',
-      text: `已收到“${message.text}”，当前页面信息往返成功。`,
-    });
+      question: message.text,
+      page,
+      providerId: message.providerId,
+      signal: context.signal,
+    })) {
+      this.emit({ requestId, kind: 'delta', text: delta });
+    }
     this.emit({ requestId, kind: 'done' });
     return { accepted: true, requestId };
   }
@@ -85,15 +110,17 @@ export async function requestActivePageInfo(signal: AbortSignal): Promise<PageIn
   return response.payload;
 }
 
-function errorStreamEvent(error: unknown): Envelope<StreamEvent> {
+function errorStreamEvent(error: unknown, requestId?: string): Envelope<StreamEvent> {
   return createEnvelope('STREAM_EVENT', {
-    requestId: crypto.randomUUID(),
+    requestId: requestId ?? crypto.randomUUID(),
     kind: 'error',
     text: sanitizeText(error instanceof Error ? error.message : String(error)).value,
   });
 }
 
-export function registerPanelPortBridge(): void {
+export function registerPanelPortBridge(
+  runtime: import('./provider-runtime').ProviderRuntime,
+): void {
   chrome.runtime.onConnect.addListener((port) => {
     if (port.name !== PANEL_PORT_NAME) {
       port.disconnect();
@@ -101,13 +128,36 @@ export function registerPanelPortBridge(): void {
     }
     const bridge = new PanelBridge(chrome.runtime.id, {
       requestPageInfo: requestActivePageInfo,
+      streamAnswer: async function* (input) {
+        if (!input.page.pageContext) {
+          throw new Error('当前页面上下文尚未就绪');
+        }
+        yield* runtime.streamAnswer({
+          requestId: input.requestId,
+          question: input.question,
+          pageContext: input.page.pageContext,
+          manualProviderId: input.providerId,
+          signal: input.signal,
+        });
+      },
+      abort: (requestId) => runtime.abort(requestId),
+      providerViews: () => runtime.views(),
       emit: (event) => port.postMessage(event),
     });
+    void runtime
+      .views()
+      .then((providers) => port.postMessage(createEnvelope('PROVIDER_STATE', { providers })))
+      .catch((error: unknown) => port.postMessage(errorStreamEvent(error)));
     port.onMessage.addListener((message) => {
+      const requestId =
+        typeof (message as { id?: unknown } | null)?.id === 'string' &&
+        (message as { id: string }).id.length <= 128
+          ? (message as { id: string }).id
+          : undefined;
       void bridge
         .dispatch(message, port.sender ?? {})
         .then((response) => port.postMessage(response))
-        .catch((error: unknown) => port.postMessage(errorStreamEvent(error)));
+        .catch((error: unknown) => port.postMessage(errorStreamEvent(error, requestId)));
     });
   });
 }

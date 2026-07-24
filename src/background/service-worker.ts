@@ -1,4 +1,6 @@
 import { registerPanelPortBridge } from './panel-bridge';
+import { registerOptionsRouter } from './options-router';
+import { ProviderRuntime } from './provider-runtime';
 
 const PROBE_KEY = 'phase0Probe';
 const MARKER_RGBA = [17, 221, 119, 255] as const;
@@ -45,7 +47,9 @@ async function setTrustedStorageAccess(): Promise<void> {
 }
 
 void setTrustedStorageAccess();
-registerPanelPortBridge();
+const providerRuntime = new ProviderRuntime();
+registerPanelPortBridge(providerRuntime);
+registerOptionsRouter(providerRuntime);
 chrome.runtime.onInstalled.addListener(() => {
   void setTrustedStorageAccess();
 });

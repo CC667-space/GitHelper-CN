@@ -1,7 +1,80 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
-export function OptionsApp(): React.JSX.Element {
+import { PROVIDER_CATALOG } from '../lib/provider-catalog';
+import type { ProviderRuntimeView } from '../lib/bridge-protocol';
+import type { ProviderId } from '../lib/types';
+import { defaultOptionsServices, type OptionsServices } from './services';
+
+export function OptionsApp({
+  services = defaultOptionsServices,
+}: {
+  services?: OptionsServices;
+}): React.JSX.Element {
   const [probeStatus, setProbeStatus] = useState('待验证');
+  const [providers, setProviders] = useState<ProviderRuntimeView[]>([]);
+  const [keys, setKeys] = useState<Partial<Record<ProviderId, string>>>({});
+  const [models, setModels] = useState<
+    Partial<Record<ProviderId, { textModel: string; visionModel: string }>>
+  >({});
+  const [status, setStatus] = useState('正在读取本地 Provider 状态…');
+
+  async function refreshProviders(): Promise<void> {
+    const next = await services.loadProviders();
+    setProviders(next);
+    setModels(
+      Object.fromEntries(
+        next.map((provider) => [
+          provider.id,
+          {
+            textModel: provider.textModel,
+            visionModel: provider.visionModel ?? '',
+          },
+        ]),
+      ),
+    );
+    setStatus('本地状态已更新');
+  }
+
+  useEffect(() => {
+    void refreshProviders().catch((error: unknown) =>
+      setStatus(error instanceof Error ? error.message : String(error)),
+    );
+  }, []);
+
+  async function saveKey(providerId: ProviderId): Promise<void> {
+    const apiKey = keys[providerId]?.trim() ?? '';
+    if (!apiKey) {
+      setStatus('请输入 API Key');
+      return;
+    }
+    await services.saveKey(providerId, apiKey);
+    setKeys((current) => ({ ...current, [providerId]: '' }));
+    setStatus(`${providerId} Key 已保存，输入框已清空`);
+    await refreshProviders();
+  }
+
+  async function removeKey(providerId: ProviderId): Promise<void> {
+    await services.deleteKey(providerId);
+    setKeys((current) => ({ ...current, [providerId]: '' }));
+    await refreshProviders();
+  }
+
+  async function saveModels(providerId: ProviderId): Promise<void> {
+    const current = models[providerId] ?? { textModel: '', visionModel: '' };
+    await services.saveModels(providerId, {
+      textModel: current.textModel,
+      visionModel: current.visionModel || undefined,
+    });
+    setStatus(`${providerId} 模型配置已保存`);
+    await refreshProviders();
+  }
+
+  async function runProbes(): Promise<void> {
+    setStatus('正在调用真实端点；会消耗少量 Provider 额度…');
+    await services.runProbes();
+    await refreshProviders();
+    setStatus('能力探针已完成；请查看各 Provider 可用状态');
+  }
 
   async function openProbeSidePanel(): Promise<void> {
     const currentWindow = await chrome.windows.getCurrent();
@@ -23,19 +96,172 @@ export function OptionsApp(): React.JSX.Element {
       <header>
         <h1 className="text-xl font-semibold">GitHelper-CN 设置</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Provider 凭据与偏好将在后续阶段接入；当前页面不读取或显示任何已存 Key。
+          Key 仅存于本机浏览器扩展存储。保存后输入框立即清空，已存 Key 只显示尾四位掩码。
         </p>
       </header>
+
+      <p
+        aria-live="polite"
+        className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700"
+        data-testid="options-status"
+      >
+        {status}
+      </p>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-medium">Provider 与 API Key</h2>
+        {PROVIDER_CATALOG.map((catalog) => {
+          const provider = providers.find((item) => item.id === catalog.id);
+          const model = models[catalog.id] ?? {
+            textModel: catalog.defaultTextModel,
+            visionModel: catalog.defaultVisionModel ?? '',
+          };
+          return (
+            <article className="rounded-lg border border-slate-200 p-4" key={catalog.id}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-medium">{catalog.label}</h3>
+                  <p className="text-xs text-slate-500">
+                    {catalog.apiHost}
+                    {catalog.apiPath}
+                  </p>
+                </div>
+                <span className="rounded bg-slate-100 px-2 py-1 text-xs">
+                  {provider?.availability ?? 'needs_key'}
+                </span>
+              </div>
+
+              <label className="mt-4 block text-sm font-medium" htmlFor={`${catalog.id}-api-key`}>
+                {catalog.label} API Key
+              </label>
+              <input
+                autoComplete="off"
+                className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm"
+                id={`${catalog.id}-api-key`}
+                onChange={(event) =>
+                  setKeys((current) => ({
+                    ...current,
+                    [catalog.id]: event.target.value,
+                  }))
+                }
+                placeholder={provider?.keyMask ?? '未配置'}
+                type="password"
+                value={keys[catalog.id] ?? ''}
+              />
+              <p className="mt-1 text-xs text-slate-500">已存：{provider?.keyMask ?? '无'}</p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  className="rounded bg-slate-900 px-3 py-2 text-sm text-white"
+                  onClick={() =>
+                    void saveKey(catalog.id).catch((error: unknown) =>
+                      setStatus(error instanceof Error ? error.message : String(error)),
+                    )
+                  }
+                  type="button"
+                >
+                  保存 Key
+                </button>
+                <button
+                  className="rounded border border-slate-300 px-3 py-2 text-sm"
+                  disabled={!provider?.keyMask}
+                  onClick={() =>
+                    void removeKey(catalog.id).catch((error: unknown) =>
+                      setStatus(error instanceof Error ? error.message : String(error)),
+                    )
+                  }
+                  type="button"
+                >
+                  删除 Key
+                </button>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="text-sm">
+                  文本 model ID
+                  <input
+                    className="mt-1 w-full rounded-md border border-slate-300 p-2"
+                    list={`${catalog.id}-model-suggestions`}
+                    onChange={(event) =>
+                      setModels((current) => ({
+                        ...current,
+                        [catalog.id]: { ...model, textModel: event.target.value },
+                      }))
+                    }
+                    value={model.textModel}
+                  />
+                </label>
+                {catalog.id !== 'deepseek' ? (
+                  <label className="text-sm">
+                    视觉 model ID
+                    <input
+                      className="mt-1 w-full rounded-md border border-slate-300 p-2"
+                      list={`${catalog.id}-model-suggestions`}
+                      onChange={(event) =>
+                        setModels((current) => ({
+                          ...current,
+                          [catalog.id]: { ...model, visionModel: event.target.value },
+                        }))
+                      }
+                      value={model.visionModel}
+                    />
+                  </label>
+                ) : (
+                  <p className="self-end rounded bg-amber-50 p-2 text-xs text-amber-800">
+                    DeepSeek 不支持图像输入
+                  </p>
+                )}
+              </div>
+              <datalist id={`${catalog.id}-model-suggestions`}>
+                {catalog.modelSuggestions.map((suggestion) => (
+                  <option key={suggestion} value={suggestion} />
+                ))}
+              </datalist>
+              <button
+                className="mt-3 rounded border border-slate-300 px-3 py-2 text-sm"
+                onClick={() =>
+                  void saveModels(catalog.id).catch((error: unknown) =>
+                    setStatus(error instanceof Error ? error.message : String(error)),
+                  )
+                }
+                type="button"
+              >
+                保存模型配置
+              </button>
+            </article>
+          );
+        })}
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <h3 className="font-medium text-amber-900">真实能力探针</h3>
+          <p className="mt-1 text-sm text-amber-800">
+            会向已配置 Provider
+            发送最小文本、流式、取消、工具、结构化输出及视觉测试请求，可能产生少量费用。
+          </p>
+          <button
+            className="mt-3 rounded bg-amber-900 px-3 py-2 text-sm text-white disabled:bg-amber-300"
+            disabled={!providers.some((provider) => provider.keyMask)}
+            onClick={() =>
+              void runProbes().catch((error: unknown) =>
+                setStatus(error instanceof Error ? error.message : String(error)),
+              )
+            }
+            type="button"
+          >
+            运行真实能力探针
+          </button>
+        </div>
+      </section>
 
       <section className="rounded-lg border border-slate-200 p-4">
         <h2 className="font-medium">数据流向披露</h2>
         <dl className="mt-3 grid grid-cols-[7rem_1fr] gap-2 text-sm">
-          <dt className="text-slate-500">当前 Provider</dt>
-          <dd>尚未配置</dd>
-          <dt className="text-slate-500">目标 Host</dt>
-          <dd>尚未选择</dd>
+          <dt className="text-slate-500">固定端点</dt>
+          <dd>仅限 DeepSeek / UUAPI / OpenRouter 预设 Host，不允许自定义 Base URL</dd>
+          <dt className="text-slate-500">中转服务</dt>
+          <dd>UUAPI、OpenRouter 可能把数据转交其上游模型供应商</dd>
           <dt className="text-slate-500">发送内容</dt>
           <dd>仅在用户明确提交后，发送最小必要上下文</dd>
+          <dt className="text-slate-500">第三方处理</dt>
+          <dd>扩展无法控制或承诺第三方端点后续如何处理数据</dd>
           <dt className="text-slate-500">私有仓库</dt>
           <dd>禁止出站</dd>
         </dl>

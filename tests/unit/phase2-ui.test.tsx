@@ -8,7 +8,8 @@ import { PanelApp } from '../../src/panel/App';
 describe('Phase 2 UI skeleton', () => {
   it('Panel 包含 Provider、会话和输入区', () => {
     const html = renderToStaticMarkup(<PanelApp />);
-    expect(html).toContain('当前 Provider');
+    expect(html).toContain('文本 Provider');
+    expect(html).toContain('视觉 Provider');
     expect(html).toContain('data-testid="conversation"');
     expect(html).toContain('问问当前 GitHub 页面');
   });
