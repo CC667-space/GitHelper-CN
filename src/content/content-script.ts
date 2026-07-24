@@ -1,3 +1,5 @@
+import { handlePageInfoRequest } from './page-info';
+
 const INJECTED_ATTR = 'data-git-helper-injected';
 const MARKER_ID = 'git-helper-phase0-probe-marker';
 const MARKER_RGB = 'rgb(17, 221, 119)';
@@ -137,6 +139,23 @@ chrome.runtime.onMessage.addListener(
       return false;
     }
 
+    return false;
+  },
+);
+
+chrome.runtime.onMessage.addListener(
+  (message: unknown, sender, sendResponse: (response: unknown) => void) => {
+    if (
+      sender.id !== chrome.runtime.id ||
+      (message as { type?: unknown } | null)?.type !== 'PAGE_INFO_REQUEST'
+    ) {
+      return false;
+    }
+    try {
+      sendResponse(handlePageInfoRequest(message, window.location, document.title));
+    } catch {
+      return false;
+    }
     return false;
   },
 );

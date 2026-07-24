@@ -1,3 +1,5 @@
+import { registerPanelPortBridge } from './panel-bridge';
+
 const PROBE_KEY = 'phase0Probe';
 const MARKER_RGBA = [17, 221, 119, 255] as const;
 
@@ -43,6 +45,7 @@ async function setTrustedStorageAccess(): Promise<void> {
 }
 
 void setTrustedStorageAccess();
+registerPanelPortBridge();
 chrome.runtime.onInstalled.addListener(() => {
   void setTrustedStorageAccess();
 });

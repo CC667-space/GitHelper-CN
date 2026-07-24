@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 1.5 已通过验收。下一步进入 Phase 2（Side Panel + 消息通信）。**
+**Phase 2 已通过验收。下一步进入 Phase 3（页面识别 + 上下文 + SPA）。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -54,14 +54,21 @@
   - sanitizer 覆盖 API Key、GitHub Token、私钥、环境变量、Cookie、密码、邮箱、手机号；System Prompt 与不可信页面数据以固定边界隔离
   - 构建产物扫描拒绝 `eval`、`new Function`、远程动态 import/script 与不安全 CSP
   - 验收：typecheck、lint 通过；Vitest 11 files / 25 tests 全过；build 与构建安全扫描通过
+- [x] **Phase 2 — Side Panel 与消息通信（2026-07-24）**：
+  - React + Tailwind + Zustand Panel 已含 Provider 占位、会话区、输入区、连接状态与页面标签
+  - Panel ↔ Background 使用命名长连接与安全 envelope；Background ↔ Content 使用 request ID 绑定的请求/响应
+  - 流式占位按 `start/context/delta/done/error` 回推；Content 返回当前 URL、标题与采集时间占位
+  - Options 落地数据流向披露骨架，明确最小上下文与私有仓库禁止出站
+  - 集成测试覆盖完整 Panel → Background → Content → Panel 往返、伪造来源及非法 Schema
+  - 验收：typecheck、lint 通过；Vitest 13 files / 29 tests 全过；build 与构建安全扫描通过；隔离 Chrome 实测扩展加载、Side Panel 打开及 Content 注入均通过
 
 ## 下一任务
-**Phase 2 — Side Panel + 消息通信**（见 EXECUTION_PLAN v1.2）。
+**Phase 3 — GitHub 页面识别与上下文读取**（见 EXECUTION_PLAN v1.2）。
 执行 Agent 应继续：
-1. 落地 React + Tailwind + Zustand Panel 骨架与 Provider 占位
-2. 建立 Panel ↔ Background 长连接及流式事件占位
-3. 建立 Background ↔ Content 页面信息请求/响应
-4. 完成 Options 披露占位和通信集成测试
+1. 实现 repo/issue/pr/releases/blob/search 的 URL + DOM 页面识别
+2. 落地各页面结构化解析器与纯文本降级
+3. 实现 GitHub turbo/History/popstate/DOM 兜底的去抖 SPA watcher
+4. 检测私有仓库/无权限页面并接入零出站标记，使用真实页面 fixtures 验收
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -69,7 +76,7 @@
 | 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成 |
 | 1 仓库结构 + 扩展骨架 | ✅ 已完成 |
 | 1.5 安全地基 | ✅ 已完成 |
-| 2 Side Panel + 消息通信 | ⬜ |
+| 2 Side Panel + 消息通信 | ✅ 已完成 |
 | 3 页面识别 + 上下文 + SPA | ⬜ |
 | 4 Provider + 能力探针 + 对话 + 手动切换 | ⬜ |
 | 5 Session + 偏好 + 容量淘汰 | ⬜ |
@@ -96,3 +103,4 @@
 - 2026-07-24：Phase 0 通过；完成 Git 基线、最小 MV3 构建、A–D 自动探针、截图坐标与最小权限定稿，并记录 CRXJS/Vite 入口 basename 兼容约束（D-036/D-037）。
 - 2026-07-24：Phase 1 通过；数据模型、目录骨架及 storage/messaging/logger 共享库落地，10 项单测通过。
 - 2026-07-24：Phase 1.5 通过；凭据隔离、Host 白名单、安全消息路由、脱敏、私有上下文零出站、Prompt 隔离及构建扫描落地，25 项单测通过。
+- 2026-07-24：Phase 2 通过；Panel/Options UI 骨架、三端安全通信、页面信息往返及流式占位落地，29 项单测与真实浏览器加载复验通过。
