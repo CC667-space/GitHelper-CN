@@ -4,12 +4,14 @@ import type {
   PanelSessionState,
   PanelPickState,
   PanelRegionState,
+  PanelSearchState,
   ProviderRuntimeView,
   ProviderState,
   StreamEvent,
 } from '../lib/bridge-protocol';
 import type { ProviderId } from '../lib/types';
 import type { SelectedElement, SelectedRegion } from '../lib/types';
+import type { GitHubSearchResult, SearchTarget } from '../lib/github-search';
 
 interface PanelMessage {
   id: string;
@@ -31,6 +33,11 @@ interface PanelState {
   regionStatus: 'idle' | 'active' | 'selected';
   regionStatusMessage?: string;
   selectedRegion?: SelectedRegion;
+  searchDraft: string;
+  searchTarget: SearchTarget;
+  searchStatus: 'idle' | 'searching' | 'done' | 'error';
+  searchError?: string;
+  searchResult?: GitHubSearchResult;
   pageLabel: string;
   providers: ProviderRuntimeView[];
   selectedTextProviderId?: ProviderId;
@@ -44,6 +51,9 @@ interface PanelState {
   clearSelectedElement(): void;
   applyRegionState(state: PanelRegionState): void;
   clearSelectedRegion(): void;
+  setSearchDraft(value: string): void;
+  setSearchTarget(value: SearchTarget): void;
+  applySearchState(state: PanelSearchState): void;
   applyStreamEvent(event: StreamEvent): void;
   selectTextProvider(providerId: ProviderId): void;
   selectVisionProvider(providerId: ProviderId): void;
@@ -56,6 +66,9 @@ export const usePanelStore = create<PanelState>((set) => ({
   sessionHistoryTruncated: false,
   pickStatus: 'idle',
   regionStatus: 'idle',
+  searchDraft: '',
+  searchTarget: 'auto',
+  searchStatus: 'idle',
   pageLabel: '等待读取当前 GitHub 页面',
   providers: [],
   setConnected: (connected) => set({ connected }),
@@ -153,6 +166,28 @@ export const usePanelStore = create<PanelState>((set) => ({
       regionStatusMessage: undefined,
       selectedRegion: undefined,
     }),
+  setSearchDraft: (searchDraft) => set({ searchDraft }),
+  setSearchTarget: (searchTarget) => set({ searchTarget }),
+  applySearchState: (state) =>
+    set(
+      state.status === 'searching'
+        ? {
+            searchStatus: 'searching',
+            searchError: undefined,
+            searchResult: undefined,
+          }
+        : state.status === 'done'
+          ? {
+              searchStatus: 'done',
+              searchError: undefined,
+              searchResult: state.result,
+            }
+          : {
+              searchStatus: 'error',
+              searchError: state.error,
+              searchResult: undefined,
+            },
+    ),
   applyStreamEvent: (event) =>
     set((state) => {
       if (event.kind === 'start') {

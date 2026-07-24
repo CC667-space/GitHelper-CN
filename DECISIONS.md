@@ -331,3 +331,14 @@
 - **证据**：测试覆盖 drag/反向坐标、结构化六类字段、充分/不足判定、needsVision 篡改拒绝、Phase 0 坐标比例、越界/取消、bitmap 关闭、零截图文本路径、视觉图像注入、偏好关闭前置阻断与 Panel 费用提示；全量 107 项测试通过。
 - **范围**：Phase 7 冻结核心功能的内部实现；不新增 Chrome 权限、Host、持久数据类别或后台截图能力范围。
 - 状态：代码已验证 ｜ 2026-07-24
+
+## D-047 中文搜索采用确定性本地转换与持久化分桶
+- **决策**：
+  - Phase 8 中文搜索先用本地确定性转换器把自然语言编译为 GitHub query；支持 `language/stars/topic/repo/is/label/pushed/archived` 等 MVP 限定词，并保留严格只读的转换 Prompt 契约供未来扩展。当前搜索不调用 AI Provider，不产生隐藏模型费用。
+  - `searchRepos/searchIssues` 作为只读工具经 zod 严格参数校验，只访问固定 `https://api.github.com/search/repositories|issues`；响应投影和 Panel 消息均限制字段、条数与长度。
+  - `core/search/code_search` 桶状态写入 `github:rate-limits:v1`，使 MV3 Service Worker 回收后仍能遵守 Reset/Retry-After。403/429 且 Remaining=0 后同桶请求直接降级，不做指数或即时重试；到点删除阻断并允许一次新请求。相同查询 60 秒内使用内存缓存。
+  - search 降级最多展示 10 条当前 GitHub 搜索页本地 DOM 文本，并生成经共享 Schema 验证的 `https://github.com/search` URL；所有结果打开动作走 Panel→Background 安全路由。
+- **理由**：常见中文搜索条件可确定性转换，能降低 Provider 成本与结果漂移；限流状态持久化符合 MV3 非常驻现实；固定 API/网页 URL 与有限投影避免把远端结果变成任意导航或大载荷通道。
+- **证据**：7 组转换测试含 5 组代表性中文查询；API 测试覆盖仓库/Issue 投影、三桶独立、Remaining/Reset/Retry-After、限流零重试、到点恢复与缓存；工具、集成和 UI 测试覆盖白名单、Schema、解释、结果卡及网页/DOM 降级。全量 126 项测试通过。
+- **范围**：Phase 8 冻结核心功能的内部实现；不新增 Provider 调用、GitHub Token、Chrome 权限、Host、写操作或外部导航能力。
+- 状态：代码已验证 ｜ 2026-07-24

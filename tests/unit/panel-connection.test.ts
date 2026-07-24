@@ -190,4 +190,51 @@ describe('Panel connection lifecycle', () => {
     expect(onRegionState).toHaveBeenCalledWith(expect.objectContaining({ status: 'selected' }));
     connection.disconnect();
   });
+
+  it('收发 GitHub 搜索与安全打开协议消息', () => {
+    const fake = createFakePort();
+    vi.stubGlobal('chrome', {
+      runtime: {
+        connect: vi.fn(() => fake.port),
+      },
+    });
+    const onSearchState = vi.fn();
+    const connection = connectPanel(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      onSearchState,
+    );
+    connection.search?.('开放的 bug issue', 'auto');
+    connection.openGitHubPage?.('https://github.com/search?q=bug&type=issues');
+    expect(fake.postMessage.mock.calls.map(([message]) => message.type)).toEqual([
+      'PANEL_SEARCH',
+      'PANEL_OPEN_GITHUB_PAGE',
+    ]);
+
+    fake.emitMessage(
+      createEnvelope('SEARCH_STATE', {
+        status: 'done',
+        requestId: 'search-1',
+        result: {
+          status: 'ok',
+          conversion: {
+            naturalLanguage: '开放的 bug issue',
+            target: 'issues',
+            query: 'is:issue is:open label:bug',
+            explanation: '搜索公开 Issue。',
+          },
+          totalCount: 0,
+          items: [],
+        },
+      }),
+    );
+    expect(onSearchState).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'done', requestId: 'search-1' }),
+    );
+    connection.disconnect();
+  });
 });

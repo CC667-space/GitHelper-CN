@@ -12,6 +12,9 @@ import {
   panelRegionCancelSchema,
   panelRegionStartSchema,
   panelRegionStateSchema,
+  panelSearchRequestSchema,
+  panelSearchStateSchema,
+  panelOpenGitHubPageSchema,
   panelSessionStateSchema,
   panelAbortSchema,
   PANEL_PORT_NAME,
@@ -23,6 +26,7 @@ import {
   type PanelSessionState,
   type PanelPickState,
   type PanelRegionState,
+  type PanelSearchState,
   type PickOutcome,
   type RegionOutcome,
   type ProviderRuntimeView,
@@ -41,6 +45,9 @@ import type {
 import { captureSelectedRegion } from './capture';
 import { preferencesStore } from './prefs-store';
 import { sessionStore } from './session-store';
+import type { GitHubSearchResult, SearchTarget } from '../lib/github-search';
+import { GitHubSearchExecutor } from './tools/executors';
+import { assertPublicContext } from './outbound-policy';
 
 interface PreparedPanelSession {
   sessionId: string;
@@ -78,12 +85,20 @@ export interface PanelBridgeDependencies {
   startRegion?(signal: AbortSignal): Promise<RegionOutcome>;
   cancelRegion?(): Promise<void>;
   captureRegion?(region: SelectedRegion, signal: AbortSignal): Promise<string>;
+  search?(input: {
+    naturalLanguage: string;
+    target: SearchTarget;
+    page: PageInfo;
+    signal: AbortSignal;
+  }): Promise<GitHubSearchResult>;
+  openGitHubPage?(url: string): Promise<void>;
   abort(requestId: string): boolean;
   providerViews?(): Promise<ProviderRuntimeView[]>;
   emit(event: Envelope<StreamEvent>): void;
   emitSessionState?(state: PanelSessionState): void;
   emitPickState?(state: PanelPickState): void;
   emitRegionState?(state: PanelRegionState): void;
+  emitSearchState?(state: PanelSearchState): void;
 }
 
 export class PanelBridge {
@@ -132,6 +147,23 @@ export class PanelBridge {
           handler: async () => {
             await this.dependencies.cancelRegion?.();
             return { cancelled: true };
+          },
+        },
+        PANEL_SEARCH: {
+          source: 'extension',
+          payloadSchema: panelSearchRequestSchema,
+          handler: (payload, context) => this.handleSearch(payload, context),
+        },
+        PANEL_OPEN_GITHUB_PAGE: {
+          source: 'extension',
+          payloadSchema: panelOpenGitHubPageSchema,
+          handler: async (payload) => {
+            if (!this.dependencies.openGitHubPage) {
+              throw new Error('GitHub 页面打开能力尚未注册');
+            }
+            const { url } = panelOpenGitHubPageSchema.parse(payload);
+            await this.dependencies.openGitHubPage(url);
+            return { opened: true };
           },
         },
       },
@@ -283,6 +315,41 @@ export class PanelBridge {
     }
     return this.dependencies.captureRegion(region, signal);
   }
+
+  private async handleSearch(payload: unknown, context: RouteContext): Promise<unknown> {
+    const request = panelSearchRequestSchema.parse(payload);
+    if (!this.dependencies.search || !this.dependencies.emitSearchState) {
+      throw new Error('GitHub 搜索能力尚未注册');
+    }
+    this.dependencies.emitSearchState({
+      status: 'searching',
+      requestId: context.requestId,
+    });
+    try {
+      const page = await this.dependencies.requestPageInfo(context.signal);
+      const result = await this.dependencies.search({
+        ...request,
+        page,
+        signal: context.signal,
+      });
+      this.dependencies.emitSearchState({
+        status: 'done',
+        requestId: context.requestId,
+        result,
+      });
+      return { accepted: true, requestId: context.requestId };
+    } catch (error: unknown) {
+      const message = sanitizeText(
+        error instanceof Error ? error.message : String(error),
+      ).value.slice(0, 1_000);
+      this.dependencies.emitSearchState({
+        status: 'error',
+        requestId: context.requestId,
+        error: message,
+      });
+      return { accepted: false, requestId: context.requestId };
+    }
+  }
 }
 
 export async function requestActivePageInfo(signal: AbortSignal): Promise<PageInfo> {
@@ -399,6 +466,7 @@ function errorStreamEvent(error: unknown, requestId?: string): Envelope<StreamEv
 export function registerPanelPortBridge(
   runtime: import('./provider-runtime').ProviderRuntime,
 ): void {
+  const searchExecutor = new GitHubSearchExecutor();
   chrome.runtime.onConnect.addListener((port) => {
     if (port.name !== PANEL_PORT_NAME) {
       port.disconnect();
@@ -430,6 +498,21 @@ export function registerPanelPortBridge(
       startRegion: requestActivePageRegion,
       cancelRegion: cancelActivePageRegion,
       captureRegion: captureActivePageRegion,
+      search: async ({ naturalLanguage, target, page, signal }) => {
+        if (!page.pageContext) {
+          throw new Error('当前页面上下文尚未就绪');
+        }
+        assertPublicContext(page.pageContext);
+        return await searchExecutor.search({
+          naturalLanguage,
+          target,
+          page: page.pageContext,
+          signal,
+        });
+      },
+      openGitHubPage: async (url) => {
+        await chrome.tabs.create({ url });
+      },
       streamAnswer: async function* (input) {
         if (!input.page.pageContext) {
           throw new Error('当前页面上下文尚未就绪');
@@ -458,6 +541,8 @@ export function registerPanelPortBridge(
         port.postMessage(createEnvelope('PICK_STATE', panelPickStateSchema.parse(state))),
       emitRegionState: (state) =>
         port.postMessage(createEnvelope('REGION_STATE', panelRegionStateSchema.parse(state))),
+      emitSearchState: (state) =>
+        port.postMessage(createEnvelope('SEARCH_STATE', panelSearchStateSchema.parse(state))),
     });
     const hydration = requestActivePageInfo(new AbortController().signal)
       .then(async (page) => {

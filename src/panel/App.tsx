@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 
 import type { ProviderId } from '../lib/types';
+import type { SearchTarget } from '../lib/github-search';
 import { connectPanel, type PanelConnection } from './connection';
 import { MarkdownMessage } from './MarkdownMessage';
 import { usePanelStore } from './store';
@@ -24,6 +25,11 @@ export function PanelApp({
     regionStatus,
     regionStatusMessage,
     selectedRegion,
+    searchDraft,
+    searchTarget,
+    searchStatus,
+    searchError,
+    searchResult,
     selectedTextProviderId,
     selectedVisionProviderId,
     activeRequestId,
@@ -32,6 +38,7 @@ export function PanelApp({
     applyPickState,
     applyRegionState,
     applySessionState,
+    applySearchState,
     applyStreamEvent,
     selectTextProvider,
     selectVisionProvider,
@@ -39,6 +46,8 @@ export function PanelApp({
     setDraft,
     clearSelectedElement,
     clearSelectedRegion,
+    setSearchDraft,
+    setSearchTarget,
   } = usePanelStore();
 
   useEffect(() => {
@@ -54,6 +63,7 @@ export function PanelApp({
       applySessionState,
       applyPickState,
       applyRegionState,
+      applySearchState,
     );
     connection.current = activeConnection;
     return () => {
@@ -66,6 +76,7 @@ export function PanelApp({
   }, [
     applyPickState,
     applyRegionState,
+    applySearchState,
     applyProviderState,
     applySessionState,
     applyStreamEvent,
@@ -91,6 +102,14 @@ export function PanelApp({
     } else {
       connection.current.send(text, selectedTextProviderId);
     }
+  }
+
+  function submitSearch(): void {
+    const text = searchDraft.trim();
+    if (!text || !connected || searchStatus === 'searching') {
+      return;
+    }
+    connection.current?.search?.(text, searchTarget);
   }
 
   return (
@@ -235,6 +254,128 @@ export function PanelApp({
           ) : null}
         </div>
       </header>
+
+      <section className="border-b border-slate-200 bg-white p-3" data-testid="github-search">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">中文搜索 GitHub</h2>
+          <span className="text-xs text-emerald-700">不调用 AI Provider</span>
+        </div>
+        <form
+          className="mt-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submitSearch();
+          }}
+        >
+          <label className="sr-only" htmlFor="github-search-input">
+            描述要搜索的仓库或 Issue
+          </label>
+          <input
+            className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
+            id="github-search-input"
+            maxLength={500}
+            onChange={(event) => setSearchDraft(event.target.value)}
+            placeholder="例如：最近一年更新、Star 超过 1000 的 Python 项目"
+            value={searchDraft}
+          />
+          <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
+            <label className="sr-only" htmlFor="github-search-target">
+              搜索类型
+            </label>
+            <select
+              className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
+              id="github-search-target"
+              onChange={(event) => setSearchTarget(event.target.value as SearchTarget)}
+              value={searchTarget}
+            >
+              <option value="auto">自动判断仓库 / Issue</option>
+              <option value="repositories">仅仓库</option>
+              <option value="issues">仅 Issue</option>
+            </select>
+            <button
+              className="rounded-md bg-blue-700 px-3 py-2 text-sm font-medium text-white disabled:bg-slate-400"
+              disabled={!connected || !searchDraft.trim() || searchStatus === 'searching'}
+              type="submit"
+            >
+              {searchStatus === 'searching' ? '搜索中…' : '搜索'}
+            </button>
+          </div>
+        </form>
+        {searchError ? (
+          <p className="mt-2 rounded-md bg-rose-50 p-2 text-xs text-rose-800">{searchError}</p>
+        ) : null}
+        {searchResult ? (
+          <div className="mt-3 space-y-2">
+            <div className="rounded-md bg-slate-100 p-2 text-xs text-slate-700">
+              <p>{searchResult.conversion.explanation}</p>
+              <code className="mt-1 block break-all text-blue-800">
+                {searchResult.conversion.query}
+              </code>
+              <p className="mt-1">
+                {searchResult.status === 'ok'
+                  ? `GitHub API 共返回 ${searchResult.totalCount.toLocaleString('zh-CN')} 条，显示前 ${searchResult.items.length} 条。`
+                  : searchResult.notice}
+              </p>
+            </div>
+            {searchResult.items.map((item) => (
+              <article
+                className="rounded-md border border-slate-200 bg-white p-2 text-xs"
+                key={`${item.kind}:${item.id}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="break-words font-medium text-slate-900">{item.title}</h3>
+                    {item.kind === 'repository' ? (
+                      <>
+                        {item.description ? (
+                          <p className="mt-1 break-words text-slate-600">{item.description}</p>
+                        ) : null}
+                        <p className="mt-1 text-slate-500">
+                          {item.language ?? '语言未知'} · ★ {item.stars.toLocaleString('zh-CN')}
+                          {item.archived ? ' · 已归档' : ''}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-1 text-slate-500">
+                        {item.repository} #{item.number} · {item.state === 'open' ? '开放' : '关闭'}
+                        {item.labels.length ? ` · ${item.labels.join(' / ')}` : ''}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    className="shrink-0 rounded border border-blue-300 px-2 py-1 text-blue-800"
+                    onClick={() => connection.current?.openGitHubPage?.(item.url)}
+                    type="button"
+                  >
+                    打开
+                  </button>
+                </div>
+              </article>
+            ))}
+            {searchResult.localResults?.length ? (
+              <div className="rounded-md border border-slate-200 bg-white p-2 text-xs">
+                <h3 className="font-medium">当前页面的本地结果</h3>
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-600">
+                  {searchResult.localResults.map((item, index) => (
+                    <li className="break-words" key={`${index}:${item.slice(0, 40)}`}>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {searchResult.fallbackUrl ? (
+              <button
+                className="w-full rounded-md border border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                onClick={() => connection.current?.openGitHubPage?.(searchResult.fallbackUrl!)}
+                type="button"
+              >
+                在 GitHub 网页继续搜索
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
 
       <section
         aria-live="polite"

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { hasSufficientStructuredRegion } from './region';
+import { githubWebUrlSchema, githubSearchResultSchema, searchTargetSchema } from './github-search';
 
 export const PANEL_PORT_NAME = 'git-helper-panel-v1';
 
@@ -97,6 +98,41 @@ export const panelRegionCancelSchema = z.object({}).strict();
 export const contentRegionStartSchema = z.object({}).strict();
 export const contentRegionCancelSchema = z.object({}).strict();
 export const contentRegionCancelResponseSchema = z.object({ cancelled: z.literal(true) }).strict();
+
+export const panelSearchRequestSchema = z
+  .object({
+    naturalLanguage: z.string().trim().min(1).max(500),
+    target: searchTargetSchema,
+  })
+  .strict();
+export const panelOpenGitHubPageSchema = z
+  .object({
+    url: githubWebUrlSchema,
+  })
+  .strict();
+
+export const panelSearchStateSchema = z.discriminatedUnion('status', [
+  z
+    .object({
+      status: z.literal('searching'),
+      requestId: z.string().min(1).max(128),
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal('done'),
+      requestId: z.string().min(1).max(128),
+      result: githubSearchResultSchema,
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal('error'),
+      requestId: z.string().min(1).max(128),
+      error: z.string().min(1).max(1_000),
+    })
+    .strict(),
+]);
 
 export const pickOutcomeSchema = z.discriminatedUnion('status', [
   z
@@ -261,6 +297,8 @@ export type PanelPickState = z.infer<typeof panelPickStateSchema>;
 export type SelectedElementPayload = z.infer<typeof selectedElementSchema>;
 export type RegionOutcome = z.infer<typeof regionOutcomeSchema>;
 export type PanelRegionState = z.infer<typeof panelRegionStateSchema>;
+export type PanelSearchRequest = z.infer<typeof panelSearchRequestSchema>;
+export type PanelSearchState = z.infer<typeof panelSearchStateSchema>;
 export type PageInfo = z.infer<typeof pageInfoSchema>;
 export type StreamEvent = z.infer<typeof streamEventSchema>;
 export type ProviderRuntimeView = z.infer<typeof providerRuntimeViewSchema>;

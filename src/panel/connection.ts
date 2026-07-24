@@ -2,17 +2,20 @@ import {
   PANEL_PORT_NAME,
   panelPickStateSchema,
   panelRegionStateSchema,
+  panelSearchStateSchema,
   panelSessionStateSchema,
   providerStateSchema,
   streamEventSchema,
   type PanelSessionState,
   type PanelPickState,
   type PanelRegionState,
+  type PanelSearchState,
   type ProviderState,
   type StreamEvent,
 } from '../lib/bridge-protocol';
 import { createEnvelope, parseEnvelope } from '../lib/messaging';
 import type { ProviderId, SelectedElement, SelectedRegion } from '../lib/types';
+import type { SearchTarget } from '../lib/github-search';
 
 export interface PanelConnection {
   send(
@@ -26,6 +29,8 @@ export interface PanelConnection {
   cancelPick?(): void;
   startRegion?(): void;
   cancelRegion?(): void;
+  search?(naturalLanguage: string, target: SearchTarget): void;
+  openGitHubPage?(url: string): void;
   disconnect(): void;
 }
 
@@ -39,6 +44,7 @@ export function connectPanel(
   onSessionState: (state: PanelSessionState) => void = () => undefined,
   onPickState: (state: PanelPickState) => void = () => undefined,
   onRegionState: (state: PanelRegionState) => void = () => undefined,
+  onSearchState: (state: PanelSearchState) => void = () => undefined,
 ): PanelConnection {
   let activePort: chrome.runtime.Port | undefined;
   let reconnectAttempt = 0;
@@ -75,6 +81,14 @@ export function connectPanel(
       onRegionState(
         parseEnvelope(raw, panelRegionStateSchema, {
           expectedType: 'REGION_STATE',
+        }).payload,
+      );
+      return;
+    }
+    if (candidate?.type === 'SEARCH_STATE') {
+      onSearchState(
+        parseEnvelope(raw, panelSearchStateSchema, {
+          expectedType: 'SEARCH_STATE',
         }).payload,
       );
       return;
@@ -152,6 +166,17 @@ export function connectPanel(
     },
     cancelRegion() {
       activePort?.postMessage(createEnvelope('PANEL_REGION_CANCEL', {}));
+    },
+    search(naturalLanguage, target) {
+      activePort?.postMessage(
+        createEnvelope('PANEL_SEARCH', {
+          naturalLanguage,
+          target,
+        }),
+      );
+    },
+    openGitHubPage(url) {
+      activePort?.postMessage(createEnvelope('PANEL_OPEN_GITHUB_PAGE', { url }));
     },
     disconnect() {
       stopped = true;

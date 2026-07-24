@@ -50,6 +50,7 @@
 - Panel 收到 `SESSION_STATE` 后恢复当前页面最近会话；恢复投影过长时明确提示早期内容未展开
 - Panel 点击选择状态覆盖 active/selected/cancelled；已选元素随问题提交，旧页面选择被清除
 - Panel 框选状态覆盖 active/selected/cancelled；结构充分提示“不截图”，不足时在提交前提示视觉 Provider 与可能费用
+- Panel 中文搜索覆盖自动/仓库/Issue 目标、查询解释与语法、仓库/Issue 结果卡、限流提示、本地 DOM 结果与安全网页入口；搜索链不调用 AI Provider
 
 ### 3. 扩展集成测试
 - Panel→BG→Content→Panel 消息往返（经来源+Schema 校验）
@@ -57,6 +58,7 @@
 - 点击选择数据结构、框选坐标/dpr/滚动上报结构
 - 点击选择集成链断言 SelectedElement 经 Content→Background→Panel 后作为不可信数据进入 AI 请求，且 SPA 后旧 `sourceUrl` 不出站
 - 框选集成链断言充分结构只走文本；不足结构由 Background 裁剪后才携图走视觉；`visionEnabled=false` 时截图/Provider/会话写入均为零
+- 搜索集成链断言 Panel→Background→只读工具→匿名 API→Panel；打开结果只接受 `https://github.com/*`
 
 ### 4. E2E（Playwright，加载扩展，Phase 11）
 - 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片
@@ -109,7 +111,7 @@
 | 5 | 会话恢复、过期+容量淘汰、偏好读写（operationPolicy 收紧类型）、三种清除各自"目标无残留、非目标完好"（D-033） |
 | 6 | pick 进出、选中结构正确、基于元素回答 |
 | 7 | 框选结构提取、充分不截图/不足时 SW 截图裁剪对齐、visionEnabled 开关、截图不持久保存 |
-| 8 | ≥5 组查询转换正确、搜索返回、search 桶限流降级（不指数重试） |
+| 8 | ≥5 组查询转换正确、仓库/Issue 搜索返回并渲染；core/search/code_search 独立持久化，search 限流零重试且到点恢复，网页/本地 DOM 降级可读 |
 | 9 | ≥3 仓库完整卡片、数字来自事实、缺字段降级、匿名限额降级提示正常 |
 | 10 | 安全客观项全过（含 Scheme 拒绝、import 边界、三种清除）+ 红队记录 ≥10 样例 |
 | 11 | 全测试绿、打包可加载、S1-S5 证据齐全（前置：Phase 6/7/8 已完成）｜ **人工：S1-S5 批量体验复核** |

@@ -147,6 +147,12 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
   - `downloadFile` 类操作：**逐次确认**（`download` 类确认弹窗），且遵守 downloads 无 'auto' 约束。
 - **所有导航/打开类工具一律拒绝**非 `https:` Scheme：`javascript:`、`data:`、`file:`、`chrome:`、`chrome-extension:`、`blob:`、`vbscript:` 等直接拒绝并返回类型化错误（zod 校验 + 收端二次校验）。
 
+### 8.2 匿名 GitHub 搜索边界（D-047）
+- 搜索请求只由 Background 用固定 `https://api.github.com/search/repositories|issues` 构造；Panel/Content 不能传入 fetch URL、Header 或 GitHub Token。
+- 中文输入与生成 query 分别限制为 500/256 字符；工具参数 strict zod 校验，多余字段拒绝。
+- GitHub API 响应视为不可信远端数据，只投影最多 10 条有限字段；结果 URL 与降级 URL必须再次满足 `https://github.com/*` Schema，不能把 API 响应变成任意导航。
+- `core/search/code_search` 限流状态只保存数值配额与时间，不含页面内容或凭据；search 受限时不重复出站，本地 DOM 结果仅作为纯文本渲染。
+
 ## 8.5 数据清除（v1.2，D-033）
 
 三种**相互独立**的清除操作，Options 页分别提供入口：

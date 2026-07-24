@@ -430,4 +430,81 @@ describe('Panel → Background → Content → Panel', () => {
       region,
     });
   });
+
+  it('中文搜索经安全路由自动执行并把查询解释与结果推回 Panel', async () => {
+    const emitSearchState = vi.fn();
+    const search = vi.fn(async () => ({
+      status: 'ok' as const,
+      conversion: {
+        naturalLanguage: 'Star 超过 1000 的 Python 项目',
+        target: 'repositories' as const,
+        query: 'language:Python stars:>1000',
+        explanation: '搜索公开仓库；语言为 Python；Star >1000。',
+      },
+      totalCount: 1,
+      items: [
+        {
+          kind: 'repository' as const,
+          id: 1,
+          title: 'octocat/demo',
+          url: 'https://github.com/octocat/demo',
+          language: 'Python',
+          stars: 1_234,
+          updatedAt: '2026-07-24T00:00:00.000Z',
+          archived: false,
+        },
+      ],
+    }));
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(async () => ({
+        url: 'https://github.com/explore',
+        title: 'Explore',
+        placeholder: false,
+        capturedAt: '2026-07-24T00:00:00.000Z',
+        pageContext: {
+          url: 'https://github.com/explore',
+          pageType: 'other' as const,
+          isPrivate: false,
+          extracted: {},
+          capturedAt: '2026-07-24T00:00:00.000Z',
+        },
+      })),
+      streamAnswer: vi.fn(),
+      search,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitSearchState,
+    });
+
+    await bridge.dispatch(
+      createEnvelope(
+        'PANEL_SEARCH',
+        {
+          naturalLanguage: 'Star 超过 1000 的 Python 项目',
+          target: 'auto',
+        },
+        { id: 'search-roundtrip' },
+      ),
+      panelSender,
+    );
+
+    expect(search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        naturalLanguage: 'Star 超过 1000 的 Python 项目',
+        target: 'auto',
+      }),
+    );
+    expect(emitSearchState).toHaveBeenNthCalledWith(1, {
+      status: 'searching',
+      requestId: 'search-roundtrip',
+    });
+    expect(emitSearchState).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        status: 'done',
+        requestId: 'search-roundtrip',
+        result: expect.objectContaining({ totalCount: 1 }),
+      }),
+    );
+  });
 });

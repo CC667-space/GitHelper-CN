@@ -192,6 +192,19 @@ password input 不读取 value。`sourceUrl` 与发送时页面不一致则丢�
   → 返回 ToolResult → 回灌模型继续
 ```
 
+**Phase 8 搜索实现（D-047）**：
+```
+中文搜索描述 → 本地确定性转换(target/query/explanation)
+  → searchRepos/searchIssues 白名单 + zod
+  → GitHubApiClient 固定匿名 /search/* 请求
+  → 有限字段结果卡
+  └─ search 桶受限 → 当前搜索页有限 DOM 结果 + https://github.com/search 降级入口
+```
+常见限定词由本地转换，当前不调用付费 Provider；严格只读转换 Prompt 仅作为可替换契约保留。
+`github:rate-limits:v1` 持久化 `core/search/code_search` 三桶的 remaining/reset/blockedUntil，
+同桶限流后到点前直接降级且不重试。API 与网页 URL 都由 Background 固定构造，Panel 不能要求
+Background fetch 任意 URL；结果打开只接受 `https://github.com/*`。
+
 ### 3.8 确认流程（OperationConfirmation，v1.1 收紧 C-3）
 需确认操作弹出：操作说明 + 影响 + 推荐选择 + **[允许本次] / [拒绝]** 两项。
 **不提供"始终允许该类操作"**——高风险权限不能一次点击永久放开。`operationPolicy` 只在允许的枚举范围内配置（见 §5 UserPreferences）。
@@ -434,6 +447,7 @@ interface OperationConfirmation {
 - **页面上下文组织**：结构化字段 + 必要摘要，标注"以下为页面不可信数据"分隔。
 - **数据最小化**：见 SECURITY.md，ContextBuilder 只取相关局部。
 - **工具白名单（v1.2 修订，D-013R）**：`openGitHubPage`（仅 `https://github.com/*`）/ `openReleases` / `openIssues` / `searchRepos` / `searchIssues` / `highlightElement` / `scrollToElement` / `extractPageInfo`；外部链接走 `openExternalLink`（逐次确认）。所有导航/打开类工具拒绝 `javascript:` / `data:` / `file:` / `chrome:` / `chrome-extension:` / `blob:` 等非 `https:` Scheme。写操作类工具 v1 不注册。
+- **搜索实现（D-047）**：中文 NL 先在本地转换为 `target/query/explanation`，不调用 AI Provider；`searchRepos/searchIssues` 只接收 1–256 字符 query，匿名 API 结果最多投影 10 条。search 限流时显示持久化恢复时间并降级本地 DOM / GitHub 网页搜索。
 - **结构化输出**：一键分析用固定 JSON schema，再渲染中文卡片；该能力依赖 Provider `capabilities.supportsStructuredOutput`，探针未通过则降级为"prompt 约束 + 本地 zod 校验重试"。
 - **参数验证**：zod，越权即拒绝并回中文错误。
 - **Prompt Injection 防护**：页面数据永不进 system 角色；显式标注不可信；白名单+确认策略（SECURITY §7）。

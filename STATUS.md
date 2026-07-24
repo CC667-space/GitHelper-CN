@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 8 — 自然语言 GitHub 搜索（MVP 必达）：Phase 7 已通过验收，待阶段提交后自动进入中文搜索实现。**
+**Phase 9 — 一键仓库分析：Phase 8 已通过验收，待阶段提交后自动进入仓库事实聚合与结构化卡片实现。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -121,10 +121,17 @@
   - Background 使用 Phase 0 比例法 `captured / viewport CSS` 换算并 clamp，绝不扣 scroll；裁剪缩放为最长边 ≤1600 的临时 JPEG，约 1MB 上限，只在请求生命周期内存在
   - `visionEnabled=false` 在会话写入、截图和 Provider 前阻断；视觉 Provider 继续受已探针 Capability 护栏；活动页/sourceUrl 二次校验防止截错页
   - 验收：typecheck、lint 通过；Vitest 32 files / 107 tests 全过；build（397 modules）与构建安全扫描通过
+- [x] **Phase 8 — 自然语言 GitHub 搜索（MVP 必达，2026-07-24）通过验收**：
+  - Panel 增加独立中文搜索区，可自动判断仓库/Issue 或手动指定类型；本地确定性转换覆盖 language/stars/topic/repo/is/label/pushed/archived 等限定词，搜索不额外调用 AI Provider
+  - `searchRepos` / `searchIssues` 进入只读工具白名单并经严格 zod 参数校验；Background 只访问固定 `api.github.com/search/*`，匿名结果投影为最多 10 条有限字段
+  - `core/search/code_search` 限流状态按 `X-RateLimit-Resource` 独立持久化，解析 Remaining/Reset/Retry-After；限流期间同桶直接降级、零重试，到点后恢复
+  - search 桶受限时显示可读恢复时间、本地 GitHub 搜索页 DOM 结果（若有）与安全 `https://github.com/search` 入口；结果和降级 URL 经共享 Schema 限定为 GitHub HTTPS
+  - Panel 展示简短查询解释、实际 GitHub 语法、总数和仓库/Issue 结果卡；打开结果统一走安全消息路由
+  - 验收：typecheck、lint 通过；Vitest 37 files / 126 tests 全过；build（402 modules）与构建安全扫描通过
 
 ## 下一任务
-**Phase 8 — 自然语言 GitHub 搜索（MVP 必达）**（见 EXECUTION_PLAN v1.2）。
-实现中文 NL→GitHub 搜索语法、searchRepos/searchIssues、匿名 search 桶独立节流、结果渲染与限流降级；完成自动测试、文档与本地阶段提交后自动进入 Phase 9。
+**Phase 9 — 一键仓库分析**（见 EXECUTION_PLAN v1.2）。
+聚合公开仓库 DOM 与匿名 GitHub API 事实，输出固定结构化中文卡片；补齐缓存、core 限流降级、Provider structuredOutput 降级与至少 3 个公开仓库的客观验收，完成后自动进入 Phase 10。
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -138,7 +145,7 @@
 | 5 Session + 偏好 + 容量淘汰 | ✅ 已完成 |
 | 6 点击提问（MVP 必达） | ✅ 已完成 |
 | 7 框选 + 视觉（MVP 必达） | ✅ 已完成 |
-| 8 NL 搜索（MVP 必达） | ⬜ |
+| 8 NL 搜索（MVP 必达） | ✅ 已完成 |
 | 9 一键仓库分析 | ⬜ |
 | 10 安全加固 + 红队测试 | ⬜ |
 | 11 测试 + 打包 + MVP 验收 | ⬜ |
@@ -181,3 +188,4 @@
 - 2026-07-24：Phase 5 通过；会话持久化/恢复、本地摘要与有限历史、30 天/50 会话/容量淘汰、收紧偏好 Schema、Options 容量显示及 D-033 三种数据清除落地；87 项测试及全套静态/构建验证通过，记录 D-043/D-044，准备进入 Phase 6。
 - 2026-07-24：Phase 6 通过；点击选择叠层、逻辑元素提取、Panel 状态/预览、SelectedElement AI 上下文闭环及 SPA 旧选择阻断落地；95 项测试及全套静态/构建验证通过，记录 D-045，准备进入 Phase 7。
 - 2026-07-24：Phase 7 通过；区域结构化提取、充分性判定、可信截图裁剪、视觉偏好/Capability/费用护栏及截图不持久化落地；107 项测试及全套静态/构建验证通过，记录 D-046，准备进入 Phase 8。
+- 2026-07-24：Phase 8 通过；本地中文 GitHub 查询转换、仓库/Issue 匿名搜索、只读工具白名单、独立 search 限流桶、网页/DOM 降级与结果卡落地；126 项测试及全套静态/构建验证通过，记录 D-047，准备进入 Phase 9。
