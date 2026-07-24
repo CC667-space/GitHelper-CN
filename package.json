@@ -13,6 +13,7 @@
     "dev": "vite",
     "lint": "eslint .",
     "format:check": "prettier --check .",
+    "scan:build": "node scripts/scan-build-safety.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

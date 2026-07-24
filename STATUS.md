@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 1 已通过验收。下一步进入 Phase 1.5（安全地基）。**
+**Phase 1.5 已通过验收。下一步进入 Phase 2（Side Panel + 消息通信）。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -47,21 +47,28 @@
   - `lib/messaging`：v1 信封、请求 ID、固定 type、zod payload 校验、64KB 限制、类型化超时
   - `lib/logger`：字段/模式双层脱敏、循环引用保护、超长截断、生产日志级别
   - 验收：typecheck 通过、lint 通过、Vitest 4 files / 10 tests 全过、build 通过；权限仍为 Phase 0 定稿清单
+- [x] **Phase 1.5 — 安全地基（2026-07-24）**：
+  - `credential-store` 按 Options write/delete、Background read/inject 分离，并以 ESLint 边界禁止 Content 导入、禁止 Options 读取、禁止其他 Background 模块写入
+  - Provider 出站请求只接受五个冻结 Host，具备请求体上限、`AbortController` 超时与外部取消；私有/无权限上下文在出站入口前硬拒绝
+  - 消息路由校验扩展 sender、GitHub 顶层 Content 来源、固定 envelope、zod payload、64KB 上限、超时及凭据字段
+  - sanitizer 覆盖 API Key、GitHub Token、私钥、环境变量、Cookie、密码、邮箱、手机号；System Prompt 与不可信页面数据以固定边界隔离
+  - 构建产物扫描拒绝 `eval`、`new Function`、远程动态 import/script 与不安全 CSP
+  - 验收：typecheck、lint 通过；Vitest 11 files / 25 tests 全过；build 与构建安全扫描通过
 
 ## 下一任务
-**Phase 1.5 — 安全地基**（见 EXECUTION_PLAN v1.2）。
+**Phase 2 — Side Panel + 消息通信**（见 EXECUTION_PLAN v1.2）。
 执行 Agent 应继续：
-1. 落地 credential-store 上下文职责与 Content import lint 边界
-2. Provider Host 白名单 fetch、router sender/schema/载荷/超时
-3. sanitizer、私有仓库零出站、System/网页数据隔离
-4. CSP/无远程代码扫描、Abort/超时/负载限制及全部安全单测
+1. 落地 React + Tailwind + Zustand Panel 骨架与 Provider 占位
+2. 建立 Panel ↔ Background 长连接及流式事件占位
+3. 建立 Background ↔ Content 页面信息请求/响应
+4. 完成 Options 披露占位和通信集成测试
 
 ## 阶段进度表
 | Phase | 状态 |
 |---|---|
 | 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成 |
 | 1 仓库结构 + 扩展骨架 | ✅ 已完成 |
-| 1.5 安全地基 | ⬜ |
+| 1.5 安全地基 | ✅ 已完成 |
 | 2 Side Panel + 消息通信 | ⬜ |
 | 3 页面识别 + 上下文 + SPA | ⬜ |
 | 4 Provider + 能力探针 + 对话 + 手动切换 | ⬜ |
@@ -88,3 +95,4 @@
 - 2026-07-24：只读基线检查时修正“下一任务”中的执行方案版本引用（v1.1 → v1.2）；仅为文档引用纠正，不改变基线范围。
 - 2026-07-24：Phase 0 通过；完成 Git 基线、最小 MV3 构建、A–D 自动探针、截图坐标与最小权限定稿，并记录 CRXJS/Vite 入口 basename 兼容约束（D-036/D-037）。
 - 2026-07-24：Phase 1 通过；数据模型、目录骨架及 storage/messaging/logger 共享库落地，10 项单测通过。
+- 2026-07-24：Phase 1.5 通过；凭据隔离、Host 白名单、安全消息路由、脱敏、私有上下文零出站、Prompt 隔离及构建扫描落地，25 项单测通过。

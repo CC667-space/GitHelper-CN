@@ -34,6 +34,41 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/options/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/credential-store'],
+              importNames: ['readCredential', 'getCredentialMask', 'injectProviderAuthorization'],
+              message: 'Options 只允许 write/delete 凭据（D-028）。',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/background/**/*.{ts,tsx}'],
+    ignores: ['src/background/credential-store.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/credential-store'],
+              importNames: ['writeCredential', 'deleteCredential'],
+              message: 'Background 只允许 read/inject 凭据（D-028）。',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['scripts/**/*.mjs', 'vite.config.ts', 'manifest.config.ts'],
     languageOptions: {
       globals: {
