@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 10 — 安全加固与红队测试：Phase 9 已通过验收，待阶段提交后自动进入后期安全加固。**
+**Phase 11 — 测试、打包与 MVP 验收：Phase 10 已通过验收，进入最终汇聚与批量体验复核准备。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -137,10 +137,18 @@
   - GitHub 重定向以 API `full_name/html_url` 回填 canonical 仓库；历史名 `facebook/react` → `react/react` 已有回归
   - 真实匿名验收：`react/react`、`microsoft/vscode`、`rust-lang/rust` 三库全部生成卡片，未命中 core 限流；证据见 `scripts/phase9-live-evidence.md`
   - 常规验收：typecheck、lint 通过；Vitest 40 files / 143 tests 全过（另 1 个 live test 默认跳过、单独真实运行通过）；build（404 modules）与构建安全扫描通过
+- [x] **Phase 10 — 安全加固与红队测试（2026-07-24）通过验收**：
+  - sanitizer 新增云密钥、Authorization/Basic、JWT、URL 凭据、JSON 命名字段与结构化敏感键名遮蔽；循环对象安全终止；消息 Router 复用同一敏感字段策略并在 handler 前递归拒绝
+  - 完整只读 `ToolRegistry` 覆盖冻结工具清单与 strict zod Schema；GitHub 导航拒绝非 HTTPS、非精确 GitHub Host、userinfo 和多余参数，外链拒绝 URL 凭据且必须逐次确认；无写入/账号/下载工具
+  - 私有/无权限 PageContext 在 Panel 对话、搜索、仓库分析入口统一阻断，Provider、GitHub API、会话准备与截图均有零调用断言
+  - D-033 三种清除均有“目标无残留、非目标完好”证据；manifest 最小权限、五域、CSP、凭据导入边界与构建安全重新复核
+  - 出站泄漏测试覆盖 ContextBuilder 到实际 DeepSeek 请求体；日志覆盖字符串/Error/对象/数组，测试哨兵明文均未出现
+  - 12 个 Prompt Injection 样例覆盖 README/Issue/PR/代码/Release/选择/搜索等载体；全部按最坏恶意工具输出被 System 隔离、白名单、Schema、Scheme/Host 或确认层拦截，记录见 `tests/security/redteam-log.md`
+  - 验收：typecheck、lint 通过；Vitest 44 files / 186 tests 全过（另 1 个 Phase 9 live test 默认跳过）；build（404 modules）、构建安全扫描与本阶段文件格式检查通过；记录 D-049
 
 ## 下一任务
-**Phase 10 — 安全加固与红队测试**（见 EXECUTION_PLAN v1.2）。
-完善 sanitizer、工具白名单/Scheme、私有页面零出站、权限、三种数据清除与出站/日志泄漏复验；记录不少于 10 个 Prompt Injection 红队样例，全部通过后自动进入 Phase 11。
+**Phase 11 — 测试、打包与 MVP 验收**（见 EXECUTION_PLAN v1.2）。
+补齐 Playwright 扩展 E2E、S1–S5 自动证据、可加载打包与使用说明；全部自动门禁通过后，在唯一人工节点暂停，请用户进行真实 Chrome 批量体验复核。
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -156,8 +164,8 @@
 | 7 框选 + 视觉（MVP 必达） | ✅ 已完成 |
 | 8 NL 搜索（MVP 必达） | ✅ 已完成 |
 | 9 一键仓库分析 | ✅ 已完成 |
-| 10 安全加固 + 红队测试 | ⬜ |
-| 11 测试 + 打包 + MVP 验收 | ⬜ |
+| 10 安全加固 + 红队测试 | ✅ 已完成 |
+| 11 测试 + 打包 + MVP 验收 | 🔄 进行中 |
 
 ## 待处理的强制确认节点
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
@@ -199,3 +207,4 @@
 - 2026-07-24：Phase 7 通过；区域结构化提取、充分性判定、可信截图裁剪、视觉偏好/Capability/费用护栏及截图不持久化落地；107 项测试及全套静态/构建验证通过，记录 D-046，准备进入 Phase 8。
 - 2026-07-24：Phase 8 通过；本地中文 GitHub 查询转换、仓库/Issue 匿名搜索、只读工具白名单、独立 search 限流桶、网页/DOM 降级与结果卡落地；126 项测试及全套静态/构建验证通过，记录 D-047，准备进入 Phase 9。
 - 2026-07-24：Phase 9 通过；匿名 core 事实聚合、固定结构化分析卡、Provider Schema 降级与事实回填、DOM/限流降级及三仓库真实匿名验收完成；143 项常规测试与独立 live test 通过，记录 D-048，准备进入 Phase 10。
+- 2026-07-24：Phase 10 通过；扩展 sanitizer、统一敏感消息字段、完整只读工具注册表、私有页入口零出站、权限/三种清除/出站体/日志复验及 12 个注入样例完成；186 项常规测试与全套静态/构建验证通过，记录 D-049，进入 Phase 11。

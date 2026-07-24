@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { CredentialStorageArea } from '../../src/background/credential-store';
+import {
+  createOptionsCredentialStore,
+  type CredentialStorageArea,
+} from '../../src/background/credential-store';
 import { PREFERENCES_STORAGE_KEY } from '../../src/background/prefs-store';
 import { SESSION_STORAGE_KEY } from '../../src/background/session-store';
 import type { StorageAreaLike } from '../../src/lib/storage';
@@ -57,6 +60,17 @@ describe('D-033 local data clearing', () => {
     expect(area.values[PREFERENCES_STORAGE_KEY]).toBeUndefined();
     expect(area.values['credential:provider:deepseek']).toBeDefined();
     expect(area.values['credential:provider:uuapi']).toBeDefined();
+    expect(area.values['provider:settings:v1']).toBeDefined();
+  });
+
+  it('单删一个 Provider Key 后其他 Key、会话、偏好与配置完好', async () => {
+    const area = seededArea();
+    await createOptionsCredentialStore(area).delete('deepseek');
+
+    expect(area.values['credential:provider:deepseek']).toBeUndefined();
+    expect(area.values['credential:provider:uuapi']).toBeDefined();
+    expect(area.values[SESSION_STORAGE_KEY]).toBeDefined();
+    expect(area.values[PREFERENCES_STORAGE_KEY]).toBeDefined();
     expect(area.values['provider:settings:v1']).toBeDefined();
   });
 

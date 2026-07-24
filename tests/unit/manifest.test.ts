@@ -5,7 +5,15 @@ import manifest from '../../manifest.config';
 interface ManifestLike {
   minimum_chrome_version?: string;
   permissions?: string[];
+  optional_permissions?: string[];
   host_permissions?: string[];
+  optional_host_permissions?: string[];
+  content_scripts?: Array<{ matches?: string[] }>;
+  externally_connectable?: unknown;
+  web_accessible_resources?: unknown[];
+  content_security_policy?: {
+    extension_pages?: string;
+  };
 }
 
 describe('Phase 0 manifest', () => {
@@ -23,5 +31,16 @@ describe('Phase 0 manifest', () => {
       'https://uuapi.net/*',
       'https://openrouter.ai/*',
     ]);
+    expect(resolved.optional_permissions).toBeUndefined();
+    expect(resolved.optional_host_permissions).toBeUndefined();
+    expect(resolved.externally_connectable).toBeUndefined();
+    expect(resolved.web_accessible_resources).toBeUndefined();
+    expect(resolved.content_scripts).toEqual([
+      expect.objectContaining({ matches: ['https://github.com/*'] }),
+    ]);
+    expect(JSON.stringify(resolved)).not.toContain('<all_urls>');
+    expect(resolved.content_security_policy?.extension_pages).toBe(
+      "script-src 'self'; object-src 'self'",
+    );
   });
 });

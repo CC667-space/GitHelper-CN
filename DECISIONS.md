@@ -353,3 +353,14 @@
 - **证据**：单元/集成/UI 测试覆盖三仓库固定快照、事实回填、README 安装优先、缺字段、core 限流零重试、Provider structured/prompt 两路、非法 JSON 单次重试、网络错误零重试、私有页面零出站、canonical 重定向和卡片渲染。匿名真实测试 `react/react`、`microsoft/vscode`、`rust-lang/rust` 全部通过，见 `scripts/phase9-live-evidence.md`。
 - **范围**：Phase 9 既定功能的内部实现；不新增 GitHub Token、Host、Chrome 权限、写操作或持久页面内容。
 - 状态：代码与真实匿名 API 已验证 ｜ 2026-07-24
+
+## D-049 安全策略集中到脱敏、消息与工具三个执行 seam
+- **决策**：
+  - `sanitizer` 扩展为字符串模式与结构化敏感键名双层遮蔽，覆盖常见 API/GitHub/云密钥、Authorization、JWT、URL 凭据、私钥、env、Cookie/密码与 PII；循环对象安全终止，发现类型按类别汇总。消息 Router 复用相同敏感键名判定，普通消息中的嵌套凭据字段在 handler 前拒绝。
+  - 全部冻结只读工具统一进入 `ToolRegistry`：工具名白名单、每工具 strict zod Schema、执行器注册和确认策略在同一 seam 完成。`SearchToolRegistry` 仅开放搜索子集；GitHub 导航精确限制为 HTTPS `github.com`，外链必须为不含 URL userinfo 的 HTTPS 且逐次确认；写操作、账号操作和下载工具不注册。
+  - 普通对话、搜索、仓库分析在 `PanelBridge` 取得 PageContext 后立即执行私有/无权限阻断，使 Provider、GitHub API、会话准备和截图在私有页均为零调用。
+  - Prompt Injection 红队使用 12 个页面载体与确定性恶意工具输出样例，按“假设模型已经受诱导”的最坏情况验证执行层。为避免新增付费成本，本阶段不调用真实 Provider；记录明确不把机制测试表述为模型绝对免疫。
+- **理由**：少量公共 seam 能让所有调用方共享同一安全策略，避免字符串脱敏、消息拒绝和工具执行各自维护相互漂移的名单；最坏输出验证比依赖某次模型“没有服从”更稳定地证明执行层护栏。
+- **证据**：`tests/security/` 覆盖脱敏后实际 Provider 请求体、日志、私有页三条出口、完整工具白名单、Scheme/Host/userinfo/strict 参数、逐次确认与 12 个注入样例；`tests/security/redteam-log.md` 记录逐项结果与结论边界。全量 186 项常规测试通过（另 1 个 Phase 9 live test 默认跳过），typecheck、lint、build 与构建安全扫描通过。
+- **范围**：Phase 10 后期安全加固；不新增 Chrome 权限、Host、外部调用、真实 Provider 成本、GitHub 写操作或数据类别。
+- 状态：代码已验证 ｜ 2026-07-24

@@ -198,6 +198,9 @@ export class PanelBridge {
     const message = panelMessageSchema.parse(payload);
     const requestId = context.requestId;
     const page = await this.dependencies.requestPageInfo(context.signal);
+    if (page.pageContext) {
+      assertPublicContext(page.pageContext);
+    }
     const selectedElement =
       message.selectedElement?.sourceUrl && message.selectedElement.sourceUrl !== page.url
         ? undefined
@@ -345,6 +348,10 @@ export class PanelBridge {
     });
     try {
       const page = await this.dependencies.requestPageInfo(context.signal);
+      if (!page.pageContext) {
+        throw new Error('当前页面上下文尚未就绪');
+      }
+      assertPublicContext(page.pageContext);
       const result = await this.dependencies.search({
         ...request,
         page,
@@ -383,6 +390,10 @@ export class PanelBridge {
     });
     try {
       const page = await this.dependencies.requestPageInfo(context.signal);
+      if (!page.pageContext) {
+        throw new Error('当前页面上下文尚未就绪');
+      }
+      assertPublicContext(page.pageContext);
       const card = await this.dependencies.analyzeRepository({
         page,
         providerId: request.providerId,

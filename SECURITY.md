@@ -187,6 +187,12 @@ Storage 访问级限制、Provider Host 白名单、消息来源验证、消息 
 **后期安全加固（Phase 10）**：
 Prompt Injection 红队测试、私有数据测试、工具白名单测试、权限复查、数据清除测试、泄漏检查、发布前安全审查。
 
+**Phase 10 落地证据（D-049）**：
+- sanitizer 覆盖字符串模式与结构化敏感键名；普通消息递归拒绝凭据字段；实际 Provider 请求体和日志均用测试哨兵验证无明文。
+- 完整只读工具注册表经 strict zod 校验；GitHub 导航拒绝非 HTTPS/非 GitHub Host/多余参数，外链拒绝 URL userinfo 并要求逐次确认；写入、账号和下载工具不存在。
+- 对话、搜索、仓库分析均在 PanelBridge 入口执行私有页零出站；测试断言 Provider/API/会话/截图依赖零调用。
+- `tests/security/redteam-log.md` 记录 12 个注入样例及防护层结果。样例采用确定性恶意工具输出验证最坏情况，不调用真实付费模型，也不宣称模型绝对免疫。
+
 ---
 
 ## 11. 日志与遥测

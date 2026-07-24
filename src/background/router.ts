@@ -7,6 +7,7 @@ import {
   withTimeout,
   type Envelope,
 } from '../lib/messaging';
+import { isSensitiveFieldName } from './sanitizer';
 
 export type RouteSource = 'content' | 'extension' | 'either';
 
@@ -87,8 +88,7 @@ function hasCredentialField(value: unknown): boolean {
     return value.some(hasCredentialField);
   }
   return Object.entries(value).some(
-    ([key, item]) =>
-      /^(?:apiKey|authorization|providerCredential)$/i.test(key) || hasCredentialField(item),
+    ([key, item]) => isSensitiveFieldName(key) || hasCredentialField(item),
   );
 }
 

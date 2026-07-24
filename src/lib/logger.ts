@@ -14,7 +14,11 @@ const SECRET_PATTERNS = [
   /\bsk-[A-Za-z0-9_-]{16,}\b/g,
   /\bgh[pousr]_[A-Za-z0-9]{20,}\b/g,
   /\bgithub_pat_[A-Za-z0-9_]{20,}\b/g,
-  /\bBearer\s+[A-Za-z0-9._~+/=-]{12,}\b/gi,
+  /\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}\b/gi,
+  /\b(?:AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35})\b/g,
+  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g,
+  /\bhttps?:\/\/[^:/\s]+:[^@\s/]+@/gi,
+  /["']?\b(?:api[-_]?key|client[-_]?secret|access[-_]?token|auth[-_]?token|password)\b["']?\s*[:=]\s*["']?[^"'\s,;}]{6,}/gi,
   /-----BEGIN (?:RSA|OPENSSH|EC|PGP) PRIVATE KEY-----[\s\S]*?-----END (?:RSA|OPENSSH|EC|PGP) PRIVATE KEY-----/g,
 ];
 

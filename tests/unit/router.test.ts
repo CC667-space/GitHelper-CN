@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { MessageRouter } from '../../src/background/router';
 import { createEnvelope } from '../../src/lib/messaging';
@@ -75,5 +75,30 @@ describe('MessageRouter', () => {
     await expect(
       slowRouter.dispatch(createEnvelope('SLOW', {}), contentSender),
     ).rejects.toMatchObject({ code: 'MESSAGE_TIMEOUT' });
+  });
+
+  it.each([
+    { nested: { client_secret: 'opaque-secret' } },
+    { headers: { Authorization: 'Bearer opaque-secret' } },
+    { authToken: 'opaque-secret' },
+    { private_key: 'opaque-secret' },
+    { cookie: 'session=opaque-secret' },
+  ])('递归拒绝普通消息中的敏感字段：%j', async (payload) => {
+    const handler = vi.fn();
+    const securityRouter = new MessageRouter(
+      {
+        SECURITY_CHECK: {
+          source: 'content',
+          payloadSchema: z.unknown(),
+          handler,
+        },
+      },
+      runtimeId,
+    );
+
+    await expect(
+      securityRouter.dispatch(createEnvelope('SECURITY_CHECK', payload), contentSender),
+    ).rejects.toMatchObject({ code: 'CREDENTIAL_IN_MESSAGE' });
+    expect(handler).not.toHaveBeenCalled();
   });
 });

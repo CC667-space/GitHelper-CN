@@ -41,4 +41,22 @@ describe('logger', () => {
     expect(sink.info).not.toHaveBeenCalled();
     expect(sink.warn).toHaveBeenCalledWith({ token: '‹REDACTED›', safe: 'ok' });
   });
+
+  it('扩展模式同样遮蔽云密钥、JWT、URL 凭据与命名 Secret', () => {
+    const source = [
+      'AKIAIOSFODNN7EXAMPLE',
+      'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature123456',
+      'https://alice:super-secret@example.com',
+      'client_secret=json-secret-value',
+    ].join(' ');
+    const redacted = redactString(source);
+    for (const secret of [
+      'AKIAIOSFODNN7EXAMPLE',
+      'signature123456',
+      'super-secret',
+      'json-secret-value',
+    ]) {
+      expect(redacted).not.toContain(secret);
+    }
+  });
 });
