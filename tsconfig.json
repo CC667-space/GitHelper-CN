@@ -14,7 +14,7 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["chrome", "node", "vitest/globals"]
+    "types": ["chrome", "node", "vite/client", "vitest/globals"]
   },
   "include": [
     "src",

@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 0 已通过验收。下一步进入 Phase 1（仓库结构与扩展骨架）。**
+**Phase 1 已通过验收。下一步进入 Phase 1.5（安全地基）。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -40,20 +40,27 @@
   - 截图公式定稿并回写 ARCHITECTURE §3.5；权限定稿为 `sidePanel/storage/activeTab`，不申请 `tabs/scripting/<all_urls>`
   - Node 24.18.0 验证：typecheck 通过、lint 通过、Vitest 1/1 通过、build 通过
   - 完整证据：`scripts/probe-results.md`
+- [x] **Phase 1 — 仓库结构与扩展骨架（2026-07-24）**：
+  - 按 ARCHITECTURE §4 补齐 Background / Content / Panel / Options / shared lib / tests 目录骨架
+  - `lib/types.ts` 落地 PageContext、SelectedElement/Region、Session、ProviderCredential、ProviderCapabilities、ProviderRouting、AIRequest/Response 等权威模型；不含 GitHub Token / 私有仓库开关
+  - `lib/storage`：schemaVersion、逐版本迁移、getBytesInUse、软/硬容量检查与类型化硬上限错误
+  - `lib/messaging`：v1 信封、请求 ID、固定 type、zod payload 校验、64KB 限制、类型化超时
+  - `lib/logger`：字段/模式双层脱敏、循环引用保护、超长截断、生产日志级别
+  - 验收：typecheck 通过、lint 通过、Vitest 4 files / 10 tests 全过、build 通过；权限仍为 Phase 0 定稿清单
 
 ## 下一任务
-**Phase 1 — 仓库结构与扩展骨架**（见 EXECUTION_PLAN v1.2）。
+**Phase 1.5 — 安全地基**（见 EXECUTION_PLAN v1.2）。
 执行 Agent 应继续：
-1. 按 ARCHITECTURE §4 补齐目录与空模块
-2. 落地 `lib/types.ts` 数据模型（含 ProviderCapabilities / ProviderCredential）
-3. 实现并测试 `lib/storage` / `lib/messaging` / `lib/logger`
-4. 保持 Phase 0 定稿权限与五域 Host 闭合
+1. 落地 credential-store 上下文职责与 Content import lint 边界
+2. Provider Host 白名单 fetch、router sender/schema/载荷/超时
+3. sanitizer、私有仓库零出站、System/网页数据隔离
+4. CSP/无远程代码扫描、Abort/超时/负载限制及全部安全单测
 
 ## 阶段进度表
 | Phase | 状态 |
 |---|---|
 | 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成 |
-| 1 仓库结构 + 扩展骨架 | ⬜ |
+| 1 仓库结构 + 扩展骨架 | ✅ 已完成 |
 | 1.5 安全地基 | ⬜ |
 | 2 Side Panel + 消息通信 | ⬜ |
 | 3 页面识别 + 上下文 + SPA | ⬜ |
@@ -80,3 +87,4 @@
 - 2026-07-24：完成 v1.2 最终定点修订（D-028~D-035 + D-007R/D-013R），未写任何项目代码。
 - 2026-07-24：只读基线检查时修正“下一任务”中的执行方案版本引用（v1.1 → v1.2）；仅为文档引用纠正，不改变基线范围。
 - 2026-07-24：Phase 0 通过；完成 Git 基线、最小 MV3 构建、A–D 自动探针、截图坐标与最小权限定稿，并记录 CRXJS/Vite 入口 basename 兼容约束（D-036/D-037）。
+- 2026-07-24：Phase 1 通过；数据模型、目录骨架及 storage/messaging/logger 共享库落地，10 项单测通过。
