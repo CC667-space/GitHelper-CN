@@ -4,7 +4,12 @@ import {
   type RepositoryAnalysisCard,
   type RepositoryInsights,
 } from '../lib/repository-analysis';
-import { GitHubApiClient, GitHubRateLimitError, type RepositoryApiBundle } from './github-api';
+import {
+  GitHubApiClient,
+  GitHubRateLimitError,
+  type RepositoryApiBundle,
+  type RepositoryFileSnapshot,
+} from './github-api';
 import { assertPublicContext } from './outbound-policy';
 
 export interface RepositoryAnalysisFacts {
@@ -15,6 +20,7 @@ export interface RepositoryAnalysisFacts {
   topics: string[];
   primaryLanguage?: string;
   languages: Array<{ name: string; percent: number }>;
+  fileSnapshot?: RepositoryFileSnapshot;
   detectedPlatforms: string[];
   installCommands: string[];
   latestRelease?: RepositoryApiBundle['latestRelease'];
@@ -69,11 +75,10 @@ function languagePercentages(
 ): Array<{ name: string; percent: number }> {
   const entries = Object.entries(languages)
     .filter(([, bytes]) => Number.isFinite(bytes) && bytes >= 0)
-    .sort((left, right) => right[1] - left[1])
-    .slice(0, 20);
+    .sort((left, right) => right[1] - left[1]);
   const total = entries.reduce((sum, [, bytes]) => sum + bytes, 0);
   if (total > 0) {
-    return entries.map(([name, bytes]) => ({
+    return entries.slice(0, 5).map(([name, bytes]) => ({
       name,
       percent: Math.round((bytes / total) * 1_000) / 10,
     }));
@@ -91,12 +96,128 @@ function languagePercentages(
           (item): item is { name: string; percent: number } =>
             item !== undefined && Number.isFinite(item.percent),
         )
-        .slice(0, 20)
+        .slice(0, 5)
     : [];
   if (domLanguages.length) {
     return domLanguages;
   }
   return primaryLanguage ? [{ name: primaryLanguage, percent: 100 }] : [];
+}
+
+function fileRole(path: string): string {
+  const lower = path.toLowerCase();
+  if (
+    /(^|\/)(package\.json|pyproject\.toml|cargo\.toml|go\.mod|pom\.xml|build\.gradle(?:\.kts)?|requirements[^/]*\.txt)$/u.test(
+      lower,
+    )
+  ) {
+    return '依赖与构建清单';
+  }
+  if (/(^|\/)(main|index|app|cli)\.[a-z0-9]+$/u.test(lower)) {
+    return '程序入口';
+  }
+  if (/(^|\/)(dockerfile|compose\.ya?ml|docker-compose\.ya?ml)$/u.test(lower)) {
+    return '运行环境';
+  }
+  if (/(^|\/)(test|tests|spec|specs)(\/|$)/u.test(lower)) {
+    return '测试';
+  }
+  return '关键项目文件';
+}
+
+function jsonFindings(content: string): string[] {
+  try {
+    const parsed = JSON.parse(content) as Record<string, unknown>;
+    const findings: string[] = [];
+    if (typeof parsed.name === 'string' && parsed.name.trim()) {
+      findings.push(`项目名：${parsed.name.trim().slice(0, 120)}`);
+    }
+    if (parsed.scripts && typeof parsed.scripts === 'object' && !Array.isArray(parsed.scripts)) {
+      const scripts = Object.keys(parsed.scripts).slice(0, 8);
+      if (scripts.length) {
+        findings.push(`脚本：${scripts.join('、')}`);
+      }
+    }
+    if (
+      parsed.dependencies &&
+      typeof parsed.dependencies === 'object' &&
+      !Array.isArray(parsed.dependencies)
+    ) {
+      const dependencies = Object.keys(parsed.dependencies).slice(0, 8);
+      if (dependencies.length) {
+        findings.push(`主要依赖：${dependencies.join('、')}`);
+      }
+    }
+    return findings;
+  } catch {
+    return [];
+  }
+}
+
+function sourceFindings(content: string): string[] {
+  const findings: string[] = [];
+  const definitions = [
+    ...content.matchAll(
+      /\b(?:export\s+)?(?:async\s+)?(?:function|class|def|fn)\s+([A-Za-z_$][\w$]*)/gu,
+    ),
+  ]
+    .map((match) => match[1])
+    .filter((name): name is string => Boolean(name))
+    .slice(0, 6);
+  if (definitions.length) {
+    findings.push(`定义：${definitions.join('、')}`);
+  }
+  const sections = [
+    ...content.matchAll(/^\s*\[([A-Za-z0-9_.-]+)\]\s*$/gmu),
+    ...content.matchAll(/^\s*module\s+([^\s]+)\s*$/gmu),
+  ]
+    .map((match) => match[1])
+    .filter((name): name is string => Boolean(name))
+    .slice(0, 6);
+  if (sections.length) {
+    findings.push(`配置段：${sections.join('、')}`);
+  }
+  const nonCommentLines = content
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter(
+      (line) =>
+        line &&
+        !line.startsWith('//') &&
+        !line.startsWith('#') &&
+        !line.startsWith('/*') &&
+        !line.startsWith('*'),
+    )
+    .slice(0, 2)
+    .map((line) => line.slice(0, 140));
+  if (!findings.length && nonCommentLines.length) {
+    findings.push(`内容线索：${nonCommentLines.join('；')}`);
+  }
+  return findings;
+}
+
+function summarizeStructure(snapshot?: RepositoryFileSnapshot): {
+  directories: string[];
+  keyFiles: Array<{ path: string; role: string; findings: string[] }>;
+  truncated: boolean;
+} {
+  if (!snapshot) {
+    return { directories: [], keyFiles: [], truncated: false };
+  }
+  return {
+    directories: snapshot.directories.slice(0, 12),
+    keyFiles: snapshot.inspectedFiles.slice(0, 3).map((file) => {
+      const findings = file.path.toLowerCase().endsWith('.json')
+        ? jsonFindings(file.content)
+        : sourceFindings(file.content);
+      return {
+        path: file.path,
+        role: fileRole(file.path),
+        findings: findings.slice(0, 4),
+      };
+    }),
+    truncated: snapshot.truncated,
+  };
 }
 
 function extractInstallCommands(readme: string): string[] {
@@ -284,6 +405,7 @@ export class RepositoryAnalysisExecutor {
       topics,
       primaryLanguage,
       languages,
+      fileSnapshot: api?.fileSnapshot,
       detectedPlatforms: detectPlatforms(`${description ?? ''}\n${readme ?? ''}`, topics),
       installCommands,
       latestRelease: api?.latestRelease,
@@ -331,6 +453,7 @@ export class RepositoryAnalysisExecutor {
       url: facts.url,
       purpose: insights.purpose,
       languages,
+      structure: summarizeStructure(facts.fileSnapshot),
       platforms: uniqueLimited(facts.detectedPlatforms, insights.platforms),
       installation: {
         steps: installCommands.length ? installCommands : insights.installation,

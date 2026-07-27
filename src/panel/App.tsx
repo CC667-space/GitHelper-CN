@@ -14,6 +14,36 @@ function displayCount(value?: number): string {
   return value === undefined ? '未获取' : value.toLocaleString('zh-CN');
 }
 
+interface ConversationMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
+interface ConversationTurn {
+  id: string;
+  question?: ConversationMessage;
+  replies: ConversationMessage[];
+}
+
+function groupConversation(messages: ConversationMessage[]): ConversationTurn[] {
+  const turns: ConversationTurn[] = [];
+  for (const message of messages) {
+    if (message.role === 'user') {
+      turns.push({ id: message.id, question: message, replies: [] });
+      continue;
+    }
+    const current = turns.at(-1);
+    if (current?.question) {
+      current.replies.push(message);
+    } else {
+      turns.push({ id: message.id, replies: [message] });
+    }
+  }
+  return turns;
+}
+
 export function PanelApp({
   connect = connectPanel,
 }: {
@@ -23,6 +53,9 @@ export function PanelApp({
   const questionInput = useRef<HTMLTextAreaElement>(null);
   const [analysisExpanded, setAnalysisExpanded] = useState(true);
   const [conversationExpanded, setConversationExpanded] = useState(true);
+  const [collapsedTurnIds, setCollapsedTurnIds] = useState<Set<string>>(() => new Set());
+  const [pendingTurnDeleteId, setPendingTurnDeleteId] = useState<string>();
+  const [pendingSessionDeleteId, setPendingSessionDeleteId] = useState<string>();
   const [focusComposerRequested, setFocusComposerRequested] = useState(false);
   const {
     connected,
@@ -114,6 +147,12 @@ export function PanelApp({
     questionInput.current?.scrollIntoView?.({ block: 'nearest' });
     setFocusComposerRequested(false);
   }, [conversationExpanded, focusComposerRequested]);
+
+  useEffect(() => {
+    setCollapsedTurnIds(new Set());
+    setPendingTurnDeleteId(undefined);
+    setPendingSessionDeleteId(undefined);
+  }, [sessionId]);
 
   function submit(): void {
     const text = draft.trim();
@@ -343,7 +382,9 @@ export function PanelApp({
         {analysisExpanded ? (
           <>
             <p className="mt-1 text-xs text-slate-500">
-              数字事实来自当前页面与匿名 GitHub API；解释会调用所选文本 Provider，可能消耗额度。
+              会读取根目录与最多 3
+              个关键文件的有限片段，不下载完整仓库或读取锁文件；解释会调用所选文本
+              Provider，可能消耗额度。
             </p>
             {analysisError ? (
               <p className="mt-2 rounded-md bg-rose-50 p-2 text-xs text-rose-800">
@@ -405,8 +446,41 @@ export function PanelApp({
                   </div>
                 </dl>
 
+                <section className="rounded bg-white p-2">
+                  <h4 className="font-medium">项目文件洞察</h4>
+                  {analysisCard.structure.directories.length ? (
+                    <p className="mt-1 break-words text-slate-600">
+                      目录：{analysisCard.structure.directories.join(' · ')}
+                    </p>
+                  ) : null}
+                  {analysisCard.structure.keyFiles.length ? (
+                    <ul className="mt-2 space-y-2">
+                      {analysisCard.structure.keyFiles.map((file) => (
+                        <li className="rounded border border-slate-200 p-2" key={file.path}>
+                          <p className="break-all font-medium">
+                            <code>{file.path}</code>
+                            <span className="ml-1 font-normal text-slate-500">· {file.role}</span>
+                          </p>
+                          <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                            {file.findings.map((finding, index) => (
+                              <li key={`${file.path}:${index}`}>{finding}</li>
+                            ))}
+                          </ul>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-1 text-slate-500">未获取关键文件内容</p>
+                  )}
+                  {analysisCard.structure.truncated ? (
+                    <p className="mt-2 text-slate-500">
+                      这里只展示受限样本，未读取的目录和文件不能据此推断。
+                    </p>
+                  ) : null}
+                </section>
+
                 <section>
-                  <h4 className="font-medium">语言</h4>
+                  <h4 className="font-medium">主要语言（最多 5 项）</h4>
                   {analysisCard.languages.length ? (
                     <ul className="mt-1 space-y-1">
                       {analysisCard.languages.map((language) => (
@@ -682,6 +756,69 @@ export function PanelApp({
           >
             新建会话
           </button>
+          <details className="col-span-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs">
+            <summary className="cursor-pointer py-1 text-slate-700">
+              管理会话（{recentSessions.length}）
+            </summary>
+            {recentSessions.length ? (
+              <ul className="mt-1 space-y-1 border-t border-slate-200 pt-1">
+                {recentSessions.map((session) => (
+                  <li className="flex items-center gap-1" key={session.sessionId}>
+                    <button
+                      aria-current={session.sessionId === sessionId ? 'true' : undefined}
+                      className="min-w-0 flex-1 truncate rounded px-2 py-1 text-left hover:bg-white"
+                      disabled={!connected || Boolean(activeRequestId)}
+                      onClick={() => connection.current?.selectSession?.(session.sessionId)}
+                      title={`${session.title}${session.repository ? ` · ${session.repository}` : ''}`}
+                      type="button"
+                    >
+                      {session.title}
+                      {session.repository ? ` · ${session.repository}` : ''}
+                    </button>
+                    {pendingSessionDeleteId === session.sessionId ? (
+                      <span className="flex shrink-0 gap-1" role="group">
+                        <button
+                          aria-label={`确认删除会话：${session.title}`}
+                          className="rounded px-2 py-1 text-rose-700 hover:bg-rose-50"
+                          disabled={!connected || Boolean(activeRequestId)}
+                          onClick={() => {
+                            connection.current?.deleteSession?.(session.sessionId);
+                            setPendingSessionDeleteId(undefined);
+                          }}
+                          title="确认删除"
+                          type="button"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          aria-label={`取消删除会话：${session.title}`}
+                          className="rounded px-2 py-1 text-slate-600 hover:bg-white"
+                          onClick={() => setPendingSessionDeleteId(undefined)}
+                          title="取消删除"
+                          type="button"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        aria-label={`删除会话：${session.title}`}
+                        className="shrink-0 rounded px-2 py-1 text-slate-500 hover:bg-rose-50 hover:text-rose-700"
+                        disabled={!connected || Boolean(activeRequestId)}
+                        onClick={() => setPendingSessionDeleteId(session.sessionId)}
+                        title="删除会话"
+                        type="button"
+                      >
+                        🗑
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="border-t border-slate-200 py-2 text-slate-500">暂无已保存会话</p>
+            )}
+          </details>
         </div>
         {conversationExpanded ? (
           <>
@@ -700,22 +837,95 @@ export function PanelApp({
                   输入一条消息，开始询问当前 GitHub 页面。
                 </div>
               ) : (
-                messages.map((message) => (
-                  <article
-                    className={`rounded-lg p-3 text-sm ${
-                      message.role === 'user'
-                        ? 'ml-8 bg-slate-900 text-white'
-                        : 'mr-8 border border-slate-200 bg-white'
-                    }`}
-                    key={message.id}
-                  >
-                    {message.role === 'assistant' ? (
-                      <MarkdownMessage content={message.content} />
-                    ) : (
-                      message.content
-                    )}
-                  </article>
-                ))
+                groupConversation(messages).map((turn) => {
+                  const collapsed = collapsedTurnIds.has(turn.id);
+                  const questionLabel = turn.question?.content.slice(0, 80);
+                  return (
+                    <div className="space-y-3" key={turn.id}>
+                      {turn.question ? (
+                        <article className="ml-8 flex items-start gap-2 rounded-lg bg-slate-900 p-3 text-sm text-white">
+                          <button
+                            aria-expanded={!collapsed}
+                            aria-label={`${collapsed ? '展开' : '收起'}问答：${questionLabel}`}
+                            className="shrink-0 rounded px-1 text-base leading-5 hover:bg-slate-700"
+                            onClick={() =>
+                              setCollapsedTurnIds((current) => {
+                                const next = new Set(current);
+                                if (next.has(turn.id)) {
+                                  next.delete(turn.id);
+                                } else {
+                                  next.add(turn.id);
+                                }
+                                return next;
+                              })
+                            }
+                            title={collapsed ? '展开这轮问答' : '收起这轮问答'}
+                            type="button"
+                          >
+                            {collapsed ? '>' : '∨'}
+                          </button>
+                          <p className="min-w-0 whitespace-pre-wrap break-words">
+                            {turn.question.content}
+                          </p>
+                        </article>
+                      ) : null}
+                      {!collapsed
+                        ? turn.replies.map((reply) => (
+                            <article
+                              className="relative mr-8 rounded-lg border border-slate-200 bg-white p-3 pr-11 text-sm"
+                              key={reply.id}
+                            >
+                              {turn.question && sessionId ? (
+                                <div className="absolute right-2 top-2 flex justify-end">
+                                  {pendingTurnDeleteId === turn.id ? (
+                                    <span className="flex gap-1" role="group">
+                                      <button
+                                        aria-label={`确认删除问答：${questionLabel}`}
+                                        className="rounded px-2 py-1 text-rose-700 hover:bg-rose-50"
+                                        disabled={!connected || Boolean(activeRequestId)}
+                                        onClick={() => {
+                                          connection.current?.deleteTurn?.(
+                                            sessionId,
+                                            turn.question!.id,
+                                          );
+                                          setPendingTurnDeleteId(undefined);
+                                        }}
+                                        title="确认删除"
+                                        type="button"
+                                      >
+                                        ✓
+                                      </button>
+                                      <button
+                                        aria-label={`取消删除问答：${questionLabel}`}
+                                        className="rounded px-2 py-1 text-slate-600 hover:bg-slate-100"
+                                        onClick={() => setPendingTurnDeleteId(undefined)}
+                                        title="取消删除"
+                                        type="button"
+                                      >
+                                        ×
+                                      </button>
+                                    </span>
+                                  ) : (
+                                    <button
+                                      aria-label={`删除问答：${questionLabel}`}
+                                      className="rounded px-2 py-1 text-slate-500 hover:bg-rose-50 hover:text-rose-700"
+                                      disabled={!connected || Boolean(activeRequestId)}
+                                      onClick={() => setPendingTurnDeleteId(turn.id)}
+                                      title="删除这轮问答"
+                                      type="button"
+                                    >
+                                      🗑
+                                    </button>
+                                  )}
+                                </div>
+                              ) : null}
+                              <MarkdownMessage content={reply.content} />
+                            </article>
+                          ))
+                        : null}
+                    </div>
+                  );
+                })
               )}
             </section>
 

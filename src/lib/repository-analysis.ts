@@ -32,7 +32,24 @@ export const repositoryAnalysisCardSchema = z
           })
           .strict(),
       )
-      .max(20),
+      .max(5),
+    structure: z
+      .object({
+        directories: z.array(z.string().min(1).max(300)).max(12),
+        keyFiles: z
+          .array(
+            z
+              .object({
+                path: z.string().min(1).max(500),
+                role: z.string().min(1).max(100),
+                findings: z.array(z.string().min(1).max(300)).max(4),
+              })
+              .strict(),
+          )
+          .max(3),
+        truncated: z.boolean(),
+      })
+      .strict(),
     platforms: z.array(z.string().min(1).max(100)).max(8),
     installation: z
       .object({

@@ -82,6 +82,22 @@ describe('Phase 9 repository analysis Panel', () => {
             { name: 'JavaScript', percent: 90 },
             { name: 'TypeScript', percent: 10 },
           ],
+          structure: {
+            directories: ['packages', 'scripts', 'fixtures'],
+            keyFiles: [
+              {
+                path: 'package.json',
+                role: '依赖与构建清单',
+                findings: ['脚本：build、test', '主要依赖：react、scheduler'],
+              },
+              {
+                path: 'main.js',
+                role: '程序入口',
+                findings: ['定义：startApp'],
+              },
+            ],
+            truncated: false,
+          },
           platforms: ['Web/Browser', 'Node.js'],
           installation: { steps: ['npm install react'], source: 'readme' },
           release: {
@@ -116,6 +132,10 @@ describe('Phase 9 repository analysis Panel', () => {
     expect(screen.getByText(/240,000/)).toBeTruthy();
     expect(screen.getByText(/1,000/)).toBeTruthy();
     expect(screen.getByText('npm install react')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '项目文件洞察' })).toBeTruthy();
+    expect(screen.getByText('package.json')).toBeTruthy();
+    expect(screen.getByText(/脚本：build、test/)).toBeTruthy();
+    expect(screen.getByText(/packages · scripts · fixtures/)).toBeTruthy();
     expect(screen.getByText(/上手难度：入门/)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '收起分析' }));
     expect(screen.queryByTestId('repository-analysis-card')).toBeNull();
@@ -157,6 +177,7 @@ describe('Phase 9 repository analysis Panel', () => {
           url: 'https://github.com/octocat/Hello-World',
           purpose: '公开信息不足。',
           languages: [],
+          structure: { directories: [], keyFiles: [], truncated: false },
           platforms: [],
           installation: { steps: [], source: 'unknown' },
           release: null,
@@ -176,6 +197,7 @@ describe('Phase 9 repository analysis Panel', () => {
     );
 
     expect(screen.getByText('未获取语言数据')).toBeTruthy();
+    expect(screen.getByText('未获取关键文件内容')).toBeTruthy();
     expect(screen.getByText('未找到正式 Release')).toBeTruthy();
     expect(screen.getByText(/core 匿名配额暂不可用/)).toBeTruthy();
   });

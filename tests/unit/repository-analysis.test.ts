@@ -194,6 +194,66 @@ describe('RepositoryAnalysisExecutor', () => {
     expect(card.url).toBe('https://github.com/react/react');
   });
 
+  it('读取实际关键文件并把项目结构与内容证据放进分析卡，而不是只返回语言比例', async () => {
+    const repository = 'example/real-files';
+    const withFiles = {
+      ...bundle(repository),
+      fileSnapshot: {
+        directories: ['src', 'tests', 'scripts'],
+        truncated: false,
+        inspectedFiles: [
+          {
+            path: 'package.json',
+            content: JSON.stringify({
+              name: 'real-files',
+              scripts: { build: 'vite build', test: 'vitest run' },
+              dependencies: { react: '18.3.1', zod: '4.4.3' },
+            }),
+          },
+          {
+            path: 'src/main.ts',
+            content: 'export function startApp() { return createServer(); }',
+          },
+        ],
+      },
+    } as RepositoryApiBundle;
+    const executor = new RepositoryAnalysisExecutor({
+      getRepositoryBundle: vi.fn(async () => withFiles),
+    } as unknown as GitHubApiClient);
+
+    const card = await executor.analyze({
+      page: page(repository, '# real-files'),
+      signal: new AbortController().signal,
+      now: new Date('2026-07-24T00:00:00.000Z'),
+    });
+    const structure = (
+      card as unknown as {
+        structure?: {
+          directories: string[];
+          keyFiles: Array<{ path: string; role: string; findings: string[] }>;
+        };
+      }
+    ).structure;
+
+    expect(structure?.directories).toEqual(['src', 'tests', 'scripts']);
+    expect(structure?.keyFiles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'package.json',
+          findings: expect.arrayContaining([
+            expect.stringMatching(/build.*test/u),
+            expect.stringMatching(/react.*zod/u),
+          ]),
+        }),
+        expect.objectContaining({
+          path: 'src/main.ts',
+          findings: expect.arrayContaining([expect.stringMatching(/startApp/u)]),
+        }),
+      ]),
+    );
+    expect(card.languages.length).toBeLessThanOrEqual(5);
+  });
+
   it('私有页面在 API 与 Provider 前零出站', async () => {
     const getRepositoryBundle = vi.fn();
     const generate = vi.fn();

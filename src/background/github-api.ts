@@ -56,9 +56,19 @@ export interface RepositoryApiRelease {
 export interface RepositoryApiBundle {
   details: RepositoryApiDetails;
   languages: Record<string, number>;
+  fileSnapshot?: RepositoryFileSnapshot;
   latestRelease?: RepositoryApiRelease;
   openPullRequests?: number;
   degradedNotice?: string;
+}
+
+export interface RepositoryFileSnapshot {
+  directories: string[];
+  inspectedFiles: Array<{
+    path: string;
+    content: string;
+  }>;
+  truncated: boolean;
 }
 
 export interface GitHubApiDependencies {
@@ -158,6 +168,148 @@ const repositoryReleaseSchema = z
   .passthrough();
 
 const repositoryPullsSchema = z.array(z.object({ id: z.number().int() }).passthrough()).max(100);
+const repositoryContentsSchema = z
+  .array(
+    z
+      .object({
+        name: z.string().min(1).max(500),
+        path: z.string().min(1).max(1_000),
+        type: z.enum(['file', 'dir']),
+        size: z.number().int().nonnegative(),
+        sha: z.string().min(1).max(100),
+      })
+      .passthrough(),
+  )
+  .max(1_000);
+const repositoryFileContentSchema = z
+  .object({
+    type: z.literal('file'),
+    path: z.string().min(1).max(1_000),
+    size: z.number().int().nonnegative(),
+    encoding: z.literal('base64'),
+    content: z.string().max(64 * 1024),
+  })
+  .passthrough();
+
+const MAX_INSPECTED_REPOSITORY_FILES = 3;
+const MAX_INSPECTED_FILE_SIZE = 24 * 1024;
+const MAX_INSPECTED_FILE_TEXT = 4 * 1024;
+
+function isSafeRepositoryContentPath(path: string): boolean {
+  const segments = path.split('/');
+  return segments.every((segment) => segment.length > 0 && segment !== '.' && segment !== '..');
+}
+
+function encodeRepositoryContentPath(path: string): string {
+  if (!isSafeRepositoryContentPath(path)) {
+    throw new Error('GitHub Contents 返回了不安全的文件路径');
+  }
+  return path
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+}
+
+function repositoryFilePriority(path: string): number {
+  const lower = path.toLowerCase();
+  const name = lower.split('/').at(-1) ?? lower;
+  if (/^(package\.json|pyproject\.toml|cargo\.toml|go\.mod|pom\.xml)$/u.test(name)) {
+    return 100;
+  }
+  if (/^(requirements[^/]*\.txt|setup\.py|build\.gradle(?:\.kts)?)$/u.test(name)) {
+    return 95;
+  }
+  if (/^(dockerfile|compose\.ya?ml|docker-compose\.ya?ml)$/u.test(name)) {
+    return 90;
+  }
+  if (/^(?:__main__|main|index|app|cli|server)\.[a-z0-9]+$/u.test(name)) {
+    return 85;
+  }
+  if (
+    /^(vite|webpack|rollup|next|nuxt|tsconfig|eslint)[^/]*\.(?:json|js|mjs|cjs|ts)$/u.test(name)
+  ) {
+    return 70;
+  }
+  if (
+    /\.(?:py|ts|tsx|js|jsx|mjs|cjs|rs|go|java|kt|kts|c|cc|cpp|h|hpp|cs|rb|php|swift|sh|ps1)$/u.test(
+      name,
+    ) &&
+    !/(?:^|[._-])(?:test|spec)(?:[._-]|$)/u.test(name)
+  ) {
+    return 60;
+  }
+  return 0;
+}
+
+function selectRepositoryDirectories(
+  entries: z.infer<typeof repositoryContentsSchema>,
+  repository: string,
+): Array<z.infer<typeof repositoryContentsSchema>[number]> {
+  const repositoryName = repository
+    .split('/')
+    .at(-1)
+    ?.replaceAll(/[^a-z0-9]/giu, '')
+    .toLowerCase();
+  const ignored = /^(?:\.github|docs?|tests?|specs?|examples?|assets?|vendor|node_modules)$/iu;
+  return entries
+    .filter(
+      (entry) =>
+        entry.type === 'dir' &&
+        isSafeRepositoryContentPath(entry.path) &&
+        !ignored.test(entry.name),
+    )
+    .map((entry) => {
+      const normalized = entry.name.replaceAll(/[^a-z0-9]/giu, '').toLowerCase();
+      const lower = entry.name.toLowerCase();
+      const priority =
+        lower === 'src'
+          ? 100
+          : lower === 'app'
+            ? 95
+            : /^(?:lib|packages|cmd|pkg|internal)$/u.test(lower)
+              ? 90
+              : repositoryName && normalized === repositoryName
+                ? 85
+                : /(?:^|[._-])(?:agent|cli|core|server|client|sdk|api)(?:[._-]|$)/u.test(lower)
+                  ? 80
+                  : 10;
+      return { entry, priority };
+    })
+    .sort(
+      (left, right) =>
+        right.priority - left.priority || left.entry.path.localeCompare(right.entry.path),
+    )
+    .slice(0, 2)
+    .map(({ entry }) => entry);
+}
+
+function selectRepositoryFiles(
+  entries: z.infer<typeof repositoryContentsSchema>,
+): Array<z.infer<typeof repositoryContentsSchema>[number]> {
+  return entries
+    .filter(
+      (entry) =>
+        entry.type === 'file' &&
+        isSafeRepositoryContentPath(entry.path) &&
+        entry.size > 0 &&
+        entry.size <= MAX_INSPECTED_FILE_SIZE &&
+        !/(^|\/)(?:package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?)$/iu.test(entry.path),
+    )
+    .map((entry) => ({ entry, priority: repositoryFilePriority(entry.path) }))
+    .filter(({ priority }) => priority > 0)
+    .sort(
+      (left, right) =>
+        right.priority - left.priority || left.entry.path.localeCompare(right.entry.path),
+    )
+    .slice(0, MAX_INSPECTED_REPOSITORY_FILES)
+    .map(({ entry }) => entry);
+}
+
+function decodeRepositoryFile(content: string): string {
+  const binary = atob(content.replace(/\s+/gu, ''));
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return new TextDecoder().decode(bytes).slice(0, MAX_INSPECTED_FILE_TEXT);
+}
 
 function defaultDependencies(): GitHubApiDependencies {
   return {
@@ -327,6 +479,7 @@ export class GitHubApiClient {
       updatedAt: detailsData.updated_at ?? undefined,
     };
     let languages: Record<string, number> = {};
+    let fileSnapshot: RepositoryFileSnapshot | undefined;
     let latestRelease: RepositoryApiRelease | undefined;
     let openPullRequests: number | undefined;
     let degradedNotice: string | undefined;
@@ -355,6 +508,77 @@ export class GitHubApiClient {
         signal,
       );
       openPullRequests = linkLastPage(pulls.headers.get('Link')) ?? pulls.data.length;
+      const root = (
+        await this.requestCore(
+          `/repos/${path}/contents?ref=${encodeURIComponent(details.defaultBranch)}`,
+          repositoryContentsSchema,
+          signal,
+        )
+      ).data;
+      const directories = root
+        .filter((entry) => entry.type === 'dir')
+        .map((entry) => entry.path)
+        .slice(0, 12);
+      const selectedDirectories = selectRepositoryDirectories(root, details.fullName);
+      const nestedEntries: z.infer<typeof repositoryContentsSchema> = [];
+      let fileReadFailed = false;
+      for (const directory of selectedDirectories) {
+        try {
+          const encodedDirectory = encodeRepositoryContentPath(directory.path);
+          const result = await this.requestCore(
+            `/repos/${path}/contents/${encodedDirectory}?ref=${encodeURIComponent(
+              details.defaultBranch,
+            )}`,
+            repositoryContentsSchema,
+            signal,
+            true,
+          );
+          if (result.data) {
+            nestedEntries.push(...result.data);
+          }
+        } catch (error: unknown) {
+          if (error instanceof GitHubRateLimitError) {
+            throw error;
+          }
+          fileReadFailed = true;
+        }
+      }
+      const selectedFiles = selectRepositoryFiles([...root, ...nestedEntries]);
+      const inspectedFiles: RepositoryFileSnapshot['inspectedFiles'] = [];
+      for (const file of selectedFiles) {
+        try {
+          const encodedPath = encodeRepositoryContentPath(file.path);
+          const result = await this.requestCore(
+            `/repos/${path}/contents/${encodedPath}?ref=${encodeURIComponent(
+              details.defaultBranch,
+            )}`,
+            repositoryFileContentSchema,
+            signal,
+            true,
+          );
+          if (result.data?.path === file.path) {
+            inspectedFiles.push({
+              path: result.data.path,
+              content: decodeRepositoryFile(result.data.content),
+            });
+          }
+        } catch (error: unknown) {
+          if (error instanceof GitHubRateLimitError) {
+            throw error;
+          }
+          fileReadFailed = true;
+        }
+      }
+      fileSnapshot = {
+        directories,
+        inspectedFiles,
+        truncated:
+          root.length >= 1_000 ||
+          selectedFiles.length >= MAX_INSPECTED_REPOSITORY_FILES ||
+          root.some((entry) => entry.type === 'dir') ||
+          nestedEntries.some((entry) => entry.type === 'dir') ||
+          fileReadFailed,
+      };
     } catch (error: unknown) {
       degradedNotice =
         error instanceof GitHubRateLimitError
@@ -368,6 +592,7 @@ export class GitHubApiClient {
     const bundle = {
       details,
       languages,
+      fileSnapshot,
       latestRelease,
       openPullRequests,
       degradedNotice,

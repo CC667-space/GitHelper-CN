@@ -472,6 +472,8 @@ interface OperationConfirmation {
 - **Phase 10 安全执行 seam（D-049）**：`sanitizer` 统一字符串与结构化敏感字段遮蔽，Message Router 复用同一字段判定；`ToolRegistry` 统一全部只读工具的白名单、strict zod 参数与逐次确认，搜索执行器只取得搜索子集。PanelBridge 在会话准备、Provider、GitHub API 与截图前先执行私有页阻断。
 - **对话持久化脱敏（D-051）**：PanelBridge 对已校验的问题先脱敏，再把同一结果交给 SessionStore 与 Provider runtime；因此 ContextBuilder 不是问题明文离开临时输入状态前的唯一防线。
 - **问答状态与紧凑交互（D-052）**：页面上下文与活动会话是两个独立状态；`hydrate` 只补充最近会话目录，不能覆盖 Panel 当前对话。Panel 提供显式会话选择/新建、分析与问答折叠、点击/框选后的输入 CTA；System Prompt 约束普通回答简练但不牺牲准确性。
+- **受限文件证据（D-053）**：仓库分析由 Background 固定构造 GitHub Contents API 路径，只读取根目录、最多 2 个高信号源码目录与最多 3 个关键文件；单候选文件 API 大小 ≤24KB，解码文本 ≤4KB，锁文件和不安全路径拒绝。确定性层先提取目录、文件角色、清单脚本/依赖或源码定义，再把经 sanitizer 的不可信片段交给 Provider；卡片不保存或返回原始文件正文。
+- **逐轮与会话删除（D-053）**：Panel 只提交 `sessionId + userMessageId` 或 `sessionId`，Background 在 SessionStore 内确定删除边界并回推完整有界快照。问答轮次删除范围为目标 user 消息到下一条 user 消息之前；整会话删除若命中活动指针则同步清除。两种删除都只在 Panel 展开 `✓/×` 后由 `✓` 触发。
 
 ---
 
@@ -510,3 +512,7 @@ interface OperationConfirmation {
 `schemaVersion` 与 `sessionId`；最近会话目录投影最多 10 项且只含 ID、短标题、短仓库标识、更新时间与消息数，
 不含页面 URL 或消息正文。
 会话/偏好清除和全部数据清除都会同步移除活动指针。
+
+**Phase 11 第二轮补丁（D-053）**：`PANEL_TURN_DELETE` 与 `PANEL_SESSION_DELETE` 均经来源校验、
+strict zod payload 与 64KB 信封限制；UI 的垃圾桶只进入待确认态，`✓` 才删除，`×` 不改变数据。
+删除活动会话后 Panel 收到 `cause: new`，删除非活动会话后当前上下文保持不变。

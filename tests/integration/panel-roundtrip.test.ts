@@ -214,6 +214,54 @@ describe('Panel → Background → Content → Panel', () => {
     );
   });
 
+  it('通过 Background 路由删除一轮问答或整个会话并刷新状态', async () => {
+    const emitSessionState = vi.fn();
+    const deleteTurn = vi.fn(async () => ({
+      sessionId: 'session-1',
+      cause: 'update' as const,
+      messages: [],
+      truncated: false,
+    }));
+    const deleteSession = vi.fn(async () => ({
+      cause: 'new' as const,
+      messages: [],
+      truncated: false,
+      recentSessions: [],
+    }));
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(),
+      streamAnswer: vi.fn(),
+      deleteTurn,
+      deleteSession,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitSessionState,
+    });
+
+    await bridge.dispatch(
+      createEnvelope('PANEL_TURN_DELETE', {
+        sessionId: 'session-1',
+        userMessageId: 'question-1',
+      }),
+      panelSender,
+    );
+    await bridge.dispatch(
+      createEnvelope('PANEL_SESSION_DELETE', { sessionId: 'session-1' }),
+      panelSender,
+    );
+
+    expect(deleteTurn).toHaveBeenCalledWith('session-1', 'question-1');
+    expect(deleteSession).toHaveBeenCalledWith('session-1');
+    expect(emitSessionState).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ sessionId: 'session-1', cause: 'update' }),
+    );
+    expect(emitSessionState).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ cause: 'new', messages: [] }),
+    );
+  });
+
   it('点击选择状态经 Background 从 active 推进到 selected', async () => {
     const emitPickState = vi.fn();
     const element = {
@@ -570,6 +618,17 @@ describe('Panel → Background → Content → Panel', () => {
       url: 'https://github.com/react/react',
       purpose: '用于构建用户界面。',
       languages: [{ name: 'JavaScript', percent: 100 }],
+      structure: {
+        directories: ['packages'],
+        keyFiles: [
+          {
+            path: 'package.json',
+            role: '项目清单 / 构建配置',
+            findings: ['项目名：react'],
+          },
+        ],
+        truncated: true,
+      },
       platforms: ['Web/Browser'],
       installation: { steps: ['npm install react'], source: 'readme' as const },
       release: null,

@@ -231,6 +231,114 @@ describe('Phase 5 UI', () => {
     );
   });
 
+  it('每轮问答可独立收展，并经二次确认删除该轮', async () => {
+    const deleteTurn = vi.fn();
+    const connect = vi.fn((_onEvent, _onProviderState, onConnectionChange, onSessionState) => {
+      onConnectionChange(true);
+      onSessionState({
+        sessionId: 'session-1',
+        cause: 'hydrate',
+        messages: [
+          {
+            id: 'question-1',
+            role: 'user',
+            content: '第一个问题',
+            createdAt: '2026-07-24T00:00:00.000Z',
+          },
+          {
+            id: 'answer-1',
+            role: 'assistant',
+            content: '第一个回答',
+            createdAt: '2026-07-24T00:00:01.000Z',
+          },
+          {
+            id: 'question-2',
+            role: 'user',
+            content: '第二个问题',
+            createdAt: '2026-07-24T00:00:02.000Z',
+          },
+          {
+            id: 'answer-2',
+            role: 'assistant',
+            content: '第二个回答',
+            createdAt: '2026-07-24T00:00:03.000Z',
+          },
+        ],
+        truncated: false,
+      });
+      return {
+        send: vi.fn(),
+        abort: vi.fn(),
+        deleteTurn,
+        disconnect: vi.fn(),
+      };
+    });
+    const user = userEvent.setup();
+    render(<PanelApp connect={connect} />);
+
+    await user.click(screen.getByRole('button', { name: '收起问答：第一个问题' }));
+    expect(screen.queryByText('第一个回答')).toBeNull();
+    expect(screen.getByText('第二个回答')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: '展开问答：第一个问题' }));
+    expect(screen.getByText('第一个回答')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: '删除问答：第一个问题' }));
+    expect(deleteTurn).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: '取消删除问答：第一个问题' }));
+    expect(screen.queryByRole('button', { name: '确认删除问答：第一个问题' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: '删除问答：第一个问题' }));
+    await user.click(screen.getByRole('button', { name: '确认删除问答：第一个问题' }));
+    expect(deleteTurn).toHaveBeenCalledWith('session-1', 'question-1');
+  });
+
+  it('会话管理列表通过勾叉二次确认删除整个 session', async () => {
+    const deleteSession = vi.fn();
+    const connect = vi.fn((_onEvent, _onProviderState, onConnectionChange, onSessionState) => {
+      onConnectionChange(true);
+      onSessionState({
+        sessionId: 'session-1',
+        cause: 'hydrate',
+        recentSessions: [
+          {
+            sessionId: 'session-1',
+            title: '第一个主题',
+            repository: 'openai/openai-node',
+            updatedAt: '2026-07-24T00:00:02.000Z',
+            messageCount: 2,
+          },
+          {
+            sessionId: 'session-2',
+            title: '第二个主题',
+            repository: 'microsoft/vscode',
+            updatedAt: '2026-07-24T00:00:01.000Z',
+            messageCount: 2,
+          },
+        ],
+        messages: [],
+        truncated: false,
+      });
+      return {
+        send: vi.fn(),
+        abort: vi.fn(),
+        deleteSession,
+        disconnect: vi.fn(),
+      };
+    });
+    const user = userEvent.setup();
+    render(<PanelApp connect={connect} />);
+
+    await user.click(screen.getByText('管理会话（2）'));
+    await user.click(screen.getByRole('button', { name: '删除会话：第一个主题' }));
+    expect(deleteSession).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: '取消删除会话：第一个主题' }));
+    expect(screen.queryByRole('button', { name: '确认删除会话：第一个主题' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: '删除会话：第一个主题' }));
+    await user.click(screen.getByRole('button', { name: '确认删除会话：第一个主题' }));
+    expect(deleteSession).toHaveBeenCalledWith('session-1');
+  });
+
   it('Options 保存收紧偏好，并以独立入口执行两类批量清除', async () => {
     const savePreferences = vi.fn(async (value) => value);
     const clearSessionsAndPreferences = vi.fn();

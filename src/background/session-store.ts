@@ -369,6 +369,32 @@ export class SessionStore {
     });
   }
 
+  async deleteExchange(sessionId: string, userMessageId: string): Promise<boolean> {
+    return this.mutate((sessions) => {
+      const sessionIndex = sessions.findIndex((session) => session.sessionId === sessionId);
+      if (sessionIndex < 0) {
+        return false;
+      }
+      const session = sessions[sessionIndex]!;
+      const start = session.messages.findIndex(
+        (message) => message.id === userMessageId && message.role === 'user',
+      );
+      if (start < 0) {
+        return false;
+      }
+      const nextUserOffset = session.messages
+        .slice(start + 1)
+        .findIndex((message) => message.role === 'user');
+      const end = nextUserOffset < 0 ? session.messages.length : start + 1 + nextUserOffset;
+      sessions[sessionIndex] = {
+        ...session,
+        messages: [...session.messages.slice(0, start), ...session.messages.slice(end)],
+        updatedAt: this.now().toISOString(),
+      };
+      return true;
+    });
+  }
+
   async clear(): Promise<void> {
     await this.enqueue(async () => {
       await this.storage.remove(SESSION_STORAGE_KEY);

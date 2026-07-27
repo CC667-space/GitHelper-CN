@@ -394,3 +394,14 @@
 - **证据**：新增/扩展 ContextBuilder、Markdown、Phase 5/6/7/9 UI、Panel connection/roundtrip、SessionStore 与 active-session-store 测试；隔离 Chrome E2E 在 GitHub SPA 切换后重载 Panel，`survivedPageSwitch=true`。全量 195 项常规测试通过（另 1 项 live test 默认跳过），typecheck、lint、build 与构建安全扫描通过。
 - **范围**：Phase 11 人工复核内部补丁；不新增 Chrome 权限、Host、Provider 成本、GitHub 写操作或持久数据类别。
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-27
+
+## D-053 仓库分析以受限文件证据为主，问答与会话删除逐次确认
+- **决策**：
+  - 一键分析除原有 API 事实外，使用固定 `api.github.com/repos/{owner}/{repo}/contents` 路径读取根目录、最多 2 个高信号源码目录，并从中选择最多 3 个清单/入口/源码文件。候选文件 API 大小必须 ≤24KB，只解码前 4KB 文本；锁文件、测试/文档/依赖目录和不安全路径不读取，原始片段不持久化。卡片先展示目录、文件路径、角色与确定性内容线索；语言比例降为最多 5 项的次要信息。
+  - 关键文件片段经 sanitizer 后，只作为明确标记的不可信 user 数据交给 Provider；System Prompt 要求用途、入口、安装与难度优先基于实际检查的文件证据，不能只复述仓库简介。私有/无权限页仍在任何 GitHub API 或 Provider 请求前零出站。
+  - Panel 按用户消息把后续 assistant 消息组成一轮问答。问题左侧 `>`/`∨` 只控制该轮回复显隐；回复右侧垃圾桶先展开 `✓`/`×`，仅 `✓` 发送删除。Background 按 user message ID 删除该问题及下一个用户问题前的回复，不影响相邻轮次。
+  - 最近会话目录使用同样的垃圾桶与 `✓`/`×` 二次确认；删除只作用于本地 `sessions:v1`。删除活动会话时同步清除 `storage.session` 活动指针并进入新会话；生成中禁用删除。
+- **理由**：仓库语言和热度元数据不能回答“项目实际如何组成与运行”，而全仓库下载又超出数据最小化和匿名配额边界；少量高信号文件提供可核查证据。逐轮收展与逐次确认删除则在节省空间的同时避免误删整个上下文。
+- **证据**：GitHub API、确定性摘要、Provider Prompt、卡片 UI、SessionStore、Panel 协议/连接/往返与 Phase 5 UI 测试覆盖受限源码目录、锁文件/路径穿越拒绝、相邻轮次不误删、收展隔离和两级确认；隔离 Chrome E2E 断言 `package.json` 与 `src/server.js` 文件证据且 Provider 请求为 0。
+- **范围**：Phase 11 第二轮人工复核内部补丁；不新增 Chrome 权限、Host、GitHub Token/写操作、Provider 调用次数或持久数据类别。
+- 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-27

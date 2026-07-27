@@ -113,6 +113,25 @@ describe('SessionStore', () => {
     expect((await store.listRecent()).map((session) => session.sessionId)).toHaveLength(2);
   });
 
+  it('按用户消息 ID 删除且只删除对应的一轮问答', async () => {
+    const store = new SessionStore(new MemoryArea(), { now: () => NOW });
+    const first = await store.prepare(page(), '第一个问题');
+    await store.appendAssistant(first.session.sessionId, '第一个回答');
+    const second = await store.prepare(page(), '第二个问题');
+    await store.appendAssistant(second.session.sessionId, '第二个回答');
+    const before = await store.get(first.session.sessionId);
+    const firstQuestionId = before?.messages.find(
+      (message) => message.role === 'user' && message.content === '第一个问题',
+    )?.id;
+
+    expect(firstQuestionId).toBeTruthy();
+    expect(await store.deleteExchange(first.session.sessionId, firstQuestionId!)).toBe(true);
+    expect(
+      (await store.get(first.session.sessionId))?.messages.map((message) => message.content),
+    ).toEqual(['第二个问题', '第二个回答']);
+    expect(await store.deleteExchange(first.session.sessionId, firstQuestionId!)).toBe(false);
+  });
+
   it('用户显式选择会话后，跨 GitHub 页面仍继续该会话', async () => {
     const store = new SessionStore(new MemoryArea(), { now: () => NOW });
     const selected = await store.prepare(page(), '原会话问题');

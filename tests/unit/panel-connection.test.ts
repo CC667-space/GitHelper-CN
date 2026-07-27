@@ -117,7 +117,7 @@ describe('Panel connection lifecycle', () => {
     connection.disconnect();
   });
 
-  it('发送显式会话选择、新建和带会话身份的问题', () => {
+  it('发送显式会话选择、新建、删除和带会话身份的问题', () => {
     const fake = createFakePort();
     vi.stubGlobal('chrome', {
       runtime: {
@@ -128,14 +128,25 @@ describe('Panel connection lifecycle', () => {
 
     connection.selectSession?.('session-2');
     connection.newSession?.();
+    connection.deleteTurn?.('session-2', 'question-1');
+    connection.deleteSession?.('session-2');
     connection.send('继续这个主题', 'deepseek', undefined, undefined, 'session-2', false);
 
     expect(fake.postMessage.mock.calls.map(([message]) => message.type)).toEqual([
       'PANEL_SESSION_SELECT',
       'PANEL_SESSION_NEW',
+      'PANEL_TURN_DELETE',
+      'PANEL_SESSION_DELETE',
       'PANEL_MESSAGE',
     ]);
     expect(fake.postMessage.mock.calls[2]?.[0].payload).toEqual({
+      sessionId: 'session-2',
+      userMessageId: 'question-1',
+    });
+    expect(fake.postMessage.mock.calls[3]?.[0].payload).toEqual({
+      sessionId: 'session-2',
+    });
+    expect(fake.postMessage.mock.calls[4]?.[0].payload).toEqual({
       text: '继续这个主题',
       providerId: 'deepseek',
       selectedElement: undefined,

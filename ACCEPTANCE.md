@@ -63,11 +63,13 @@
 - 框选集成链断言充分结构只走文本；不足结构由 Background 裁剪后才携图走视觉；`visionEnabled=false` 时截图/Provider/会话写入均为零
 - 搜索集成链断言 Panel→Background→只读工具→匿名 API→Panel；打开结果只接受 `https://github.com/*`
 - 仓库分析链断言当前 PageContext→core/Provider→固定卡片；私有页面 core/Provider 均零调用；Provider 不能覆盖 API 数字事实
+- 仓库分析读取固定 Contents API 的受限文件样本：最多 2 个源码目录、3 个文件、每文件 4KB 文本；锁文件/路径穿越拒绝，卡片显示实际文件证据且不返回原文
+- 单轮问答收展互不影响；问答删除与 session 删除均须垃圾桶后 `✓/×` 二次确认，`×` 零变更，`✓` 不误删相邻轮次或非目标 session
 
 ### 4. E2E（Playwright，加载扩展，Phase 11）
-- 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片
+- 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片，并显示受限读取的实际关键文件证据
 - SPA 导航后上下文刷新且无重复初始化
-- 会话恢复；切换 GitHub 页面后活动会话仍保留，Panel 重载后继续恢复
+- 会话恢复；切换 GitHub 页面后活动会话仍保留，Panel 重载后继续恢复；逐轮收展及两类确认删除可操作
 
 ### 5. 专项安全测试（Phase 1.5 地基 + Phase 10 加固）
 
@@ -116,7 +118,7 @@
 | 6 | pick 进出、选中结构正确、基于元素回答 |
 | 7 | 框选结构提取、充分不截图/不足时 SW 截图裁剪对齐、visionEnabled 开关、截图不持久保存 |
 | 8 | ≥5 组查询转换正确、仓库/Issue 搜索返回并渲染；core/search/code_search 独立持久化，search 限流零重试且到点恢复，网页/本地 DOM 降级可读 |
-| 9 | ≥3 个真实公开仓库完整卡片、数字来自 DOM/API 事实、Provider structuredOutput 降级、缺字段与匿名 core 限额降级提示正常 |
+| 9 | ≥3 个真实公开仓库完整卡片、数字来自 DOM/API 事实、显示受限关键文件证据、Provider structuredOutput 降级、缺字段与匿名 core 限额降级提示正常 |
 | 10 | 安全客观项全过（含 Scheme 拒绝、import 边界、三种清除）+ 红队记录 ≥10 样例 |
 | 11 | 全测试绿、打包可加载、S1-S5 证据齐全（前置：Phase 6/7/8 已完成）｜ **人工：S1-S5 批量体验复核** |
 

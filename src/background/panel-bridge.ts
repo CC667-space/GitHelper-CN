@@ -20,6 +20,8 @@ import {
   panelSessionStateSchema,
   panelSessionNewSchema,
   panelSessionSelectSchema,
+  panelSessionDeleteSchema,
+  panelTurnDeleteSchema,
   panelAbortSchema,
   PANEL_PORT_NAME,
   panelMessageSchema,
@@ -92,6 +94,8 @@ export interface PanelBridgeDependencies {
   changeSession?(
     action: { kind: 'select'; sessionId: string } | { kind: 'new' },
   ): Promise<PanelSessionState>;
+  deleteTurn?(sessionId: string, userMessageId: string): Promise<PanelSessionState>;
+  deleteSession?(sessionId: string): Promise<PanelSessionState>;
   loadPreferences?(): Promise<UserPreferences>;
   saveAssistant?(sessionId: string, content: string): Promise<void>;
   startPick?(signal: AbortSignal): Promise<PickOutcome>;
@@ -156,6 +160,36 @@ export class PanelBridge {
           source: 'extension',
           payloadSchema: panelSessionNewSchema,
           handler: async () => await this.handleSessionChange({ kind: 'new' }),
+        },
+        PANEL_TURN_DELETE: {
+          source: 'extension',
+          payloadSchema: panelTurnDeleteSchema,
+          handler: async (payload) => {
+            if (!this.dependencies.deleteTurn || !this.dependencies.emitSessionState) {
+              throw new Error('问答删除能力尚未注册');
+            }
+            const { sessionId, userMessageId } = panelTurnDeleteSchema.parse(payload);
+            const state = panelSessionStateSchema.parse(
+              await this.dependencies.deleteTurn(sessionId, userMessageId),
+            );
+            this.dependencies.emitSessionState(state);
+            return { deleted: true };
+          },
+        },
+        PANEL_SESSION_DELETE: {
+          source: 'extension',
+          payloadSchema: panelSessionDeleteSchema,
+          handler: async (payload) => {
+            if (!this.dependencies.deleteSession || !this.dependencies.emitSessionState) {
+              throw new Error('会话删除能力尚未注册');
+            }
+            const { sessionId } = panelSessionDeleteSchema.parse(payload);
+            const state = panelSessionStateSchema.parse(
+              await this.dependencies.deleteSession(sessionId),
+            );
+            this.dependencies.emitSessionState(state);
+            return { deleted: true };
+          },
         },
         PANEL_PICK_START: {
           source: 'extension',
@@ -628,6 +662,27 @@ export function registerPanelPortBridge(
         }
         await activeSession.write(session.sessionId);
         return await panelState(session, 'select');
+      },
+      deleteTurn: async (sessionId, userMessageId) => {
+        if (!(await sessions.deleteExchange(sessionId, userMessageId))) {
+          throw new Error('要删除的问答不存在或已过期');
+        }
+        return await panelState(await sessions.get(sessionId), 'update');
+      },
+      deleteSession: async (sessionId) => {
+        if (!(await sessions.delete(sessionId))) {
+          throw new Error('要删除的会话不存在或已过期');
+        }
+        const activeSessionId = await activeSession.read();
+        if (activeSessionId === sessionId) {
+          await activeSession.clear();
+          return await panelState(undefined, 'new');
+        }
+        const current = activeSessionId ? await sessions.get(activeSessionId) : undefined;
+        if (activeSessionId && !current) {
+          await activeSession.clear();
+        }
+        return await panelState(current, current ? 'update' : 'new');
       },
       saveAssistant: async (sessionId, content) => {
         await sessions.appendAssistant(sessionId, content);

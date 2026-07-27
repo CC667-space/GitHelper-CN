@@ -31,6 +31,8 @@ export interface PanelConnection {
   abort(requestId: string): void;
   selectSession?(sessionId: string): void;
   newSession?(): void;
+  deleteTurn?(sessionId: string, userMessageId: string): void;
+  deleteSession?(sessionId: string): void;
   startPick?(): void;
   cancelPick?(): void;
   startRegion?(): void;
@@ -178,6 +180,12 @@ export function connectPanel(
     },
     newSession() {
       activePort?.postMessage(createEnvelope('PANEL_SESSION_NEW', {}));
+    },
+    deleteTurn(sessionId, userMessageId) {
+      activePort?.postMessage(createEnvelope('PANEL_TURN_DELETE', { sessionId, userMessageId }));
+    },
+    deleteSession(sessionId) {
+      activePort?.postMessage(createEnvelope('PANEL_SESSION_DELETE', { sessionId }));
     },
     startPick() {
       activePort?.postMessage(createEnvelope('PANEL_PICK_START', {}));

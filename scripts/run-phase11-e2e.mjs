@@ -168,6 +168,71 @@ try {
       });
       return;
     }
+    if (path === '/repos/octocat/Hello-World/contents?ref=main') {
+      const packageJson = '{"name":"hello-world","scripts":{"start":"node src/server.js"}}';
+      await route.fulfill({
+        status: 200,
+        headers: apiHeaders(),
+        body: JSON.stringify([
+          { name: 'src', path: 'src', type: 'dir', size: 0, sha: 'src-sha' },
+          {
+            name: 'package.json',
+            path: 'package.json',
+            type: 'file',
+            size: packageJson.length,
+            sha: 'package-sha',
+          },
+        ]),
+      });
+      return;
+    }
+    if (path === '/repos/octocat/Hello-World/contents/src?ref=main') {
+      const serverSource = 'export function startServer() { return "hello"; }';
+      await route.fulfill({
+        status: 200,
+        headers: apiHeaders(),
+        body: JSON.stringify([
+          {
+            name: 'server.js',
+            path: 'src/server.js',
+            type: 'file',
+            size: serverSource.length,
+            sha: 'server-sha',
+          },
+        ]),
+      });
+      return;
+    }
+    if (path === '/repos/octocat/Hello-World/contents/package.json?ref=main') {
+      const packageJson = '{"name":"hello-world","scripts":{"start":"node src/server.js"}}';
+      await route.fulfill({
+        status: 200,
+        headers: apiHeaders(),
+        body: JSON.stringify({
+          type: 'file',
+          path: 'package.json',
+          size: packageJson.length,
+          encoding: 'base64',
+          content: Buffer.from(packageJson, 'utf8').toString('base64'),
+        }),
+      });
+      return;
+    }
+    if (path === '/repos/octocat/Hello-World/contents/src/server.js?ref=main') {
+      const serverSource = 'export function startServer() { return "hello"; }';
+      await route.fulfill({
+        status: 200,
+        headers: apiHeaders(),
+        body: JSON.stringify({
+          type: 'file',
+          path: 'src/server.js',
+          size: serverSource.length,
+          encoding: 'base64',
+          content: Buffer.from(serverSource, 'utf8').toString('base64'),
+        }),
+      });
+      return;
+    }
     await route.fulfill({
       status: 404,
       headers: apiHeaders(),
@@ -223,6 +288,9 @@ try {
   assert(analysisText.includes('octocat/Hello-World'), 'E2E 分析卡缺少仓库名');
   assert(analysisText.includes('2,800'), 'E2E 分析卡缺少 API Star 事实');
   assert(analysisText.includes('MIT'), 'E2E 分析卡缺少 API 许可证事实');
+  assert(analysisText.includes('项目文件洞察'), 'E2E 分析卡缺少项目文件洞察');
+  assert(analysisText.includes('package.json'), 'E2E 分析卡缺少实际 package.json 证据');
+  assert(analysisText.includes('src/server.js'), 'E2E 分析卡缺少受限源码文件证据');
 
   const issueBody = issueFixture.match(/<body>([\s\S]*?)<\/body>/iu)?.[1];
   assert(issueBody, 'Issue fixture 缺少 body');
@@ -310,6 +378,7 @@ try {
       s1RepositoryAnalysis: {
         repository: 'octocat/Hello-World',
         apiFacts: ['stars', 'license', 'release', 'openPullRequests'],
+        fileEvidence: ['package.json', 'src/server.js'],
       },
       spa: {
         pageType: spaContext.pageType,

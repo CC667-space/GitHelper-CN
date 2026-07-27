@@ -235,6 +235,12 @@ describe('GitHubApiClient', () => {
             Link: '<https://api.github.com/repositories/10270250/pulls?state=open&per_page=1&page=75>; rel="last"',
           },
         }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: coreHeaders,
+        }),
       );
     const setup = dependencies(fetchMock);
     const client = new GitHubApiClient(setup.dependencies);
@@ -252,7 +258,152 @@ describe('GitHubApiClient', () => {
       openPullRequests: 75,
     });
     expect(second).toEqual(first);
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it('从固定 GitHub contents 路径读取根目录、受限源码目录与最多三个高信号文件内容', async () => {
+    const coreHeaders = {
+      'Content-Type': 'application/json',
+      'X-RateLimit-Resource': 'core',
+      'X-RateLimit-Remaining': '50',
+    };
+    const details = {
+      full_name: 'example/real-files',
+      html_url: 'https://github.com/example/real-files',
+      description: 'A real project',
+      topics: [],
+      default_branch: 'main',
+      language: 'TypeScript',
+      stargazers_count: 10,
+      forks_count: 2,
+      watchers_count: 3,
+      open_issues_count: 1,
+      archived: false,
+      license: { name: 'MIT License', spdx_id: 'MIT' },
+      pushed_at: '2026-07-23T00:00:00.000Z',
+      updated_at: '2026-07-24T00:00:00.000Z',
+    };
+    const packageJson = JSON.stringify({
+      name: 'real-files',
+      scripts: { build: 'vite build', test: 'vitest run' },
+    });
+    const mainSource = 'export function startServer() { return createServer(); }';
+    const base64 = (value: string) => Buffer.from(value, 'utf8').toString('base64');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(details), { status: 200, headers: coreHeaders }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ TypeScript: 100 }), { status: 200, headers: coreHeaders }),
+      )
+      .mockResolvedValueOnce(new Response('{}', { status: 404, headers: coreHeaders }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([]), { status: 200, headers: coreHeaders }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            {
+              name: 'hermes_cli',
+              path: 'hermes_cli',
+              type: 'dir',
+              size: 0,
+              sha: 'dir-sha',
+            },
+            {
+              name: 'package.json',
+              path: 'package.json',
+              type: 'file',
+              size: packageJson.length,
+              sha: 'package-sha',
+            },
+            {
+              name: 'pnpm-lock.yaml',
+              path: 'pnpm-lock.yaml',
+              type: 'file',
+              size: 20_000,
+              sha: 'lock-sha',
+            },
+            {
+              name: 'escape.ts',
+              path: '../issues',
+              type: 'file',
+              size: 20,
+              sha: 'escape-sha',
+            },
+          ]),
+          { status: 200, headers: coreHeaders },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            {
+              name: 'server.ts',
+              path: 'hermes_cli/server.ts',
+              type: 'file',
+              size: mainSource.length,
+              sha: 'server-sha',
+            },
+          ]),
+          { status: 200, headers: coreHeaders },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            type: 'file',
+            path: 'package.json',
+            size: packageJson.length,
+            encoding: 'base64',
+            content: base64(packageJson),
+          }),
+          { status: 200, headers: coreHeaders },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            type: 'file',
+            path: 'hermes_cli/server.ts',
+            size: mainSource.length,
+            encoding: 'base64',
+            content: base64(mainSource),
+          }),
+          { status: 200, headers: coreHeaders },
+        ),
+      );
+    const setup = dependencies(fetchMock);
+    const client = new GitHubApiClient(setup.dependencies);
+
+    const result = await client.getRepositoryBundle(
+      'example/real-files',
+      new AbortController().signal,
+    );
+
+    expect(result.fileSnapshot).toEqual({
+      directories: ['hermes_cli'],
+      inspectedFiles: [
+        { path: 'package.json', content: packageJson },
+        { path: 'hermes_cli/server.ts', content: mainSource },
+      ],
+      truncated: true,
+    });
+    const urls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(urls).toContain('https://api.github.com/repos/example/real-files/contents?ref=main');
+    expect(urls).toContain(
+      'https://api.github.com/repos/example/real-files/contents/package.json?ref=main',
+    );
+    expect(urls).toContain(
+      'https://api.github.com/repos/example/real-files/contents/hermes_cli?ref=main',
+    );
+    expect(urls).toContain(
+      'https://api.github.com/repos/example/real-files/contents/hermes_cli/server.ts?ref=main',
+    );
+    expect(urls.some((url) => url.includes('pnpm-lock.yaml'))).toBe(false);
+    expect(urls.some((url) => url.includes('../issues'))).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(8);
   });
 
   it('仓库没有 Release 时返回缺字段而非失败', async () => {
@@ -277,6 +428,7 @@ describe('GitHubApiClient', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify(details), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }))
       .mockResolvedValueOnce(new Response('{}', { status: 404 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
     const setup = dependencies(fetchMock);
     const client = new GitHubApiClient(setup.dependencies);

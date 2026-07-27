@@ -15,6 +15,16 @@ function facts(): RepositoryAnalysisFacts {
     languages: [{ name: 'JavaScript', percent: 100 }],
     detectedPlatforms: ['Web/Browser'],
     installCommands: ['npm install react'],
+    fileSnapshot: {
+      directories: ['packages'],
+      inspectedFiles: [
+        {
+          path: 'package.json',
+          content: '{"name":"react","scripts":{"test":"yarn test"}}',
+        },
+      ],
+      truncated: true,
+    },
     stars: 240_000,
   };
 }
@@ -114,6 +124,10 @@ describe('ProviderRuntime repository structured analysis', () => {
       responseFormat: { type: 'json_object' },
     });
     expect(chat.mock.calls[0]?.[0].messages[0]?.content).toContain('不得输出或改写 Star');
+    expect(chat.mock.calls[0]?.[0].messages[0]?.content).toContain('实际检查的关键文件');
+    expect(chat.mock.calls[0]?.[0].messages[1]?.content).toContain(
+      '"content":"{\\"name\\":\\"react\\",\\"scripts\\":{\\"test\\":\\"yarn test\\"}}"',
+    );
   });
 
   it('能力未验证时用 Prompt+zod，非法 JSON 只重试一次后成功', async () => {

@@ -96,6 +96,17 @@ export const panelSessionSelectSchema = z
   })
   .strict();
 export const panelSessionNewSchema = z.object({}).strict();
+export const panelTurnDeleteSchema = z
+  .object({
+    sessionId: z.string().min(1).max(128),
+    userMessageId: z.string().min(1).max(128),
+  })
+  .strict();
+export const panelSessionDeleteSchema = z
+  .object({
+    sessionId: z.string().min(1).max(128),
+  })
+  .strict();
 
 export const pageInfoRequestSchema = z.object({}).strict();
 export const panelPickStartSchema = z.object({}).strict();
