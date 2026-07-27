@@ -410,46 +410,53 @@ export function PanelApp({
                   </button>
                 </div>
 
-                <dl className="grid grid-cols-2 gap-2">
-                  <div className="rounded bg-white p-2">
-                    <dt className="text-slate-500">Star / Fork / Watch</dt>
-                    <dd className="mt-1 font-medium">
-                      {displayCount(analysisCard.popularity.stars)} /{' '}
-                      {displayCount(analysisCard.popularity.forks)} /{' '}
-                      {displayCount(analysisCard.popularity.watchers)}
-                    </dd>
+                <section
+                  className="rounded border border-emerald-100 bg-white p-2"
+                  data-testid="repository-quick-scan"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-medium">README 速览</h4>
+                    <span className="text-[11px] text-slate-500">
+                      {analysisCard.quickScan.source === 'readme'
+                        ? '来自受限 README 片段'
+                        : analysisCard.quickScan.source === 'description'
+                          ? 'README 未取得，使用仓库简介'
+                          : '可用资料有限'}
+                    </span>
                   </div>
-                  <div className="rounded bg-white p-2">
-                    <dt className="text-slate-500">开放 Issue / PR</dt>
-                    <dd className="mt-1 font-medium">
-                      {displayCount(analysisCard.issuesAndPullRequests.openIssues)} /{' '}
-                      {displayCount(analysisCard.issuesAndPullRequests.openPullRequests)}
-                    </dd>
-                  </div>
-                  <div className="rounded bg-white p-2">
-                    <dt className="text-slate-500">最后推送</dt>
-                    <dd className="mt-1 font-medium">
-                      {displayDate(analysisCard.activity.pushedAt)}
-                    </dd>
-                  </div>
-                  <div className="rounded bg-white p-2">
-                    <dt className="text-slate-500">归档 / 许可证</dt>
-                    <dd className="mt-1 font-medium">
-                      {analysisCard.archived === null
-                        ? '归档状态未知'
-                        : analysisCard.archived
-                          ? '已归档'
-                          : '未归档'}
-                      {' · '}
-                      {analysisCard.license?.spdxId ?? analysisCard.license?.name ?? '未获取'}
-                    </dd>
-                  </div>
-                </dl>
+                  <p className="mt-1 whitespace-pre-wrap text-slate-700">
+                    {analysisCard.quickScan.readmeSummary}
+                  </p>
+                </section>
 
                 <section className="rounded bg-white p-2">
-                  <h4 className="font-medium">项目文件洞察</h4>
+                  <h4 className="font-medium">主要功能</h4>
+                  {analysisCard.quickScan.features.length ? (
+                    <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                      {analysisCard.quickScan.features.map((feature, index) => (
+                        <li key={`${index}:${feature.slice(0, 40)}`}>{feature}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-1 text-slate-500">未从受限 README 片段识别出明确功能清单</p>
+                  )}
+                </section>
+
+                <section className="rounded bg-white p-2">
+                  <h4 className="font-medium">文件、配置与实现</h4>
+                  {analysisCard.quickScan.configuration.length ? (
+                    <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                      {analysisCard.quickScan.configuration.map((item, index) => (
+                        <li className="break-words" key={`${index}:${item.slice(0, 40)}`}>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-1 text-slate-500">未识别出可靠配置线索</p>
+                  )}
                   {analysisCard.structure.directories.length ? (
-                    <p className="mt-1 break-words text-slate-600">
+                    <p className="mt-2 break-words text-slate-600">
                       目录：{analysisCard.structure.directories.join(' · ')}
                     </p>
                   ) : null}
@@ -470,8 +477,20 @@ export function PanelApp({
                       ))}
                     </ul>
                   ) : (
-                    <p className="mt-1 text-slate-500">未获取关键文件内容</p>
+                    <p className="mt-2 text-slate-500">未获取关键文件内容</p>
                   )}
+                  {analysisCard.quickScan.implementation.length ? (
+                    <>
+                      <p className="mt-2 font-medium text-slate-700">简单实现分析</p>
+                      <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                        {analysisCard.quickScan.implementation.map((item, index) => (
+                          <li className="break-words" key={`${index}:${item.slice(0, 40)}`}>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : null}
                   {analysisCard.structure.truncated ? (
                     <p className="mt-2 text-slate-500">
                       这里只展示受限样本，未读取的目录和文件不能据此推断。
@@ -479,32 +498,9 @@ export function PanelApp({
                   ) : null}
                 </section>
 
-                <section>
-                  <h4 className="font-medium">主要语言（最多 5 项）</h4>
-                  {analysisCard.languages.length ? (
-                    <ul className="mt-1 space-y-1">
-                      {analysisCard.languages.map((language) => (
-                        <li className="flex justify-between gap-2" key={language.name}>
-                          <span>{language.name}</span>
-                          <span>{language.percent.toFixed(1)}%</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="mt-1 text-slate-500">未获取语言数据</p>
-                  )}
-                </section>
-
-                <section>
-                  <h4 className="font-medium">平台</h4>
-                  <p className="mt-1 text-slate-600">
-                    {analysisCard.platforms.join(' / ') || '未可靠识别'}
-                  </p>
-                </section>
-
-                <section>
+                <section className="rounded bg-white p-2">
                   <h4 className="font-medium">
-                    安装
+                    安装与运行
                     <span className="ml-1 font-normal text-slate-500">
                       （
                       {analysisCard.installation.source === 'readme'
@@ -525,18 +521,6 @@ export function PanelApp({
                     </ol>
                   ) : (
                     <p className="mt-1 text-slate-500">未找到可靠安装步骤</p>
-                  )}
-                </section>
-
-                <section className="rounded bg-white p-2">
-                  <h4 className="font-medium">最新 Release</h4>
-                  {analysisCard.release ? (
-                    <p className="mt-1 text-slate-600">
-                      {analysisCard.release.name} ({analysisCard.release.tag}) ·{' '}
-                      {displayDate(analysisCard.release.publishedAt)}
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-slate-500">未找到正式 Release</p>
                   )}
                 </section>
 
@@ -569,11 +553,92 @@ export function PanelApp({
                   </ol>
                 </section>
 
-                <p className="text-slate-500">
-                  数据源：DOM {analysisCard.sources.dom ? '✓' : '—'} · GitHub API{' '}
-                  {analysisCard.sources.githubApi ? '✓' : '—'} · Provider{' '}
-                  {analysisCard.sources.provider ? '✓' : '—'}
-                </p>
+                <details
+                  className="rounded border border-slate-200 bg-slate-50 px-2 py-1"
+                  data-testid="repository-facts"
+                >
+                  <summary className="cursor-pointer py-1 font-medium text-slate-700">
+                    仓库事实（Star、语言、Release 等）
+                  </summary>
+                  <div className="space-y-3 border-t border-slate-200 py-2">
+                    <dl className="grid grid-cols-2 gap-2">
+                      <div className="rounded bg-white p-2">
+                        <dt className="text-slate-500">Star / Fork / Watch</dt>
+                        <dd className="mt-1 font-medium">
+                          {displayCount(analysisCard.popularity.stars)} /{' '}
+                          {displayCount(analysisCard.popularity.forks)} /{' '}
+                          {displayCount(analysisCard.popularity.watchers)}
+                        </dd>
+                      </div>
+                      <div className="rounded bg-white p-2">
+                        <dt className="text-slate-500">开放 Issue / PR</dt>
+                        <dd className="mt-1 font-medium">
+                          {displayCount(analysisCard.issuesAndPullRequests.openIssues)} /{' '}
+                          {displayCount(analysisCard.issuesAndPullRequests.openPullRequests)}
+                        </dd>
+                      </div>
+                      <div className="rounded bg-white p-2">
+                        <dt className="text-slate-500">最后推送</dt>
+                        <dd className="mt-1 font-medium">
+                          {displayDate(analysisCard.activity.pushedAt)}
+                        </dd>
+                      </div>
+                      <div className="rounded bg-white p-2">
+                        <dt className="text-slate-500">归档 / 许可证</dt>
+                        <dd className="mt-1 font-medium">
+                          {analysisCard.archived === null
+                            ? '归档状态未知'
+                            : analysisCard.archived
+                              ? '已归档'
+                              : '未归档'}
+                          {' · '}
+                          {analysisCard.license?.spdxId ?? analysisCard.license?.name ?? '未获取'}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <section>
+                      <h5 className="font-medium">主要语言（最多 5 项）</h5>
+                      {analysisCard.languages.length ? (
+                        <ul className="mt-1 space-y-1">
+                          {analysisCard.languages.map((language) => (
+                            <li className="flex justify-between gap-2" key={language.name}>
+                              <span>{language.name}</span>
+                              <span>{language.percent.toFixed(1)}%</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-1 text-slate-500">未获取语言数据</p>
+                      )}
+                    </section>
+
+                    <section>
+                      <h5 className="font-medium">平台</h5>
+                      <p className="mt-1 text-slate-600">
+                        {analysisCard.platforms.join(' / ') || '未可靠识别'}
+                      </p>
+                    </section>
+
+                    <section className="rounded bg-white p-2">
+                      <h5 className="font-medium">最新 Release</h5>
+                      {analysisCard.release ? (
+                        <p className="mt-1 text-slate-600">
+                          {analysisCard.release.name} ({analysisCard.release.tag}) ·{' '}
+                          {displayDate(analysisCard.release.publishedAt)}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-slate-500">未找到正式 Release</p>
+                      )}
+                    </section>
+
+                    <p className="text-slate-500">
+                      数据源：DOM {analysisCard.sources.dom ? '✓' : '—'} · GitHub API{' '}
+                      {analysisCard.sources.githubApi ? '✓' : '—'} · Provider{' '}
+                      {analysisCard.sources.provider ? '✓' : '—'}
+                    </p>
+                  </div>
+                </details>
                 {analysisCard.degradedNotice ? (
                   <p className="rounded bg-amber-50 p-2 text-amber-900">
                     {analysisCard.degradedNotice}

@@ -1,8 +1,8 @@
 # Phase 11 自动验收证据
 
-> 日期：2026-07-27
+> 日期：2026-07-28
 >
-> 状态：自动验收及前两轮人工问题补丁已通过；真实 Chrome 的 S1–S5 批量体验复核仍待用户完成。
+> 状态：自动验收及前三轮人工问题补丁已通过；真实 Chrome 的 S1–S5 批量体验复核仍待用户完成。
 
 ## 自动门禁
 
@@ -11,10 +11,10 @@
 | Vitest                   | 45 个文件通过、1 个 opt-in live 文件默认跳过；201 项通过、1 项跳过                                                                                         |
 | TypeScript               | `pnpm typecheck` 通过                                                                                                                                      |
 | ESLint                   | `pnpm lint` 通过                                                                                                                                           |
-| Production build         | `pnpm build` 通过，405 modules transformed                                                                                                                 |
+| Production build         | `pnpm build` 通过，406 modules transformed                                                                                                                 |
 | Build safety             | `pnpm scan:build` 通过；无 eval/new Function/远程运行时脚本                                                                                                |
 | Playwright extension E2E | 通过；Chrome for Testing 149，隔离临时 profile，Provider 请求 0                                                                                            |
-| Package                  | `artifacts\GitHelper-CN-v0.1.0.zip`，13 entries，根目录 `manifest.json` 已校验；SHA-256 `832582c809215a0b54cd13833eadef4303e8d67d296b7c255a685a11c89a26b1` |
+| Package                  | `artifacts\GitHelper-CN-v0.1.0.zip`，13 entries，根目录 `manifest.json` 已校验；SHA-256 `c579144a4d6800fabb5cfcb12efa4ac79e5d6e89184bb9db409fa357cee1394a` |
 
 Phase 9 的三仓库匿名 live test 默认不进入常规 `pnpm test`，但已在 Phase 9 独立真实运行通过，证据见 `scripts/phase9-live-evidence.md`。
 
@@ -37,7 +37,9 @@ pnpm test:e2e
   "s1RepositoryAnalysis": {
     "repository": "octocat/Hello-World",
     "apiFacts": ["stars", "license", "release", "openPullRequests"],
-    "fileEvidence": ["package.json", "src/server.js"]
+    "fileEvidence": ["README.md", "package.json", "src/server.js"],
+    "defaultVisible": ["readmeSummary", "features", "configuration", "implementation"],
+    "factsDefaultExpanded": false
   },
   "spa": {
     "pageType": "issue",
@@ -65,7 +67,7 @@ pnpm test:e2e
 
 | 成功标准            | 自动证据                                                                                                                                                                                                                                    | 结论                                                                                           |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| S1 公开仓库一键分析 | `tests/unit/github-api.test.ts`、`tests/unit/repository-analysis.test.ts`、`tests/unit/repository-provider.test.ts`、`tests/integration/panel-roundtrip.test.ts`、`tests/unit/phase9-ui.test.tsx`、`tests/integration/public-repository-analysis.live.test.ts`、Phase 11 E2E | 三个真实公开仓库已在 Phase 9 通过；受限目录/文件读取、锁文件/路径拒绝与文件证据卡片全过；E2E 显示 `package.json` / `src/server.js` |
+| S1 公开仓库一键分析 | `tests/unit/github-api.test.ts`、`tests/unit/repository-analysis.test.ts`、`tests/unit/repository-provider.test.ts`、`tests/integration/panel-roundtrip.test.ts`、`tests/unit/phase9-ui.test.tsx`、`tests/integration/public-repository-analysis.live.test.ts`、Phase 11 E2E | 三个真实公开仓库已在 Phase 9 通过；README 优先、受限目录/文件、锁文件/路径拒绝与本地降级全过；E2E 默认显示 README/功能/配置/实现及 `package.json` / `src/server.js`，事实区默认关闭且展开后数字可见 |
 | S2 点击/框选提问    | `tests/unit/pick.test.ts`、`tests/unit/region.test.ts`、`tests/unit/capture.test.ts`、`tests/integration/panel-roundtrip.test.ts`、Phase 6/7 UI 测试                                                                                        | 点击结构、框选结构、文本/视觉分路、错页与偏好护栏全过；选择后下一步 CTA 可聚焦输入框             |
 | S3 NL→搜索          | `tests/unit/search-query.test.ts`、`tests/unit/search-executor.test.ts`、`tests/unit/github-api.test.ts`、Phase 8 UI/集成测试                                                                                                               | 7 组转换（≥5），仓库/Issue 结果、限流零重试和 DOM/网页降级全过                                 |
 | S4 会话保存恢复     | `tests/unit/session-store.test.ts`、`tests/unit/active-session-store.test.ts`、`tests/unit/panel-connection.test.ts`、Phase 5 UI/集成测试、Phase 11 E2E                                                                                       | CRUD、显式选择/新建、逐轮收展、问答/session 二次确认删除、活动指针、过期/容量淘汰、断线重连、跨页面与 Panel 重载恢复全过 |
@@ -73,4 +75,4 @@ pnpm test:e2e
 
 ## 人工复核入口
 
-加载最新 `dist/`，按 `docs/USER_GUIDE.md` 第 9 节依次完成 S1–S5，并复核实际文件洞察、逐轮折叠、两类 `🗑 → ✓/×`、精炼回答、代码块与选择后 CTA。S5 只使用测试哨兵，禁止粘贴真实 Key。
+加载最新 `dist/`，按 `docs/USER_GUIDE.md` 第 9 节依次完成 S1–S5，并复核 README/功能/配置/实现速览、仓库事实默认折叠、逐轮折叠、两类 `🗑 → ✓/×`、精炼回答、代码块与选择后 CTA。S5 只使用测试哨兵，禁止粘贴真实 Key。

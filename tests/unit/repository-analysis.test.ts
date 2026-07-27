@@ -169,13 +169,40 @@ describe('RepositoryAnalysisExecutor', () => {
       }),
     );
     const card = await executor.analyze({
-      page: page('react/react', 'npm install react'),
+      page: page(
+        'react/react',
+        [
+          '# React',
+          '',
+          'A library for building component-based user interfaces.',
+          '',
+          '## Features',
+          '',
+          '- Build interfaces from reusable components',
+          '- Render on web and native platforms',
+          '',
+          '## Installation',
+          '',
+          'npm install react',
+        ].join('\n'),
+      ),
       signal: new AbortController().signal,
       now: new Date('2026-07-24T00:00:00.000Z'),
     });
 
     expect(card.popularity.stars).toBe(12_345);
     expect(card.sources.provider).toBe(false);
+    expect(card.quickScan).toMatchObject({
+      source: 'readme',
+      readmeSummary: expect.stringMatching(/library.*component-based/iu),
+      features: expect.arrayContaining([
+        expect.stringMatching(/reusable components/iu),
+        expect.stringMatching(/web and native/iu),
+      ]),
+    });
+    expect(card.quickScan.configuration).toEqual(
+      expect.arrayContaining([expect.stringMatching(/npm install react/iu)]),
+    );
     expect(card.degradedNotice).toContain('本地确定性说明');
   });
 
@@ -202,6 +229,18 @@ describe('RepositoryAnalysisExecutor', () => {
         directories: ['src', 'tests', 'scripts'],
         truncated: false,
         inspectedFiles: [
+          {
+            path: 'README.md',
+            content: [
+              '# real-files',
+              '',
+              'A toolkit for inspecting actual project files.',
+              '',
+              '## Features',
+              '',
+              '- Reads bounded configuration evidence',
+            ].join('\n'),
+          },
           {
             path: 'package.json',
             content: JSON.stringify({
@@ -250,6 +289,18 @@ describe('RepositoryAnalysisExecutor', () => {
           findings: expect.arrayContaining([expect.stringMatching(/startApp/u)]),
         }),
       ]),
+    );
+    expect(card.quickScan.configuration).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/package\.json.*build.*test/iu),
+        expect.stringMatching(/package\.json.*react.*zod/iu),
+      ]),
+    );
+    expect(card.quickScan.implementation).toEqual(
+      expect.arrayContaining([expect.stringMatching(/src\/main\.ts.*startApp/iu)]),
+    );
+    expect(card.quickScan.features).toEqual(
+      expect.arrayContaining([expect.stringMatching(/bounded configuration evidence/iu)]),
     );
     expect(card.languages.length).toBeLessThanOrEqual(5);
   });

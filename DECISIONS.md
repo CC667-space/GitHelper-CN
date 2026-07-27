@@ -405,3 +405,13 @@
 - **证据**：GitHub API、确定性摘要、Provider Prompt、卡片 UI、SessionStore、Panel 协议/连接/往返与 Phase 5 UI 测试覆盖受限源码目录、锁文件/路径穿越拒绝、相邻轮次不误删、收展隔离和两级确认；隔离 Chrome E2E 断言 `package.json` 与 `src/server.js` 文件证据且 Provider 请求为 0。
 - **范围**：Phase 11 第二轮人工复核内部补丁；不新增 Chrome 权限、Host、GitHub Token/写操作、Provider 调用次数或持久数据类别。
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-27
+
+## D-054 仓库分析默认展示 README 项目速览，事实元数据折叠
+- **决策**：
+  - README 在 D-053 既有“最多 3 文件、单文件 ≤24KB、文本 ≤4KB”配额内获得最高选择优先级；不增加目录深度、文件数或正文量。Contents API 与 DOM 同时提供 README 时，优先使用路径、大小和响应身份均经 Background 校验的 API 片段。
+  - `RepositoryAnalysisCard` 增加固定 `quickScan`：README 概括、主要功能、配置/运行、简单实现线索及来源。Provider Prompt 要求用简练中文生成这些字段；为兼容 Provider 漏字段或非法 JSON，本地仍从 Markdown 首段/功能章节、README 安装命令、清单脚本/依赖、目录和入口定义生成确定性降级。
+  - Panel 默认先展示 README 速览、功能和文件/配置/实现；Star/Fork/Watch、Issue/PR、最后推送、许可证、语言、平台和 Release 集中放入默认关闭的“仓库事实”原生 `details`。事实来源与写入权仍遵守 D-048，不由 Provider 改写。
+- **理由**：热度和语言比例不能帮助用户快速判断“这是什么、能做什么、如何使用、怎样组织”；README 与受限关键文件能更直接满足速览需求。把事实元数据保留但默认折叠，可降低首屏噪声而不损失可核查信息。
+- **证据**：GitHub API 测试断言 README 在 3 文件上限内优先且仍只读受限内容；分析器测试覆盖 API README 优先、功能/配置/实现本地降级；Panel 测试断言速览默认显示、事实区默认关闭并可展开；隔离 Chrome E2E 同时验证 README 功能证据、`package.json`/`src/server.js` 证据及展开后的 Star/许可证，Provider 请求为 0。
+- **范围**：Phase 11 第三轮人工复核内部补丁；不新增 Chrome 权限、Host、GitHub Token/写操作、Provider 调用次数、文件预算或持久数据类别。
+- 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28

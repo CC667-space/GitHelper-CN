@@ -5,6 +5,10 @@ import { githubWebUrlSchema } from './github-search';
 export const repositoryInsightsSchema = z
   .object({
     purpose: z.string().min(1).max(1_000),
+    readmeSummary: z.string().min(1).max(1_000).optional(),
+    features: z.array(z.string().min(1).max(300)).max(6).optional(),
+    configuration: z.array(z.string().min(1).max(300)).max(6).optional(),
+    implementationNotes: z.array(z.string().min(1).max(300)).max(6).optional(),
     platforms: z.array(z.string().min(1).max(100)).max(8),
     installation: z.array(z.string().min(1).max(500)).max(8),
     difficulty: z
@@ -23,6 +27,15 @@ export const repositoryAnalysisCardSchema = z
     repository: z.string().min(1).max(500),
     url: githubWebUrlSchema,
     purpose: z.string().min(1).max(1_000),
+    quickScan: z
+      .object({
+        readmeSummary: z.string().min(1).max(1_000),
+        features: z.array(z.string().min(1).max(300)).max(6),
+        configuration: z.array(z.string().min(1).max(300)).max(6),
+        implementation: z.array(z.string().min(1).max(300)).max(6),
+        source: z.enum(['readme', 'description', 'limited']),
+      })
+      .strict(),
     languages: z
       .array(
         z

@@ -11,6 +11,7 @@ import {
   type RepositoryFileSnapshot,
 } from './github-api';
 import { assertPublicContext } from './outbound-policy';
+import { buildRepositoryQuickScan } from './repository-quick-scan';
 
 export interface RepositoryAnalysisFacts {
   repository: string;
@@ -106,6 +107,9 @@ function languagePercentages(
 
 function fileRole(path: string): string {
   const lower = path.toLowerCase();
+  if (/(^|\/)readme(?:\.[a-z0-9_-]+)?\.(?:md|mdx|rst|txt)$/u.test(lower)) {
+    return '项目说明';
+  }
   if (
     /(^|\/)(package\.json|pyproject\.toml|cargo\.toml|go\.mod|pom\.xml|build\.gradle(?:\.kts)?|requirements[^/]*\.txt)$/u.test(
       lower,
@@ -196,6 +200,25 @@ function sourceFindings(content: string): string[] {
   return findings;
 }
 
+function markdownFindings(content: string): string[] {
+  const headings = [...content.matchAll(/^#{1,6}\s+(.+?)\s*#*\s*$/gmu)]
+    .map((match) => match[1]?.trim())
+    .filter((heading): heading is string => Boolean(heading))
+    .slice(0, 6);
+  const findings: string[] = [];
+  if (headings.length) {
+    findings.push(`章节：${headings.join('、')}`);
+  }
+  const intro = content
+    .split(/\r?\n\s*\r?\n/gu)
+    .map((block) => block.replace(/\s+/gu, ' ').trim())
+    .find((block) => block.length >= 20 && !/^#|^!\[/u.test(block));
+  if (intro) {
+    findings.push(`简介：${intro.replace(/[*_~`]+/gu, '').slice(0, 140)}`);
+  }
+  return findings;
+}
+
 function summarizeStructure(snapshot?: RepositoryFileSnapshot): {
   directories: string[];
   keyFiles: Array<{ path: string; role: string; findings: string[] }>;
@@ -207,9 +230,12 @@ function summarizeStructure(snapshot?: RepositoryFileSnapshot): {
   return {
     directories: snapshot.directories.slice(0, 12),
     keyFiles: snapshot.inspectedFiles.slice(0, 3).map((file) => {
-      const findings = file.path.toLowerCase().endsWith('.json')
-        ? jsonFindings(file.content)
-        : sourceFindings(file.content);
+      const lower = file.path.toLowerCase();
+      const findings = /(^|\/)readme(?:\.[a-z0-9_-]+)?\.(?:md|mdx|rst|txt)$/u.test(lower)
+        ? markdownFindings(file.content)
+        : lower.endsWith('.json')
+          ? jsonFindings(file.content)
+          : sourceFindings(file.content);
       return {
         path: file.path,
         role: fileRole(file.path),
@@ -388,7 +414,10 @@ export class RepositoryAnalysisExecutor {
     }
     const canonicalRepository = api?.details.fullName ?? repository;
     const description = api?.details.description ?? dom.description;
-    const readme = dom.readme;
+    const inspectedReadme = api?.fileSnapshot?.inspectedFiles.find((file) =>
+      /(^|\/)readme(?:\.[a-z0-9_-]+)?\.(?:md|mdx|rst|txt)$/iu.test(file.path),
+    )?.content;
+    const readme = inspectedReadme ?? dom.readme;
     const primaryLanguage = api?.details.primaryLanguage ?? dom.primaryLanguage;
     const topics = api?.details.topics ?? [];
     const languages = languagePercentages(
@@ -444,6 +473,7 @@ export class RepositoryAnalysisExecutor {
       }
     }
     const factual = factualRisks(facts, now);
+    const structure = summarizeStructure(facts.fileSnapshot);
     const openIssues =
       facts.combinedOpenCount !== undefined && facts.openPullRequests !== undefined
         ? Math.max(0, facts.combinedOpenCount - facts.openPullRequests)
@@ -452,8 +482,16 @@ export class RepositoryAnalysisExecutor {
       repository: facts.repository,
       url: facts.url,
       purpose: insights.purpose,
+      quickScan: buildRepositoryQuickScan({
+        readme,
+        description,
+        installCommands,
+        structure,
+        insights,
+        providerUsed,
+      }),
       languages,
-      structure: summarizeStructure(facts.fileSnapshot),
+      structure,
       platforms: uniqueLimited(facts.detectedPlatforms, insights.platforms),
       installation: {
         steps: installCommands.length ? installCommands : insights.installation,

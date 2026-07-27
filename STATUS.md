@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 11 — 测试、打包与 MVP 验收：前两轮人工复核问题均已修复并通过自动验收，等待 S1–S5 复核。**
+**Phase 11 — 测试、打包与 MVP 验收：前三轮人工复核问题均已修复并通过自动验收，等待 S1–S5 复核。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -165,10 +165,16 @@
   - 每轮问题左侧 `>/∨` 独立收展；回复右上角 `🗑` 与 session 管理列表均先展开 `✓/×`，仅 `✓` 删除。问答删除按 user message ID 限定到下一问题前，不误删相邻轮次；删除活动 session 同步清除活动指针
   - 记录 D-053；自动门禁：typecheck、lint 通过；Vitest 45 files / 201 tests 全过（另 1 个 Phase 9 live test 默认跳过）；build（405 modules）、构建安全扫描与隔离 Chrome E2E 通过；E2E 文件证据为 `package.json` / `src/server.js`，Provider 请求 0、页面异常 0
   - 最新本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `832582c809215a0b54cd13833eadef4303e8d67d296b7c255a685a11c89a26b1`
+- [x] **Phase 11 — 第三轮人工复核补丁（2026-07-28）完成**：
+  - README 在既有最多 3 文件、单候选 ≤24KB、正文 ≤4KB 的 D-053 配额内提升为最高优先级；API 与 DOM 同时存在时优先采用已校验 API 片段，没有扩大目录深度、请求 Host、文件预算或持久数据
+  - 固定卡片新增 README 概括、主要功能、配置/运行和简单实现速览；Provider Prompt 要求简练中文，Provider 缺字段/失败时由 Markdown 段落、功能章节、安装命令及实际文件证据确定性降级
+  - Panel 默认先展示 README/功能/文件配置；Star、Issue/PR、语言、平台、Release、许可证等移入默认关闭且可展开的“仓库事实”
+  - 记录 D-054；自动门禁：typecheck、lint 通过；Vitest 45 files / 201 tests 全过（另 1 个 Phase 9 live test 默认跳过）；build（406 modules）、构建安全扫描与隔离 Chrome E2E 通过；E2E 断言 README 功能、`package.json` / `src/server.js` 证据及事实区默认折叠，Provider 请求 0、页面异常 0
+  - 最新本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `c579144a4d6800fabb5cfcb12efa4ac79e5d6e89184bb9db409fa357cee1394a`
 
 ## 下一任务
 **Phase 11 强制确认节点 ② — S1–S5 批量体验复核**（见 `docs/USER_GUIDE.md` 第 9 节）。
-用户在真实 Chrome 重新加载最新 `dist/` 后，复核 S1–S5 及前两轮人工问题；确认全部通过后，执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
+用户在真实 Chrome 重新加载最新 `dist/` 后，复核 S1–S5 及前三轮人工问题；确认全部通过后，执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
 
 ## 阶段进度表
 | Phase | 状态 |

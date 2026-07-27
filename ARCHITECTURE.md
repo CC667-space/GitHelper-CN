@@ -221,6 +221,12 @@ README 中有界提取的安装命令优先于 Provider 建议；API 重定向�
 规范化仓库身份。完整 core 聚合缓存 5 分钟，限流阻断状态继续由 D-032 三桶持久化。
 Provider 输入仍是带不可信标记并经 sanitizer 处理的 user 数据，绝不进入 System 指令。
 
+**Phase 11 第三轮补丁（D-054）**：README 在既有 3 文件取样配额内具有最高优先级；当
+Contents API 与 DOM 都提供 README 片段时，优先采用路径和大小均经校验的 API 片段。固定卡片的
+`quickScan` 先展示 README 概括、主要功能、配置/运行与简单实现线索；Provider 可生成简练中文解释，
+但缺失/非法输出时由本地 Markdown 段落、功能章节、安装命令和文件摘要确定性降级。Star、语言、
+Release、许可证等事实仍由 DOM/API 回填，并集中放入默认关闭的仓库事实区。
+
 ### 3.8 确认流程（OperationConfirmation，v1.1 收紧 C-3）
 需确认操作弹出：操作说明 + 影响 + 推荐选择 + **[允许本次] / [拒绝]** 两项。
 **不提供"始终允许该类操作"**——高风险权限不能一次点击永久放开。`operationPolicy` 只在允许的枚举范围内配置（见 §5 UserPreferences）。

@@ -170,11 +170,32 @@ try {
     }
     if (path === '/repos/octocat/Hello-World/contents?ref=main') {
       const packageJson = '{"name":"hello-world","scripts":{"start":"node src/server.js"}}';
+      const readme = [
+        '# Hello World',
+        '',
+        'A tiny example server for learning the project structure.',
+        '',
+        '## Features',
+        '',
+        '- Starts a local greeting server',
+        '- Demonstrates a minimal JavaScript entry point',
+        '',
+        '## Installation',
+        '',
+        'npm install',
+      ].join('\n');
       await route.fulfill({
         status: 200,
         headers: apiHeaders(),
         body: JSON.stringify([
           { name: 'src', path: 'src', type: 'dir', size: 0, sha: 'src-sha' },
+          {
+            name: 'README.md',
+            path: 'README.md',
+            type: 'file',
+            size: readme.length,
+            sha: 'readme-sha',
+          },
           {
             name: 'package.json',
             path: 'package.json',
@@ -183,6 +204,34 @@ try {
             sha: 'package-sha',
           },
         ]),
+      });
+      return;
+    }
+    if (path === '/repos/octocat/Hello-World/contents/README.md?ref=main') {
+      const readme = [
+        '# Hello World',
+        '',
+        'A tiny example server for learning the project structure.',
+        '',
+        '## Features',
+        '',
+        '- Starts a local greeting server',
+        '- Demonstrates a minimal JavaScript entry point',
+        '',
+        '## Installation',
+        '',
+        'npm install',
+      ].join('\n');
+      await route.fulfill({
+        status: 200,
+        headers: apiHeaders(),
+        body: JSON.stringify({
+          type: 'file',
+          path: 'README.md',
+          size: readme.length,
+          encoding: 'base64',
+          content: Buffer.from(readme, 'utf8').toString('base64'),
+        }),
       });
       return;
     }
@@ -286,11 +335,18 @@ try {
   await analysisCard.waitFor({ timeout: 20_000 });
   const analysisText = await analysisCard.innerText();
   assert(analysisText.includes('octocat/Hello-World'), 'E2E 分析卡缺少仓库名');
-  assert(analysisText.includes('2,800'), 'E2E 分析卡缺少 API Star 事实');
-  assert(analysisText.includes('MIT'), 'E2E 分析卡缺少 API 许可证事实');
-  assert(analysisText.includes('项目文件洞察'), 'E2E 分析卡缺少项目文件洞察');
+  assert(analysisText.includes('README 速览'), 'E2E 分析卡缺少 README 速览');
+  assert(analysisText.includes('主要功能'), 'E2E 分析卡缺少主要功能');
+  assert(analysisText.includes('Starts a local greeting server'), 'E2E 分析卡缺少 README 功能证据');
+  assert(analysisText.includes('文件、配置与实现'), 'E2E 分析卡缺少文件配置分析');
   assert(analysisText.includes('package.json'), 'E2E 分析卡缺少实际 package.json 证据');
   assert(analysisText.includes('src/server.js'), 'E2E 分析卡缺少受限源码文件证据');
+  const repositoryFacts = panel.getByTestId('repository-facts');
+  assert((await repositoryFacts.getAttribute('open')) === null, 'E2E 仓库事实区不应默认展开');
+  await repositoryFacts.locator('summary').click();
+  const factsText = await repositoryFacts.innerText();
+  assert(factsText.includes('2,800'), 'E2E 仓库事实区缺少 API Star 事实');
+  assert(factsText.includes('MIT'), 'E2E 仓库事实区缺少 API 许可证事实');
 
   const issueBody = issueFixture.match(/<body>([\s\S]*?)<\/body>/iu)?.[1];
   assert(issueBody, 'Issue fixture 缺少 body');
@@ -378,7 +434,9 @@ try {
       s1RepositoryAnalysis: {
         repository: 'octocat/Hello-World',
         apiFacts: ['stars', 'license', 'release', 'openPullRequests'],
-        fileEvidence: ['package.json', 'src/server.js'],
+        fileEvidence: ['README.md', 'package.json', 'src/server.js'],
+        defaultVisible: ['readmeSummary', 'features', 'configuration', 'implementation'],
+        factsDefaultExpanded: false,
       },
       spa: {
         pageType: spaContext.pageType,

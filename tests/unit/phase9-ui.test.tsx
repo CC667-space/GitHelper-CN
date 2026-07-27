@@ -78,6 +78,13 @@ describe('Phase 9 repository analysis Panel', () => {
           repository: 'react/react',
           url: 'https://github.com/react/react',
           purpose: '用于构建 Web 和原生用户界面。',
+          quickScan: {
+            readmeSummary: 'React 是一个使用组件构建 Web 与原生用户界面的库。',
+            features: ['以可复用组件组合界面', '支持 Web 与原生渲染'],
+            configuration: ['package.json：脚本 build、test', '安装：npm install react'],
+            implementation: ['packages：核心包目录', 'main.js：定义 startApp'],
+            source: 'readme',
+          },
           languages: [
             { name: 'JavaScript', percent: 90 },
             { name: 'TypeScript', percent: 10 },
@@ -129,14 +136,22 @@ describe('Phase 9 repository analysis Panel', () => {
 
     expect(screen.getByTestId('repository-analysis-card')).toBeTruthy();
     expect(screen.getByText('react/react')).toBeTruthy();
-    expect(screen.getByText(/240,000/)).toBeTruthy();
-    expect(screen.getByText(/1,000/)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'README 速览' })).toBeTruthy();
+    expect(screen.getByText(/使用组件构建 Web 与原生用户界面/)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '主要功能' })).toBeTruthy();
+    expect(screen.getByText('以可复用组件组合界面')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '文件、配置与实现' })).toBeTruthy();
     expect(screen.getByText('npm install react')).toBeTruthy();
-    expect(screen.getByRole('heading', { name: '项目文件洞察' })).toBeTruthy();
     expect(screen.getByText('package.json')).toBeTruthy();
     expect(screen.getByText(/脚本：build、test/)).toBeTruthy();
     expect(screen.getByText(/packages · scripts · fixtures/)).toBeTruthy();
     expect(screen.getByText(/上手难度：入门/)).toBeTruthy();
+    const facts = screen.getByTestId('repository-facts') as HTMLDetailsElement;
+    expect(facts.open).toBe(false);
+    await user.click(screen.getByText('仓库事实（Star、语言、Release 等）'));
+    expect(facts.open).toBe(true);
+    expect(screen.getByText(/240,000/)).toBeTruthy();
+    expect(screen.getByText(/1,000/)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '收起分析' }));
     expect(screen.queryByTestId('repository-analysis-card')).toBeNull();
     await user.click(screen.getByRole('button', { name: '展开分析' }));
@@ -176,6 +191,13 @@ describe('Phase 9 repository analysis Panel', () => {
           repository: 'octocat/Hello-World',
           url: 'https://github.com/octocat/Hello-World',
           purpose: '公开信息不足。',
+          quickScan: {
+            readmeSummary: '未获取到可概括的 README 内容。',
+            features: [],
+            configuration: [],
+            implementation: [],
+            source: 'limited',
+          },
           languages: [],
           structure: { directories: [], keyFiles: [], truncated: false },
           platforms: [],
@@ -196,9 +218,12 @@ describe('Phase 9 repository analysis Panel', () => {
       }),
     );
 
-    expect(screen.getByText('未获取语言数据')).toBeTruthy();
+    expect(screen.getByText('未获取到可概括的 README 内容。')).toBeTruthy();
+    expect(screen.getByText('未从受限 README 片段识别出明确功能清单')).toBeTruthy();
     expect(screen.getByText('未获取关键文件内容')).toBeTruthy();
-    expect(screen.getByText('未找到正式 Release')).toBeTruthy();
+    const facts = screen.getByTestId('repository-facts') as HTMLDetailsElement;
+    expect(facts.open).toBe(false);
+    expect(facts.textContent).toContain('未找到正式 Release');
     expect(screen.getByText(/core 匿名配额暂不可用/)).toBeTruthy();
   });
 });

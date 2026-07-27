@@ -160,9 +160,9 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
 - Provider 非法 JSON 最多再请求一次；网络/鉴权/限流错误不自动重试。core 限流时不继续撞同桶，转为 DOM 有限降级。
 - 仓库卡、core 缓存和限流状态不保存 README 正文、Provider Key 或 GitHub Token；v1 仍无 GitHub Token。
 
-### 8.4 公开仓库文件证据边界（D-053）
+### 8.4 公开仓库文件证据边界（D-053 / D-054）
 - 只在公开 PageContext 通过后，由 Background 固定构造 `api.github.com/repos/{owner}/{repo}/contents` 请求；Panel/Content 不能传 URL、Header、分支或文件路径。
-- 目录检查最多根目录 + 2 个高信号目录；文件最多 3 个，API 声明大小 ≤24KB 且只保留前 4KB 解码文本。锁文件、依赖/文档/测试目录和含空段、`.`、`..` 的路径拒绝；响应文件路径必须与请求路径完全一致。
+- 目录检查最多根目录 + 2 个高信号目录；文件最多 3 个，API 声明大小 ≤24KB 且只保留前 4KB 解码文本。README 只是在同一 3 文件配额内获得最高选择优先级，不增加请求深度、文件数或文本量；API 与 DOM 同时有 README 时优先使用已校验 API 片段。锁文件、依赖/文档/测试目录和含空段、`.`、`..` 的路径拒绝；响应文件路径必须与请求路径完全一致。
 - 文件正文与注释仍是 Prompt Injection 不可信数据：先经 sanitizer，再放入 user 角色；不得进入 System Prompt、日志、会话、缓存或分析卡。卡片只保留路径、角色与最多 4 条确定性内容线索。
 - 任一目录/文件读取失败只标记有限样本或降级，不扩大目录深度、不改用任意 URL、不下载完整仓库；core 限流时停止后续请求。
 - 问答轮次和 session 删除只操作本地会话数据，且必须由 Panel 垃圾桶后的 `✓` 二次确认触发；生成中禁用删除。删除活动 session 时同步清除活动指针，不影响 Provider Key 或偏好。

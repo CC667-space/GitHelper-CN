@@ -617,6 +617,13 @@ describe('Panel → Background → Content → Panel', () => {
       repository: 'react/react',
       url: 'https://github.com/react/react',
       purpose: '用于构建用户界面。',
+      quickScan: {
+        readmeSummary: 'React 使用组件构建用户界面。',
+        features: ['组件化界面'],
+        configuration: ['package.json：脚本 test'],
+        implementation: ['packages：核心包目录'],
+        source: 'readme' as const,
+      },
       languages: [{ name: 'JavaScript', percent: 100 }],
       structure: {
         directories: ['packages'],

@@ -287,6 +287,16 @@ describe('GitHubApiClient', () => {
       name: 'real-files',
       scripts: { build: 'vite build', test: 'vitest run' },
     });
+    const readme = [
+      '# Real Files',
+      '',
+      'A small server toolkit.',
+      '',
+      '## Features',
+      '',
+      '- Starts an HTTP server',
+      '- Validates configuration',
+    ].join('\n');
     const mainSource = 'export function startServer() { return createServer(); }';
     const base64 = (value: string) => Buffer.from(value, 'utf8').toString('base64');
     const fetchMock = vi
@@ -310,6 +320,13 @@ describe('GitHubApiClient', () => {
               type: 'dir',
               size: 0,
               sha: 'dir-sha',
+            },
+            {
+              name: 'README.md',
+              path: 'README.md',
+              type: 'file',
+              size: readme.length,
+              sha: 'readme-sha',
             },
             {
               name: 'package.json',
@@ -354,6 +371,18 @@ describe('GitHubApiClient', () => {
         new Response(
           JSON.stringify({
             type: 'file',
+            path: 'README.md',
+            size: readme.length,
+            encoding: 'base64',
+            content: base64(readme),
+          }),
+          { status: 200, headers: coreHeaders },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            type: 'file',
             path: 'package.json',
             size: packageJson.length,
             encoding: 'base64',
@@ -385,6 +414,7 @@ describe('GitHubApiClient', () => {
     expect(result.fileSnapshot).toEqual({
       directories: ['hermes_cli'],
       inspectedFiles: [
+        { path: 'README.md', content: readme },
         { path: 'package.json', content: packageJson },
         { path: 'hermes_cli/server.ts', content: mainSource },
       ],
@@ -392,6 +422,9 @@ describe('GitHubApiClient', () => {
     });
     const urls = fetchMock.mock.calls.map(([url]) => String(url));
     expect(urls).toContain('https://api.github.com/repos/example/real-files/contents?ref=main');
+    expect(urls).toContain(
+      'https://api.github.com/repos/example/real-files/contents/README.md?ref=main',
+    );
     expect(urls).toContain(
       'https://api.github.com/repos/example/real-files/contents/package.json?ref=main',
     );
@@ -403,7 +436,7 @@ describe('GitHubApiClient', () => {
     );
     expect(urls.some((url) => url.includes('pnpm-lock.yaml'))).toBe(false);
     expect(urls.some((url) => url.includes('../issues'))).toBe(false);
-    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(fetchMock).toHaveBeenCalledTimes(9);
   });
 
   it('仓库没有 Release 时返回缺字段而非失败', async () => {

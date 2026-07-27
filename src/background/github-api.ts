@@ -213,6 +213,9 @@ function encodeRepositoryContentPath(path: string): string {
 function repositoryFilePriority(path: string): number {
   const lower = path.toLowerCase();
   const name = lower.split('/').at(-1) ?? lower;
+  if (/^readme(?:\.[a-z0-9_-]+)?\.(?:md|mdx|rst|txt)$/u.test(name)) {
+    return 110;
+  }
   if (/^(package\.json|pyproject\.toml|cargo\.toml|go\.mod|pom\.xml)$/u.test(name)) {
     return 100;
   }
