@@ -88,6 +88,8 @@ describe('Phase 7 Panel region selection', () => {
     const visualRegion = region(true);
     act(() => emitRegionState?.({ status: 'selected', region: visualRegion }));
     expect(screen.getByText(/调用视觉 Provider，可能产生费用/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: '下一步：输入问题' }));
+    expect(document.activeElement).toBe(screen.getByLabelText('输入问题'));
     await user.type(screen.getByLabelText('输入问题'), '解释这张图');
     await user.click(screen.getByRole('button', { name: '发送' }));
     expect(send).toHaveBeenCalledExactlyOnceWith(

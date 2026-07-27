@@ -18,6 +18,8 @@ import {
   panelAnalyzeRepositoryRequestSchema,
   panelRepositoryAnalysisStateSchema,
   panelSessionStateSchema,
+  panelSessionNewSchema,
+  panelSessionSelectSchema,
   panelAbortSchema,
   PANEL_PORT_NAME,
   panelMessageSchema,
@@ -43,6 +45,7 @@ import type {
   ProviderId,
   SelectedElement,
   SelectedRegion,
+  Session,
   UserPreferences,
 } from '../lib/types';
 import { captureSelectedRegion } from './capture';
@@ -54,6 +57,7 @@ import { assertPublicContext } from './outbound-policy';
 import type { RepositoryAnalysisCard } from '../lib/repository-analysis';
 import { RepositoryAnalysisExecutor } from './repository-analysis';
 import { GitHubApiClient } from './github-api';
+import { activePanelSessionStore } from './active-session-store';
 
 interface PreparedPanelSession {
   sessionId: string;
@@ -83,7 +87,11 @@ export interface PanelBridgeDependencies {
     page: PageInfo,
     question: string,
     preferences?: UserPreferences,
+    selection?: { sessionId?: string; startNew?: boolean },
   ): Promise<PreparedPanelSession>;
+  changeSession?(
+    action: { kind: 'select'; sessionId: string } | { kind: 'new' },
+  ): Promise<PanelSessionState>;
   loadPreferences?(): Promise<UserPreferences>;
   saveAssistant?(sessionId: string, content: string): Promise<void>;
   startPick?(signal: AbortSignal): Promise<PickOutcome>;
@@ -135,6 +143,19 @@ export class PanelBridge {
             const request = panelAbortSchema.parse(payload);
             return { aborted: this.dependencies.abort(request.requestId) };
           },
+        },
+        PANEL_SESSION_SELECT: {
+          source: 'extension',
+          payloadSchema: panelSessionSelectSchema,
+          handler: async (payload) => {
+            const { sessionId } = panelSessionSelectSchema.parse(payload);
+            return await this.handleSessionChange({ kind: 'select', sessionId });
+          },
+        },
+        PANEL_SESSION_NEW: {
+          source: 'extension',
+          payloadSchema: panelSessionNewSchema,
+          handler: async () => await this.handleSessionChange({ kind: 'new' }),
         },
         PANEL_PICK_START: {
           source: 'extension',
@@ -233,6 +254,10 @@ export class PanelBridge {
       page,
       sanitizedQuestion,
       currentPreferences,
+      {
+        sessionId: message.sessionId,
+        startNew: message.startNewSession,
+      },
     );
     if (prepared) {
       this.dependencies.emitSessionState?.(prepared.snapshot);
@@ -279,6 +304,17 @@ export class PanelBridge {
   private emit(event: StreamEvent): void {
     const validated = streamEventSchema.parse(event);
     this.dependencies.emit(createEnvelope('STREAM_EVENT', validated));
+  }
+
+  private async handleSessionChange(
+    action: { kind: 'select'; sessionId: string } | { kind: 'new' },
+  ): Promise<{ changed: true }> {
+    if (!this.dependencies.changeSession || !this.dependencies.emitSessionState) {
+      throw new Error('会话切换能力尚未注册');
+    }
+    const state = panelSessionStateSchema.parse(await this.dependencies.changeSession(action));
+    this.dependencies.emitSessionState(state);
+    return { changed: true };
   }
 
   private async handlePickStart(context: RouteContext): Promise<PickOutcome> {
@@ -553,22 +589,45 @@ export function registerPanelPortBridge(
       return;
     }
     const sessions = sessionStore();
+    const activeSession = activePanelSessionStore();
     const preferences = preferencesStore();
+    const panelState = async (
+      session: Session | undefined,
+      cause: NonNullable<PanelSessionState['cause']>,
+    ): Promise<PanelSessionState> =>
+      panelSessionStateSchema.parse({
+        ...sessions.panelSnapshot(session),
+        cause,
+        recentSessions: await sessions.listSummaries(),
+      });
     const bridge = new PanelBridge(chrome.runtime.id, {
       requestPageInfo: requestActivePageInfo,
       loadPreferences: () => preferences.read(),
-      prepareSession: async (page, question, currentPreferences) => {
+      prepareSession: async (page, question, currentPreferences, selection) => {
         if (!page.pageContext) {
           throw new Error('当前页面上下文尚未就绪');
         }
-        const prepared = await sessions.prepare(page.pageContext, question);
+        const prepared = await sessions.prepare(page.pageContext, question, selection);
+        await activeSession.write(prepared.session.sessionId);
         return {
           sessionId: prepared.session.sessionId,
           history: prepared.history,
           historySummary: prepared.historySummary,
           preferences: currentPreferences ?? (await preferences.read()),
-          snapshot: panelSessionStateSchema.parse(sessions.panelSnapshot(prepared.session)),
+          snapshot: await panelState(prepared.session, 'update'),
         };
+      },
+      changeSession: async (action) => {
+        if (action.kind === 'new') {
+          await activeSession.clear();
+          return await panelState(undefined, 'new');
+        }
+        const session = await sessions.get(action.sessionId);
+        if (!session) {
+          throw new Error('所选会话不存在或已过期');
+        }
+        await activeSession.write(session.sessionId);
+        return await panelState(session, 'select');
       },
       saveAssistant: async (sessionId, content) => {
         await sessions.appendAssistant(sessionId, content);
@@ -645,13 +704,14 @@ export function registerPanelPortBridge(
     });
     const hydration = requestActivePageInfo(new AbortController().signal)
       .then(async (page) => {
-        const session = page.pageContext ? await sessions.findForPage(page.pageContext) : undefined;
-        port.postMessage(
-          createEnvelope(
-            'SESSION_STATE',
-            panelSessionStateSchema.parse(sessions.panelSnapshot(session)),
-          ),
-        );
+        const activeSessionId = await activeSession.read();
+        const active = activeSessionId ? await sessions.get(activeSessionId) : undefined;
+        if (activeSessionId && !active) {
+          await activeSession.clear();
+        }
+        const session =
+          active ?? (page.pageContext ? await sessions.findForPage(page.pageContext) : undefined);
+        port.postMessage(createEnvelope('SESSION_STATE', await panelState(session, 'hydrate')));
       })
       .catch(() => undefined);
     port.onDisconnect.addListener(() => {

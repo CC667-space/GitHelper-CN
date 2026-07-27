@@ -270,6 +270,17 @@ try {
   assert(!serializedSessions.includes(sensitiveSentinel), '会话持久化包含敏感哨兵明文');
   assert(serializedSessions.includes('‹REDACTED:API_KEY›'), '会话持久化缺少敏感哨兵遮蔽标记');
 
+  await githubPage.evaluate(() => {
+    history.pushState({}, '', '/explore');
+    document.title = 'Explore GitHub';
+    document.body.innerHTML = '<main><h1>Explore GitHub</h1><p>发现公开项目</p></main>';
+    document.dispatchEvent(new Event('turbo:load'));
+    document.dispatchEvent(new Event('turbo:render'));
+  });
+  await githubPage.waitForTimeout(700);
+  const switchedPageResponse = await requestActivePageInfo(serviceWorker);
+  assert(switchedPageResponse?.payload?.url.endsWith('/explore'), '跨页面测试未切换到 Explore');
+
   await panel.reload({ waitUntil: 'domcontentloaded' });
   await panel.locator('[title="Background 已连接"]').waitFor({ timeout: 10_000 });
   await panel
@@ -308,6 +319,7 @@ try {
       sessionRestore: {
         persisted: true,
         restoredAfterPanelReload: true,
+        survivedPageSwitch: true,
       },
       s5SensitiveSentinel: {
         persistedPlaintext: false,

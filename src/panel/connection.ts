@@ -25,8 +25,12 @@ export interface PanelConnection {
     providerId?: ProviderId,
     selectedElement?: SelectedElement,
     selectedRegion?: SelectedRegion,
+    sessionId?: string,
+    startNewSession?: boolean,
   ): void;
   abort(requestId: string): void;
+  selectSession?(sessionId: string): void;
+  newSession?(): void;
   startPick?(): void;
   cancelPick?(): void;
   startRegion?(): void;
@@ -154,18 +158,26 @@ export function connectPanel(
   openPort();
 
   return {
-    send(text, providerId, selectedElement, selectedRegion) {
+    send(text, providerId, selectedElement, selectedRegion, sessionId, startNewSession) {
       activePort?.postMessage(
         createEnvelope('PANEL_MESSAGE', {
           text,
           providerId,
           selectedElement,
           selectedRegion,
+          sessionId,
+          startNewSession,
         }),
       );
     },
     abort(requestId) {
       activePort?.postMessage(createEnvelope('PANEL_ABORT', { requestId }));
+    },
+    selectSession(sessionId) {
+      activePort?.postMessage(createEnvelope('PANEL_SESSION_SELECT', { sessionId }));
+    },
+    newSession() {
+      activePort?.postMessage(createEnvelope('PANEL_SESSION_NEW', {}));
     },
     startPick() {
       activePort?.postMessage(createEnvelope('PANEL_PICK_START', {}));

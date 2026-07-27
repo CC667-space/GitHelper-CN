@@ -69,6 +69,8 @@ describe('Phase 6 Panel click selection', () => {
     };
     act(() => emitPickState?.({ status: 'selected', element }));
     expect(screen.getByText(/已选择 <a>/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: '下一步：输入问题' }));
+    expect(document.activeElement).toBe(screen.getByLabelText('输入问题'));
     await user.type(screen.getByLabelText('输入问题'), '这个入口有什么用？');
     await user.click(screen.getByRole('button', { name: '发送' }));
 

@@ -17,6 +17,7 @@ export const SUMMARY_MESSAGE_THRESHOLD = 40;
 export const SUMMARY_TOKEN_THRESHOLD = 8_000;
 export const SESSION_CONTEXT_BYTES = 12 * 1024;
 export const PANEL_SESSION_BYTES = 48 * 1024;
+export const MAX_PANEL_SESSION_SUMMARIES = 10;
 
 const messageSchema = z
   .object({
@@ -81,6 +82,19 @@ export interface SessionPromptContext {
 
 export interface PreparedSession extends SessionPromptContext {
   session: Session;
+}
+
+export interface SessionSelection {
+  sessionId?: string;
+  startNew?: boolean;
+}
+
+export interface SessionSummary {
+  sessionId: string;
+  title: string;
+  repository?: string;
+  updatedAt: string;
+  messageCount: number;
 }
 
 export interface PanelSessionSnapshot {
@@ -179,6 +193,12 @@ function newestFirst(left: Session, right: Session): number {
   return Date.parse(right.updatedAt) - Date.parse(left.updatedAt);
 }
 
+function sessionTitle(session: Session): string {
+  const firstQuestion = session.messages.find((message) => message.role === 'user')?.content;
+  const title = firstQuestion?.replace(/\s+/g, ' ').trim();
+  return (title || session.repository || 'GitHub 页面会话').slice(0, 80);
+}
+
 function projectMessages(messages: Message[], maxBytes: number): PanelSessionSnapshot['messages'] {
   const projected: PanelSessionSnapshot['messages'] = [];
   let bytes = 0;
@@ -248,10 +268,33 @@ export class SessionStore {
     return (await this.loadAndMaintain()).sort(newestFirst);
   }
 
-  async prepare(page: PageContext, question: string): Promise<PreparedSession> {
+  async listSummaries(limit = MAX_PANEL_SESSION_SUMMARIES): Promise<SessionSummary[]> {
+    return (await this.listRecent())
+      .slice(0, Math.min(MAX_PANEL_SESSION_SUMMARIES, Math.max(0, limit)))
+      .map((session) => ({
+        sessionId: session.sessionId,
+        title: sessionTitle(session),
+        repository: session.repository?.slice(0, 100),
+        updatedAt: session.updatedAt,
+        messageCount: session.messages.length,
+      }));
+  }
+
+  async prepare(
+    page: PageContext,
+    question: string,
+    selection: SessionSelection = {},
+  ): Promise<PreparedSession> {
     return this.mutate((sessions) => {
       const now = this.now().toISOString();
-      let session = sessions.filter((item) => sessionMatchesPage(item, page)).sort(newestFirst)[0];
+      let session = selection.startNew
+        ? undefined
+        : selection.sessionId
+          ? sessions.find((item) => item.sessionId === selection.sessionId)
+          : sessions.filter((item) => sessionMatchesPage(item, page)).sort(newestFirst)[0];
+      if (selection.sessionId && !selection.startNew && !session) {
+        throw new Error('所选会话不存在或已过期');
+      }
       if (!session) {
         session = {
           schemaVersion: CURRENT_SCHEMA_VERSION,

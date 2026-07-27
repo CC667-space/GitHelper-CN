@@ -344,6 +344,14 @@ describe('Phase 4 trusted UI', () => {
           '1. **Explore**：发现项目',
           '2. `Topics`：按主题浏览',
           '',
+          '```text',
+          'AI stars:>5000',
+          '```',
+          '',
+          '```',
+          'AI',
+          '```',
+          '',
           '<script>alert("xss")</script>',
           '![跟踪图片](https://example.com/pixel.png)',
           '[外部链接](https://example.com/)',
@@ -356,6 +364,16 @@ describe('Phase 4 trusted UI', () => {
     expect(within(conversation).getByRole('heading', { name: '页面摘要' })).toBeTruthy();
     expect(within(conversation).getByText('Explore').tagName).toBe('STRONG');
     expect(within(conversation).getAllByRole('listitem')).toHaveLength(2);
+    const codeBlock = within(conversation).getByText('AI stars:>5000');
+    expect(codeBlock.tagName).toBe('CODE');
+    expect(codeBlock.closest('pre')).not.toBeNull();
+    expect(codeBlock.className).toContain('bg-transparent');
+    expect(codeBlock.className).toContain('text-inherit');
+    expect(codeBlock.className).not.toContain('bg-slate-100');
+    const plainCodeBlock = within(conversation).getByText('AI', { exact: true });
+    expect(plainCodeBlock.closest('pre')).not.toBeNull();
+    expect(plainCodeBlock.className).toContain('bg-transparent');
+    expect(plainCodeBlock.className).not.toContain('bg-slate-100');
     expect(conversation.querySelector('script')).toBeNull();
     expect(conversation.querySelector('img')).toBeNull();
     expect(conversation.querySelector('a')).toBeNull();

@@ -73,6 +73,8 @@ export const panelMessageSchema = z
   .object({
     text: z.string().trim().min(1).max(8_000),
     providerId: z.enum(['deepseek', 'uuapi', 'openrouter']).optional(),
+    sessionId: z.string().min(1).max(128).optional(),
+    startNewSession: z.boolean().optional(),
     selectedElement: selectedElementSchema.optional(),
     selectedRegion: selectedRegionSchema.optional(),
   })
@@ -87,6 +89,13 @@ export const panelAbortSchema = z
     requestId: z.string().min(1).max(128),
   })
   .strict();
+
+export const panelSessionSelectSchema = z
+  .object({
+    sessionId: z.string().min(1).max(128),
+  })
+  .strict();
+export const panelSessionNewSchema = z.object({}).strict();
 
 export const pageInfoRequestSchema = z.object({}).strict();
 export const panelPickStartSchema = z.object({}).strict();
@@ -297,6 +306,21 @@ export const providerStateSchema = z
 export const panelSessionStateSchema = z
   .object({
     sessionId: z.string().min(1).max(128).optional(),
+    cause: z.enum(['hydrate', 'select', 'new', 'update']).optional(),
+    recentSessions: z
+      .array(
+        z
+          .object({
+            sessionId: z.string().min(1).max(128),
+            title: z.string().min(1).max(80),
+            repository: z.string().max(100).optional(),
+            updatedAt: z.iso.datetime(),
+            messageCount: z.number().int().nonnegative().max(200),
+          })
+          .strict(),
+      )
+      .max(10)
+      .optional(),
     messages: z
       .array(
         z

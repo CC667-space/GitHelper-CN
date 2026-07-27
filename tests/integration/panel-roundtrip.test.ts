@@ -87,6 +87,30 @@ describe('Panel → Background → Content → Panel', () => {
       yield '本轮';
       yield '回答';
     });
+    const prepareSession = vi.fn(async () => ({
+      sessionId: 'session-1',
+      history: [
+        {
+          id: 'history-1',
+          role: 'user' as const,
+          content: '上一轮问题',
+          createdAt: '2026-07-24T00:00:00.000Z',
+        },
+      ],
+      preferences: defaultUserPreferences(),
+      snapshot: {
+        sessionId: 'session-1',
+        messages: [
+          {
+            id: 'current-user',
+            role: 'user' as const,
+            content: '继续',
+            createdAt: '2026-07-24T00:00:01.000Z',
+          },
+        ],
+        truncated: false,
+      },
+    }));
     const bridge = new PanelBridge(runtimeId, {
       requestPageInfo: vi.fn(async () => ({
         url: 'https://github.com/openai/openai-node',
@@ -102,30 +126,7 @@ describe('Panel → Background → Content → Panel', () => {
           capturedAt: '2026-07-24T00:00:00.000Z',
         },
       })),
-      prepareSession: vi.fn(async () => ({
-        sessionId: 'session-1',
-        history: [
-          {
-            id: 'history-1',
-            role: 'user' as const,
-            content: '上一轮问题',
-            createdAt: '2026-07-24T00:00:00.000Z',
-          },
-        ],
-        preferences: defaultUserPreferences(),
-        snapshot: {
-          sessionId: 'session-1',
-          messages: [
-            {
-              id: 'current-user',
-              role: 'user' as const,
-              content: '继续',
-              createdAt: '2026-07-24T00:00:01.000Z',
-            },
-          ],
-          truncated: false,
-        },
-      })),
+      prepareSession,
       streamAnswer,
       saveAssistant,
       abort: vi.fn(() => false),
@@ -138,6 +139,8 @@ describe('Panel → Background → Content → Panel', () => {
         'PANEL_MESSAGE',
         {
           text: '继续',
+          sessionId: 'session-1',
+          startNewSession: false,
           selectedElement: {
             tag: 'a',
             role: 'link',
@@ -156,7 +159,59 @@ describe('Panel → Background → Content → Panel', () => {
     expect(emitSessionState).toHaveBeenCalledWith(
       expect.objectContaining({ sessionId: 'session-1' }),
     );
+    expect(prepareSession).toHaveBeenCalledWith(expect.anything(), '继续', undefined, {
+      sessionId: 'session-1',
+      startNew: false,
+    });
     expect(saveAssistant).toHaveBeenCalledWith('session-1', '本轮回答');
+  });
+
+  it('通过 Background 路由显式选择与新建会话', async () => {
+    const emitSessionState = vi.fn();
+    const changeSession = vi.fn(async (action: { kind: 'select' | 'new'; sessionId?: string }) => ({
+      sessionId: action.kind === 'select' ? action.sessionId : undefined,
+      cause: action.kind,
+      messages:
+        action.kind === 'select'
+          ? [
+              {
+                id: 'message-selected',
+                role: 'assistant' as const,
+                content: '已切换',
+                createdAt: '2026-07-24T00:00:00.000Z',
+              },
+            ]
+          : [],
+      truncated: false,
+    }));
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(),
+      streamAnswer: vi.fn(),
+      changeSession,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitSessionState,
+    });
+
+    await bridge.dispatch(
+      createEnvelope('PANEL_SESSION_SELECT', { sessionId: 'session-2' }),
+      panelSender,
+    );
+    await bridge.dispatch(createEnvelope('PANEL_SESSION_NEW', {}), panelSender);
+
+    expect(changeSession).toHaveBeenNthCalledWith(1, {
+      kind: 'select',
+      sessionId: 'session-2',
+    });
+    expect(changeSession).toHaveBeenNthCalledWith(2, { kind: 'new' });
+    expect(emitSessionState).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ sessionId: 'session-2', cause: 'select' }),
+    );
+    expect(emitSessionState).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ cause: 'new', messages: [] }),
+    );
   });
 
   it('点击选择状态经 Background 从 active 推进到 selected', async () => {

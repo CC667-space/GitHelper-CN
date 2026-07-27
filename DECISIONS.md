@@ -382,3 +382,15 @@
 - **证据**：安全测试从 `PanelBridge.dispatch` 验证 Session question、Provider question 与回推状态均无假 Key 明文；Playwright E2E 发送假 Key 后，`chrome.storage.local` 和 Panel 重载结果均只有 `‹REDACTED:API_KEY›`。
 - **范围**：Phase 11 发布前安全审查补丁；不改变用户可用功能、权限、Host、Provider 路由或数据类别。
 - 状态：代码与浏览器 E2E 已验证 ｜ 2026-07-24
+
+## D-052 Phase 11 人工复核补丁统一问答状态与紧凑交互
+- **决策**：
+  - System Prompt 增加回答风格契约：结论先行、只保留必要依据，普通回答默认控制在 400 个中文字符内；复杂任务最多 6 个短要点，用户明确要求教程、详细解释或完整代码时才展开。禁止寒暄、复述问题、重复结论、泛化总结与礼貌收尾，但准确性和必要不确定性说明优先。
+  - 分析区与问答区都可独立收起/展开。点击/框选成功后，Panel 显示明确的“下一步：输入问题”操作，展开问答并聚焦输入框。
+  - Panel 提供最近 10 个会话的有界最小目录与“新建会话”。目录只含 ID、短标题、短仓库标识、更新时间和消息数，不携带页面 URL 或正文。默认继续当前活动会话；用户显式选择时允许跨 GitHub 页面继续该会话，显式新建则不复用同页旧会话。
+  - 当前活动会话 ID 仅以版本化指针存入 `chrome.storage.session`。Background 重连或 GitHub 页面切换产生的 `hydrate` 快照不得用空会话或其他自动匹配会话覆盖 Panel 当前对话；完整 Panel 重载则由活动指针恢复。清除会话/偏好或清除全部数据时同步清除该指针。
+  - Markdown fenced code 始终按独立深色代码块渲染；行内代码继续使用浅色样式，避免二者的前景色/背景色冲突。
+- **理由**：人工复核暴露的五个问题来自同一交互状态边界：回复过长、长区块占位、选区没有动作闭环、代码块样式冲突，以及页面上下文更新误覆盖对话。把活动会话选择与页面上下文刷新分离，可在不扩大持久数据、权限或 Provider 调用范围的前提下稳定用户控制权。
+- **证据**：新增/扩展 ContextBuilder、Markdown、Phase 5/6/7/9 UI、Panel connection/roundtrip、SessionStore 与 active-session-store 测试；隔离 Chrome E2E 在 GitHub SPA 切换后重载 Panel，`survivedPageSwitch=true`。全量 195 项常规测试通过（另 1 项 live test 默认跳过），typecheck、lint、build 与构建安全扫描通过。
+- **范围**：Phase 11 人工复核内部补丁；不新增 Chrome 权限、Host、Provider 成本、GitHub 写操作或持久数据类别。
+- 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-27

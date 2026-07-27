@@ -117,6 +117,10 @@ describe('Phase 9 repository analysis Panel', () => {
     expect(screen.getByText(/1,000/)).toBeTruthy();
     expect(screen.getByText('npm install react')).toBeTruthy();
     expect(screen.getByText(/上手难度：入门/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: '收起分析' }));
+    expect(screen.queryByTestId('repository-analysis-card')).toBeNull();
+    await user.click(screen.getByRole('button', { name: '展开分析' }));
+    expect(screen.getByTestId('repository-analysis-card')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '打开仓库' }));
     expect(openGitHubPage).toHaveBeenCalledWith('https://github.com/react/react');
   });

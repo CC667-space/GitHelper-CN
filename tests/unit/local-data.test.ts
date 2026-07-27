@@ -4,6 +4,7 @@ import {
   createOptionsCredentialStore,
   type CredentialStorageArea,
 } from '../../src/background/credential-store';
+import { ACTIVE_PANEL_SESSION_KEY } from '../../src/background/active-session-store';
 import { PREFERENCES_STORAGE_KEY } from '../../src/background/prefs-store';
 import { SESSION_STORAGE_KEY } from '../../src/background/session-store';
 import type { StorageAreaLike } from '../../src/lib/storage';
@@ -54,10 +55,16 @@ function seededArea(): MemoryArea {
 describe('D-033 local data clearing', () => {
   it('清除会话/偏好后 Provider Key 与普通配置完好', async () => {
     const area = seededArea();
-    await createLocalDataManager(area).clearSessionsAndPreferences();
+    const sessionArea = new MemoryArea();
+    sessionArea.values[ACTIVE_PANEL_SESSION_KEY] = {
+      schemaVersion: 1,
+      sessionId: 'active-session',
+    };
+    await createLocalDataManager(area, sessionArea).clearSessionsAndPreferences();
 
     expect(area.values[SESSION_STORAGE_KEY]).toBeUndefined();
     expect(area.values[PREFERENCES_STORAGE_KEY]).toBeUndefined();
+    expect(sessionArea.values[ACTIVE_PANEL_SESSION_KEY]).toBeUndefined();
     expect(area.values['credential:provider:deepseek']).toBeDefined();
     expect(area.values['credential:provider:uuapi']).toBeDefined();
     expect(area.values['provider:settings:v1']).toBeDefined();
@@ -76,9 +83,15 @@ describe('D-033 local data clearing', () => {
 
   it('清除全部时经 credential-store 删除全部 Key，随后不留本地数据', async () => {
     const area = seededArea();
-    await createLocalDataManager(area).clearAllLocalData();
+    const sessionArea = new MemoryArea();
+    sessionArea.values[ACTIVE_PANEL_SESSION_KEY] = {
+      schemaVersion: 1,
+      sessionId: 'active-session',
+    };
+    await createLocalDataManager(area, sessionArea).clearAllLocalData();
 
     expect(area.values).toEqual({});
+    expect(sessionArea.values).toEqual({});
     expect(area.removed).toContainEqual([
       'credential:provider:deepseek',
       'credential:provider:uuapi',

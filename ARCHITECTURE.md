@@ -172,9 +172,11 @@ password input 不读取 value。`sourceUrl` 与发送时页面不一致则丢�
 ```
 首次提问 → 若无活动会话则新建(sessionId, pageUrl, pageType, repository)
   → 每轮追加 message → updatedAt 刷新
-  → 页面变化(SPA) → 同仓库关联最近会话并更新 pageUrl；跨仓库隔离为新会话
+  → 活动 sessionId 写入 storage.session 指针
+  → 页面变化(SPA) → 保持当前活动会话；只刷新 PageContext，不用 hydrate 覆盖对话
+  → 用户选择最近会话 → 显式继续该会话；用户新建 → 强制创建独立会话
   → 对话超阈值 → 本地生成 historySummary，保留最近有限消息
-  → 重开 Panel → 按 pageUrl/repository 匹配最近会话恢复
+  → 重开 Panel → 优先按活动指针恢复；无有效指针时按 pageUrl/repository 匹配
   → 30 天过期清理 / 容量超限淘汰(见 §8) / 用户手动删除
 ```
 
@@ -234,7 +236,7 @@ Provider 输入仍是带不可信标记并经 sanitizer 处理的 user 数据，
 - **去抖**：URL 变化后去抖（~300ms）再触发重新解析，避免连续导航重复解析。
 - **重复初始化保护**：content script 入口幂等（挂载前检查全局标记），SPA 导航不重复注入叠层。
 - **状态清理**：页面切换时清理旧选择状态（pick/框选叠层、已选元素）、使旧 PageContext 失效。
-- **Session 关联**：同仓库内页面切换 → 会话延续并更新 pageUrl；跨仓库/跨页面类型 → 询问新建或关联。
+- **Session 关联**：页面切换只更新 PageContext，不自动替换 Panel 当前活动会话；用户可从最近会话列表显式切换或新建。Panel 完整重载时优先使用 `storage.session` 活动指针恢复，指针无效才按页面/仓库匹配。
 
 ---
 
@@ -469,13 +471,14 @@ interface OperationConfirmation {
 - **仓库分析事实回填（D-048）**：Provider 输出 Schema 不包含 Star/Release/日期/许可证/Issue-PR 等可变事实；最终卡片仅从 `RepositoryAnalysisFacts` 回填这些字段。Provider 失败不阻断事实卡，降级说明明确标记数据源。
 - **Phase 10 安全执行 seam（D-049）**：`sanitizer` 统一字符串与结构化敏感字段遮蔽，Message Router 复用同一字段判定；`ToolRegistry` 统一全部只读工具的白名单、strict zod 参数与逐次确认，搜索执行器只取得搜索子集。PanelBridge 在会话准备、Provider、GitHub API 与截图前先执行私有页阻断。
 - **对话持久化脱敏（D-051）**：PanelBridge 对已校验的问题先脱敏，再把同一结果交给 SessionStore 与 Provider runtime；因此 ContextBuilder 不是问题明文离开临时输入状态前的唯一防线。
+- **问答状态与紧凑交互（D-052）**：页面上下文与活动会话是两个独立状态；`hydrate` 只补充最近会话目录，不能覆盖 Panel 当前对话。Panel 提供显式会话选择/新建、分析与问答折叠、点击/框选后的输入 CTA；System Prompt 约束普通回答简练但不牺牲准确性。
 
 ---
 
 ## 8. 存储容量与淘汰策略（v1.1，P1-1）
 
 **存储分区**：
-- `chrome.storage.session`：即时页面状态（当前 PageContext 缓存、pick/框选临时态）。
+- `chrome.storage.session`：即时页面状态（当前 PageContext 缓存、pick/框选临时态、版本化活动会话 ID 指针；不含消息正文）。
 - `chrome.storage.local`（TRUSTED_CONTEXTS）：偏好、Provider 非敏感配置、会话索引、摘要、凭据（独立 key 前缀，经 credential-store 访问）。
 - IndexedDB：**启用条件** = 单会话消息体或总量逼近 storage.local 配额（见硬上限）时启用，存长会话正文；v1 先不启用，封装层预留。
 - 截图：**只在内存/请求生命周期内使用，不持久保存**。
@@ -502,3 +505,8 @@ interface OperationConfirmation {
 `preferences:v1` 且读写均经 zod 校验。超过摘要阈值时使用本地提取式摘要，不额外调用付费 Provider；
 总上下文仍受 32KB 上限约束。清除全部数据后同步重置 Background 内存中的 Provider 探针/禁用状态，
 避免持久数据已空但旧能力状态继续生效。
+
+**Phase 11 人工复核补丁（D-052）**：活动会话指针使用 `panel:active-session:v1`，只保存
+`schemaVersion` 与 `sessionId`；最近会话目录投影最多 10 项且只含 ID、短标题、短仓库标识、更新时间与消息数，
+不含页面 URL 或消息正文。
+会话/偏好清除和全部数据清除都会同步移除活动指针。

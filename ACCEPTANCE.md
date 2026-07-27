@@ -14,7 +14,7 @@
 | S1 | 公开仓库一键分析 | 对 ≥3 个真实公开仓库产出完整结构化中文卡片，关键数字来自 DOM/API |
 | S2 | 点击/框选提问 | 选中元素/区域后得到基于该内容的中文回答；集成测试断言选中数据结构 |
 | S3 | NL→搜索 | ≥5 组中文查询转出合理 GitHub 语法并返回结果 |
-| S4 | 会话保存恢复 | 保存后重开 Panel 可恢复；过期清理与容量淘汰生效 |
+| S4 | 会话保存恢复 | 保存后重开 Panel 可恢复；GitHub 页面切换不清空活动会话；可显式选择/新建会话；过期清理与容量淘汰生效 |
 | S5 | 敏感信息遮蔽 | 构造含 Key/Token/私钥的内容，出站请求体被遮蔽、日志无明文 |
 
 **C-2 约束**：S2（点击+框选）与 S3（NL 搜索）是冻结核心功能，**必须在 Phase 11 前完成**；缺任何一项不得进行 MVP 验收，删减须经用户确认（基线变更）。
@@ -38,19 +38,20 @@
 - selection/pick：进入/退出、悬停叠层、捕获阶段点击拦截、嵌套逻辑元素归一、SelectedElement 字段、password value 不提取、SPA 失效清理
 - selection/region：正向/反向 drag、结构化字段边界、统一充分性判定、needsVision 一致性、rect/viewport/scroll/dpr/zoom/sourceUrl
 - capture：Phase 0 比例坐标、边界 clamp、结构充分时零调用、临时 JPEG/bitmap 释放、取消与错页拒绝
-- context-builder：只含允许字段、不含整页
+- context-builder：只含允许字段、不含整页；普通回答的简练/无废话风格契约在 System Prompt 中固定，且明确准确性优先
 - messaging：信封版本/请求 ID、Schema 校验、超载荷拒绝、超时
 
 ### 2. 组件测试（Vitest + Testing Library）
 - Panel 消息流渲染、Provider 下拉切换（不可用 Provider 置灰）、确认弹窗（**断言无"始终允许"选项**）
 - 扩展 action 单击直接调用 `sidePanel.open`；React StrictMode 重挂载时旧连接的延迟断开不会覆盖新连接状态；Panel `Enter` 发送、`Shift+Enter` 换行且 IME 合成 Enter 不误发（D-040）
 - Background port 在首轮完成后断开时，Panel 自动重连并可发送第二轮；主动关闭 Panel 后不再重连（D-041）
-- 助手 Markdown/GFM 生成语义化标题/列表/强调/代码/表格；原始 HTML、远程图片与可点击外链不会进入 DOM（D-042）
+- 助手 Markdown/GFM 生成语义化标题/列表/强调/代码/表格；fenced code 与行内代码样式不冲突；原始 HTML、远程图片与可点击外链不会进入 DOM（D-042/D-052）
 - Options 表单读写、Key 录入与掩码（**可实现表述，D-028**）：录入用 password input；**保存成功后输入框与受控状态被清空**（断言 value === ''）；**已保存 Key 不回显明文**——保存后重新打开 Options，DOM/组件状态中只有掩码（尾 4 位），无完整 Key 字符串；Zustand store 全量序列化后不含已存 Key 明文
 - Options 偏好表单与容量用量可读；三种数据清除入口分别可用且全清有显式二次确认（D-033）、数据流向披露展示
-- Panel 收到 `SESSION_STATE` 后恢复当前页面最近会话；恢复投影过长时明确提示早期内容未展开
-- Panel 点击选择状态覆盖 active/selected/cancelled；已选元素随问题提交，旧页面选择被清除
-- Panel 框选状态覆盖 active/selected/cancelled；结构充分提示“不截图”，不足时在提交前提示视觉 Provider 与可能费用
+- Panel 收到 `SESSION_STATE` 后恢复活动会话；页面变化/Background 重连的 hydrate 不覆盖当前对话；最近会话可选择且可强制新建；恢复投影过长时明确提示早期内容未展开
+- 分析区与问答区可独立收起/展开；收起不丢失当前状态
+- Panel 点击选择状态覆盖 active/selected/cancelled；已选元素随问题提交，旧页面选择被清除；选择成功后有可聚焦输入框的下一步操作
+- Panel 框选状态覆盖 active/selected/cancelled；结构充分提示“不截图”，不足时在提交前提示视觉 Provider 与可能费用；框选成功后有可聚焦输入框的下一步操作
 - Panel 中文搜索覆盖自动/仓库/Issue 目标、查询解释与语法、仓库/Issue 结果卡、限流提示、本地 DOM 结果与安全网页入口；搜索链不调用 AI Provider
 - Panel 一键仓库分析覆盖运行/完成/错误、固定字段卡片、数据源、缺字段与 degradedNotice；数字事实以卡片字段直接呈现
 
@@ -66,7 +67,7 @@
 ### 4. E2E（Playwright，加载扩展，Phase 11）
 - 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片
 - SPA 导航后上下文刷新且无重复初始化
-- 会话恢复
+- 会话恢复；切换 GitHub 页面后活动会话仍保留，Panel 重载后继续恢复
 
 ### 5. 专项安全测试（Phase 1.5 地基 + Phase 10 加固）
 

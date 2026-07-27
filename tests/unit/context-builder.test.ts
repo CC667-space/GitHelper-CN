@@ -17,6 +17,15 @@ function page(overrides: Partial<PageContext> = {}): PageContext {
 }
 
 describe('context-builder and private outbound guard', () => {
+  it('System Prompt 默认要求结论优先、短回答且不以寒暄和客套占用面板', () => {
+    expect(SYSTEM_PROMPT).toContain('先给结论');
+    expect(SYSTEM_PROMPT).toContain('不超过 400 个中文字符');
+    expect(SYSTEM_PROMPT).toContain('最多 6 个短要点');
+    expect(SYSTEM_PROMPT).toContain('不要寒暄、复述问题');
+    expect(SYSTEM_PROMPT).toContain('不确定');
+    expect(SYSTEM_PROMPT).toContain('不得为了简短牺牲准确性');
+  });
+
   it('System 只含固定规则，页面文字只进入带不可信标记的 user 角色', () => {
     const built = buildMinimalContext('请解释', page());
 

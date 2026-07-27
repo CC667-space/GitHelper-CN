@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MAX_PANEL_SESSION_SUMMARIES,
   MAX_RECENT_SESSIONS,
   PANEL_SESSION_BYTES,
   SESSION_RETENTION_MS,
@@ -100,6 +101,56 @@ describe('SessionStore', () => {
     expect(await store.delete(prepared.session.sessionId)).toBe(true);
     expect(await store.get(prepared.session.sessionId)).toBeUndefined();
     expect(area.getBytesCalls).toBeGreaterThan(0);
+  });
+
+  it('用户显式新建时，即使页面相同也创建独立会话', async () => {
+    const store = new SessionStore(new MemoryArea(), { now: () => NOW });
+    const first = await store.prepare(page(), '第一个主题');
+    const second = await store.prepare(page(), '第二个主题', { startNew: true });
+
+    expect(second.session.sessionId).not.toBe(first.session.sessionId);
+    expect(second.history).toEqual([]);
+    expect((await store.listRecent()).map((session) => session.sessionId)).toHaveLength(2);
+  });
+
+  it('用户显式选择会话后，跨 GitHub 页面仍继续该会话', async () => {
+    const store = new SessionStore(new MemoryArea(), { now: () => NOW });
+    const selected = await store.prepare(page(), '原会话问题');
+    const continued = await store.prepare(
+      page({
+        url: 'https://github.com/microsoft/vscode',
+        repository: 'microsoft/vscode',
+      }),
+      '切换页面后继续',
+      { sessionId: selected.session.sessionId },
+    );
+
+    expect(continued.session.sessionId).toBe(selected.session.sessionId);
+    expect(continued.history.map((message) => message.content)).toEqual(['原会话问题']);
+    expect(continued.session.pageUrl).toBe('https://github.com/microsoft/vscode');
+  });
+
+  it('最近会话目录只提供 Panel 选择所需的有界最小投影', async () => {
+    const store = new SessionStore(new MemoryArea(), { now: () => NOW });
+    for (let index = 0; index < MAX_PANEL_SESSION_SUMMARIES + 2; index += 1) {
+      await store.prepare(
+        page({ repository: `${'仓'.repeat(120)}/${index}` }),
+        `${'问'.repeat(100)} ${index}`,
+        { startNew: true },
+      );
+    }
+    const summaries = await store.listSummaries();
+
+    expect(summaries).toHaveLength(MAX_PANEL_SESSION_SUMMARIES);
+    expect(summaries[0]?.title.length).toBeLessThanOrEqual(80);
+    expect(summaries[0]?.repository?.length).toBeLessThanOrEqual(100);
+    expect(summaries[0]).not.toHaveProperty('pageUrl');
+    expect(summaries[0]).toEqual(
+      expect.objectContaining({
+        messageCount: 1,
+      }),
+    );
+    expect(new TextEncoder().encode(JSON.stringify(summaries)).byteLength).toBeLessThan(8 * 1024);
   });
 
   it('自动删除 30 天过期会话并只保留最近 50 个', async () => {

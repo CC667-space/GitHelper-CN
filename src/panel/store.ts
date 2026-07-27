@@ -27,8 +27,10 @@ interface PanelState {
   connected: boolean;
   draft: string;
   messages: PanelMessage[];
+  recentSessions: NonNullable<PanelSessionState['recentSessions']>;
   sessionHistoryTruncated: boolean;
   sessionId?: string;
+  startNewSession: boolean;
   pickStatus: 'idle' | 'active' | 'selected';
   pickStatusMessage?: string;
   selectedElement?: SelectedElement;
@@ -52,6 +54,7 @@ interface PanelState {
   addUserMessage(content: string): void;
   applyProviderState(state: ProviderState): void;
   applySessionState(state: PanelSessionState): void;
+  beginNewSession(): void;
   applyPickState(state: PanelPickState): void;
   clearSelectedElement(): void;
   applyRegionState(state: PanelRegionState): void;
@@ -69,7 +72,9 @@ export const usePanelStore = create<PanelState>((set) => ({
   connected: false,
   draft: '',
   messages: [],
+  recentSessions: [],
   sessionHistoryTruncated: false,
+  startNewSession: false,
   pickStatus: 'idle',
   regionStatus: 'idle',
   searchDraft: '',
@@ -109,11 +114,29 @@ export const usePanelStore = create<PanelState>((set) => ({
     })),
   selectTextProvider: (selectedTextProviderId) => set({ selectedTextProviderId }),
   selectVisionProvider: (selectedVisionProviderId) => set({ selectedVisionProviderId }),
-  applySessionState: ({ sessionId, messages, truncated }) =>
+  applySessionState: ({ sessionId, messages, truncated, cause, recentSessions }) =>
+    set((state) => {
+      const nextRecentSessions = recentSessions ?? state.recentSessions;
+      if (
+        (cause === undefined || cause === 'hydrate') &&
+        (state.startNewSession || (state.sessionId !== undefined && sessionId !== state.sessionId))
+      ) {
+        return { recentSessions: nextRecentSessions };
+      }
+      return {
+        sessionId,
+        messages,
+        recentSessions: nextRecentSessions,
+        sessionHistoryTruncated: truncated,
+        startNewSession: cause === 'new',
+      };
+    }),
+  beginNewSession: () =>
     set({
-      sessionId,
-      messages,
-      sessionHistoryTruncated: truncated,
+      messages: [],
+      sessionHistoryTruncated: false,
+      sessionId: undefined,
+      startNewSession: true,
     }),
   applyPickState: (state) =>
     set(

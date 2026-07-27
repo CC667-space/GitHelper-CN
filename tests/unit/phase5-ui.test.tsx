@@ -1,10 +1,10 @@
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { defaultUserPreferences } from '../../src/background/prefs-store';
-import type { ProviderRuntimeView } from '../../src/lib/bridge-protocol';
+import type { PanelSessionState, ProviderRuntimeView } from '../../src/lib/bridge-protocol';
 import type { OptionsServices } from '../../src/options/services';
 import { OptionsApp } from '../../src/options/App';
 import { PanelApp } from '../../src/panel/App';
@@ -45,6 +45,7 @@ afterEach(() => {
     connected: false,
     draft: '',
     messages: [],
+    recentSessions: [],
     pageLabel: '等待读取当前 GitHub 页面',
     providers: [],
     pickStatus: 'idle',
@@ -55,6 +56,7 @@ afterEach(() => {
     selectedRegion: undefined,
     sessionHistoryTruncated: false,
     sessionId: undefined,
+    startNewSession: false,
     selectedTextProviderId: undefined,
     selectedVisionProviderId: undefined,
   });
@@ -62,7 +64,9 @@ afterEach(() => {
 
 describe('Phase 5 UI', () => {
   it('Panel 重开后恢复会话并提示未展开的早期历史', async () => {
+    let emitSessionState: ((state: PanelSessionState) => void) | undefined;
     const connect = vi.fn((_onEvent, _onProviderState, onConnectionChange, onSessionState) => {
+      emitSessionState = onSessionState;
       onConnectionChange(true);
       onSessionState({
         sessionId: 'session-restored',
@@ -94,6 +98,137 @@ describe('Phase 5 UI', () => {
     expect(await screen.findByText('此前的问题')).toBeTruthy();
     expect(screen.getByText('此前的回答')).toBeTruthy();
     expect(screen.getByText(/较早消息已摘要/)).toBeTruthy();
+
+    act(() => {
+      emitSessionState?.({
+        messages: [],
+        truncated: false,
+      });
+    });
+    expect(screen.getByText('此前的问题')).toBeTruthy();
+    expect(screen.getByText('此前的回答')).toBeTruthy();
+
+    act(() => {
+      emitSessionState?.({
+        sessionId: 'session-from-new-page',
+        cause: 'hydrate',
+        messages: [
+          {
+            id: 'message-other',
+            role: 'assistant',
+            content: '其他页面自动匹配的会话',
+            createdAt: '2026-07-24T00:00:02.000Z',
+          },
+        ],
+        truncated: false,
+      });
+    });
+    expect(screen.getByText('此前的问题')).toBeTruthy();
+    expect(screen.queryByText('其他页面自动匹配的会话')).toBeNull();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '收起问答' }));
+    expect(screen.queryByTestId('conversation')).toBeNull();
+    expect(screen.queryByLabelText('输入问题')).toBeNull();
+    await user.click(screen.getByRole('button', { name: '展开问答' }));
+    expect(screen.getByTestId('conversation')).toBeTruthy();
+    expect(screen.getByLabelText('输入问题')).toBeTruthy();
+  });
+
+  it('Panel 可选择最近会话并显式新建隔离会话', async () => {
+    const selectSession = vi.fn();
+    const newSession = vi.fn();
+    const send = vi.fn();
+    let emitSessionState: ((state: PanelSessionState) => void) | undefined;
+    const connect = vi.fn((_onEvent, _onProviderState, onConnectionChange, onSessionState) => {
+      emitSessionState = onSessionState;
+      onConnectionChange(true);
+      onSessionState({
+        sessionId: 'session-1',
+        cause: 'hydrate',
+        recentSessions: [
+          {
+            sessionId: 'session-1',
+            title: '第一个主题',
+            repository: 'openai/openai-node',
+            updatedAt: '2026-07-24T00:00:02.000Z',
+            messageCount: 2,
+          },
+          {
+            sessionId: 'session-2',
+            title: '第二个主题',
+            repository: 'microsoft/vscode',
+            updatedAt: '2026-07-24T00:00:01.000Z',
+            messageCount: 2,
+          },
+        ],
+        messages: [
+          {
+            id: 'message-1',
+            role: 'assistant',
+            content: '第一个会话',
+            createdAt: '2026-07-24T00:00:00.000Z',
+          },
+        ],
+        truncated: false,
+      });
+      return {
+        send,
+        abort: vi.fn(),
+        selectSession,
+        newSession,
+        disconnect: vi.fn(),
+      };
+    });
+    const user = userEvent.setup();
+    render(<PanelApp connect={connect} />);
+
+    expect(await screen.findByRole('option', { name: /第一个主题/ })).toBeTruthy();
+    expect(screen.getByRole('option', { name: /第二个主题/ })).toBeTruthy();
+    await user.selectOptions(screen.getByLabelText('当前会话'), 'session-2');
+    expect(selectSession).toHaveBeenCalledWith('session-2');
+
+    act(() => {
+      emitSessionState?.({
+        sessionId: 'session-2',
+        cause: 'select',
+        messages: [
+          {
+            id: 'message-2',
+            role: 'assistant',
+            content: '第二个会话',
+            createdAt: '2026-07-24T00:00:01.000Z',
+          },
+        ],
+        truncated: false,
+      });
+    });
+    expect(screen.getByText('第二个会话')).toBeTruthy();
+    await user.type(screen.getByLabelText('输入问题'), '继续第二个主题');
+    await user.click(screen.getByRole('button', { name: '发送' }));
+    expect(send).toHaveBeenLastCalledWith(
+      '继续第二个主题',
+      undefined,
+      undefined,
+      undefined,
+      'session-2',
+      false,
+    );
+
+    await user.click(screen.getByRole('button', { name: '新建会话' }));
+    expect(newSession).toHaveBeenCalledOnce();
+    expect(screen.queryByText('第二个会话')).toBeNull();
+    expect(screen.getByText(/开始询问当前 GitHub 页面/)).toBeTruthy();
+    await user.type(screen.getByLabelText('输入问题'), '独立的新主题');
+    await user.click(screen.getByRole('button', { name: '发送' }));
+    expect(send).toHaveBeenLastCalledWith(
+      '独立的新主题',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      true,
+    );
   });
 
   it('Options 保存收紧偏好，并以独立入口执行两类批量清除', async () => {

@@ -117,6 +117,35 @@ describe('Panel connection lifecycle', () => {
     connection.disconnect();
   });
 
+  it('发送显式会话选择、新建和带会话身份的问题', () => {
+    const fake = createFakePort();
+    vi.stubGlobal('chrome', {
+      runtime: {
+        connect: vi.fn(() => fake.port),
+      },
+    });
+    const connection = connectPanel(vi.fn(), vi.fn(), vi.fn());
+
+    connection.selectSession?.('session-2');
+    connection.newSession?.();
+    connection.send('继续这个主题', 'deepseek', undefined, undefined, 'session-2', false);
+
+    expect(fake.postMessage.mock.calls.map(([message]) => message.type)).toEqual([
+      'PANEL_SESSION_SELECT',
+      'PANEL_SESSION_NEW',
+      'PANEL_MESSAGE',
+    ]);
+    expect(fake.postMessage.mock.calls[2]?.[0].payload).toEqual({
+      text: '继续这个主题',
+      providerId: 'deepseek',
+      selectedElement: undefined,
+      selectedRegion: undefined,
+      sessionId: 'session-2',
+      startNewSession: false,
+    });
+    connection.disconnect();
+  });
+
   it('收发点击选择协议消息', () => {
     const fake = createFakePort();
     vi.stubGlobal('chrome', {
