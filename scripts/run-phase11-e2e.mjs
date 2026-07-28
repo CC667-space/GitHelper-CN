@@ -378,24 +378,38 @@ try {
   await analysisCard.waitFor({ timeout: 20_000 });
   const analysisText = await analysisCard.innerText();
   assert(analysisText.includes('octocat/Hello-World'), 'E2E 分析卡缺少仓库名');
-  assert(analysisText.includes('README 速览'), 'E2E 分析卡缺少 README 速览');
-  assert(analysisText.includes('主要功能'), 'E2E 分析卡缺少主要功能');
-  assert(analysisText.includes('启动本地问候服务器'), 'E2E 分析卡缺少中文 README 功能证据');
-  assert(analysisText.includes('学习真实项目结构'), 'E2E 分析卡缺少中文 README 概括');
+  assert(analysisText.includes('总结速览'), 'E2E 分析卡缺少总结速览');
+  assert(analysisText.includes('AI 总结暂不可用'), 'E2E 本地降级未明确标记 AI 总结状态');
+  const repositoryDetails = panel.getByTestId('repository-details');
+  const repositorySourceSummary = panel.getByTestId('repository-source-summary');
+  assert((await repositoryDetails.getAttribute('open')) === null, 'E2E 详细介绍不应默认展开');
   assert(
-    !analysisText.includes('Starts a local greeting server'),
+    (await repositorySourceSummary.getAttribute('open')) === null,
+    'E2E 原项目文件摘要不应默认展开',
+  );
+  await repositoryDetails.locator('summary').click();
+  const detailsText = await repositoryDetails.innerText();
+  assert(detailsText.includes('主要功能'), 'E2E 详细介绍缺少主要功能');
+  assert(detailsText.includes('上手难度'), 'E2E 详细介绍缺少上手难度');
+  await repositorySourceSummary.locator('summary').click();
+  const sourceText = await repositorySourceSummary.innerText();
+  assert(sourceText.includes('README 摘要'), 'E2E 原项目文件摘要缺少 README 摘要');
+  assert(sourceText.includes('启动本地问候服务器'), 'E2E 分析卡缺少中文 README 功能证据');
+  assert(sourceText.includes('学习真实项目结构'), 'E2E 分析卡缺少中文 README 概括');
+  assert(
+    !sourceText.includes('Starts a local greeting server'),
     'E2E 分析卡错误展示了默认英文 README',
   );
   assert(
-    !analysisText.includes('A tiny example server') &&
-      !analysisText.includes('A first repository for testing GitHub APIs'),
+    !sourceText.includes('A tiny example server') &&
+      !sourceText.includes('A first repository for testing GitHub APIs'),
     'E2E 分析卡仍透传英文 README 概括或仓库用途',
   );
-  assert(!analysisText.includes('�'), 'E2E 分析卡仍包含 UTF-8 替换字符');
-  assert(!analysisText.includes('<img'), 'E2E 分析卡仍包含 README banner HTML');
-  assert(analysisText.includes('文件、配置与实现'), 'E2E 分析卡缺少文件配置分析');
-  assert(analysisText.includes('package.json'), 'E2E 分析卡缺少实际 package.json 证据');
-  assert(analysisText.includes('src/server.js'), 'E2E 分析卡缺少受限源码文件证据');
+  assert(!sourceText.includes('�'), 'E2E 分析卡仍包含 UTF-8 替换字符');
+  assert(!sourceText.includes('<img'), 'E2E 分析卡仍包含 README banner HTML');
+  assert(sourceText.includes('文件、配置与实现'), 'E2E 分析卡缺少文件配置分析');
+  assert(sourceText.includes('package.json'), 'E2E 分析卡缺少实际 package.json 证据');
+  assert(sourceText.includes('src/server.js'), 'E2E 分析卡缺少受限源码文件证据');
   const repositoryFacts = panel.getByTestId('repository-facts');
   assert((await repositoryFacts.getAttribute('open')) === null, 'E2E 仓库事实区不应默认展开');
   await repositoryFacts.locator('summary').click();
@@ -490,7 +504,8 @@ try {
         repository: 'octocat/Hello-World',
         apiFacts: ['stars', 'license', 'release', 'openPullRequests'],
         fileEvidence: ['README.zh-CN.md', 'package.json', 'src/server.js'],
-        defaultVisible: ['readmeSummary', 'features', 'configuration', 'implementation'],
+        defaultVisible: ['overview'],
+        defaultCollapsed: ['details', 'sourceSummary', 'facts'],
         factsDefaultExpanded: false,
       },
       spa: {

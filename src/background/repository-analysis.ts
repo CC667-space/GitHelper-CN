@@ -15,11 +15,11 @@ import {
 } from './github-api';
 import { assertPublicContext } from './outbound-policy';
 import {
-  buildRepositoryQuickScan,
+  buildRepositorySourceSummary,
   cleanRepositoryMarkdownText,
   extractReadmeSummary,
   hasChineseNarrative,
-} from './repository-quick-scan';
+} from './repository-source-summary';
 
 export interface RepositoryAnalysisFacts {
   repository: string;
@@ -359,7 +359,16 @@ function factualRisks(facts: RepositoryAnalysisFacts, now: Date): string[] {
 }
 
 function fallbackInsights(facts: RepositoryAnalysisFacts, now: Date): RepositoryInsights {
+  const highlights = [
+    facts.installCommands.length ? '项目文档中提供了安装或启动命令。' : undefined,
+    facts.primaryLanguage ? `主要代码使用 ${facts.primaryLanguage}。` : undefined,
+    facts.readmeExcerpt ? '已读取 README 和少量关键文件作为分析依据。' : undefined,
+  ].filter((item): item is string => Boolean(item));
   return {
+    overview: {
+      summary: '这是一个公开的 GitHub 项目。AI 易读总结暂不可用，可展开下方内容查看已确认信息。',
+      highlights: highlights.length ? highlights.slice(0, 3) : ['当前可用资料有限。'],
+    },
     purpose: localPurpose(facts),
     platforms: facts.detectedPlatforms,
     installation: facts.installCommands,
@@ -481,6 +490,7 @@ export class RepositoryAnalysisExecutor {
     const local = fallbackInsights(facts, now);
     let insights = local;
     let providerUsed = false;
+    let providerOverviewUsed = false;
     if (this.generateInsights) {
       try {
         const generated = await this.generateInsights(
@@ -491,6 +501,7 @@ export class RepositoryAnalysisExecutor {
         );
         insights = mergeRepositoryInsights(local, generated.insights);
         providerUsed = true;
+        providerOverviewUsed = Boolean(generated.insights.overview);
       } catch (error: unknown) {
         degradedNotice = [
           degradedNotice,
@@ -511,14 +522,22 @@ export class RepositoryAnalysisExecutor {
     return repositoryAnalysisCardSchema.parse({
       repository: facts.repository,
       url: facts.url,
+      overview: {
+        ...insights.overview,
+        source: providerOverviewUsed ? 'provider' : 'local',
+      },
       purpose: hasChineseNarrative(insights.purpose, 4) ? insights.purpose : local.purpose,
-      quickScan: buildRepositoryQuickScan({
+      details: {
+        readmeSummary: insights.readmeSummary,
+        features: insights.features ?? [],
+        configuration: insights.configuration ?? [],
+        implementation: insights.implementationNotes ?? [],
+      },
+      sourceSummary: buildRepositorySourceSummary({
         readme,
         description,
         installCommands,
         structure,
-        insights,
-        providerUsed,
       }),
       languages,
       structure,

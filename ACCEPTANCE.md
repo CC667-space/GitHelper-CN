@@ -31,7 +31,7 @@
 - credential-store：Options 上下文只 write/delete、Background 只 read/inject（读写路径唯一）；普通 storage 接口读不到凭据；**构建期 import 边界：`src/content/**` 引用 credential-store 触发 lint 报错（D-028）**
 - tools registry：zod 校验通过/拒绝、白名单外拒绝、**openGitHubPage 仅接受 `https://github.com/*`、非 https Scheme（javascript/data/file/chrome/chrome-extension/blob）全部拒绝（D-013R）**
 - github-api：**限流分桶（core/search/code_search）、X-RateLimit-Resource/Remaining/Reset 与 Retry-After 解析、限流后不指数重试（mock 计时断言）、到点恢复（D-032）**
-- repository-analysis：固定 Schema；DOM/API 事实回填；3 文件配额内最多 1 份 README，根目录默认/中文 README 优先于嵌套说明并保留非 README 文件；README banner/替换字符不进入卡片，HTML 功能表可本地提取；README 安装优先；Provider 合法部分字段经白名单投影后与本地完整结果合并，未知字段丢弃，畸形 JSON 最多重试一次；Provider 失败、缺 Release/许可证/语言和 core 限流均确定性降级；网络错误不重试；canonical 仓库重定向
+- repository-analysis：固定 Schema；`overview`（AI 新手总结）、`details`（详细解释）、`sourceSummary`（本地原文件证据）分层且互不覆盖；DOM/API 事实回填；3 文件配额内最多 1 份 README，根目录中文/默认 README 优先于嵌套说明并保留非 README 文件；README banner/替换字符不进入卡片，HTML 功能表可本地提取；README 安装优先；Provider 合法部分字段经白名单投影后与本地完整结果合并，未知字段丢弃，缺少新手总结、英文自然语言或畸形 JSON 最多重试一次；技术命令/路径不因英文字符误判；Provider 失败、缺 Release/许可证/语言和 core 限流均确定性降级；网络错误不重试；canonical 仓库重定向
 - storage：读写、schemaVersion、迁移、getBytesInUse 容量检查、淘汰顺序
 - session-store：CRUD、同页面/同仓库关联、30 天过期、50 会话上限、摘要触发、Provider/Panel 上下文长度控制、容量淘汰顺序
 - prefs-store：合法偏好持久化；运行时拒绝 `downloads:auto` 和非 `deny` 的 `accountChanges`
@@ -53,7 +53,7 @@
 - Panel 点击选择状态覆盖 active/selected/cancelled；已选元素随问题提交，旧页面选择被清除；选择成功后有可聚焦输入框的下一步操作
 - Panel 框选状态覆盖 active/selected/cancelled；结构充分提示“不截图”，不足时在提交前提示视觉 Provider 与可能费用；框选成功后有可聚焦输入框的下一步操作
 - Panel 中文搜索覆盖自动/仓库/Issue 目标、查询解释与语法、仓库/Issue 结果卡、限流提示、本地 DOM 结果与安全网页入口；搜索链不调用 AI Provider
-- Panel 一键仓库分析覆盖运行/完成/错误、固定字段卡片、数据源、缺字段与 degradedNotice；README/功能/配置/实现速览默认展开且自然语言为中文，Star/语言/Release 等事实区默认折叠并可展开
+- Panel 一键仓库分析覆盖运行/完成/错误、固定字段卡片、数据源、缺字段与 degradedNotice；仅“总结速览”默认显示，“详细介绍”“原项目文件摘要”和 Star/语言/Release 等“仓库事实”均默认折叠并可展开
 
 ### 3. 扩展集成测试
 - Panel→BG→Content→Panel 消息往返（经来源+Schema 校验）
@@ -67,7 +67,7 @@
 - 单轮问答收展互不影响；问答删除与 session 删除均须垃圾桶后 `✓/×` 二次确认，`×` 零变更，`✓` 不误删相邻轮次或非目标 session
 
 ### 4. E2E（Playwright，加载扩展，Phase 11）
-- 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片；中英文 README 共存且包含 banner HTML/功能表时，优先中文 README，默认显示无乱码、无英文叙述透传的中文概括、主要功能、配置与实际关键文件证据，仓库事实默认折叠且展开后数字可见
+- 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片；默认仅显示新手总结，详细介绍、原项目文件摘要和仓库事实均关闭；展开原项目文件摘要后，中英文 README 共存且含 banner HTML/功能表时应优先中文 README，无乱码、无默认英文说明透传，并包含配置与实际关键文件证据；展开事实区后数字可见
 - SPA 导航后上下文刷新且无重复初始化
 - 会话恢复；切换 GitHub 页面后活动会话仍保留，Panel 重载后继续恢复；逐轮收展及两类确认删除可操作
 

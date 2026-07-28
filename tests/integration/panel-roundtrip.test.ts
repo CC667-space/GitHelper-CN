@@ -616,8 +616,19 @@ describe('Panel → Background → Content → Panel', () => {
     const card = {
       repository: 'react/react',
       url: 'https://github.com/react/react',
+      overview: {
+        summary: 'React 帮你用组件构建用户界面。',
+        highlights: ['适合构建 Web 界面'],
+        source: 'provider' as const,
+      },
       purpose: '用于构建用户界面。',
-      quickScan: {
+      details: {
+        readmeSummary: 'React 是一个界面开发工具。',
+        features: ['组件化界面'],
+        configuration: ['项目通过 package.json 管理测试任务。'],
+        implementation: ['核心代码位于 packages 目录。'],
+      },
+      sourceSummary: {
         readmeSummary: 'React 使用组件构建用户界面。',
         features: ['组件化界面'],
         configuration: ['package.json：脚本 test'],

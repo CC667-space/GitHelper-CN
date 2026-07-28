@@ -4,6 +4,12 @@ import { githubWebUrlSchema } from './github-search';
 
 export const repositoryInsightsSchema = z
   .object({
+    overview: z
+      .object({
+        summary: z.string().min(1).max(180),
+        highlights: z.array(z.string().min(1).max(60)).min(1).max(3),
+      })
+      .strict(),
     purpose: z.string().min(1).max(1_000),
     readmeSummary: z.string().min(1).max(1_000).optional(),
     features: z.array(z.string().min(1).max(300)).max(6).optional(),
@@ -33,8 +39,23 @@ export const repositoryAnalysisCardSchema = z
   .object({
     repository: z.string().min(1).max(500),
     url: githubWebUrlSchema,
+    overview: z
+      .object({
+        summary: z.string().min(1).max(180),
+        highlights: z.array(z.string().min(1).max(60)).min(1).max(3),
+        source: z.enum(['provider', 'local']),
+      })
+      .strict(),
     purpose: z.string().min(1).max(1_000),
-    quickScan: z
+    details: z
+      .object({
+        readmeSummary: z.string().min(1).max(1_000).optional(),
+        features: z.array(z.string().min(1).max(300)).max(6),
+        configuration: z.array(z.string().min(1).max(300)).max(6),
+        implementation: z.array(z.string().min(1).max(300)).max(6),
+      })
+      .strict(),
+    sourceSummary: z
       .object({
         readmeSummary: z.string().min(1).max(1_000),
         features: z.array(z.string().min(1).max(300)).max(6),

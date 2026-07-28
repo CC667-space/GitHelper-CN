@@ -399,7 +399,6 @@ export function PanelApp({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="break-words text-sm font-semibold">{analysisCard.repository}</h3>
-                    <p className="mt-1 text-slate-600">{analysisCard.purpose}</p>
                   </div>
                   <button
                     className="shrink-0 rounded border border-emerald-400 px-2 py-1 text-emerald-900"
@@ -412,146 +411,219 @@ export function PanelApp({
 
                 <section
                   className="rounded border border-emerald-100 bg-white p-2"
-                  data-testid="repository-quick-scan"
+                  data-testid="repository-overview"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-medium">README 速览</h4>
+                    <h4 className="font-medium">总结速览</h4>
                     <span className="text-[11px] text-slate-500">
-                      {analysisCard.quickScan.source === 'readme'
-                        ? '来自受限 README 片段'
-                        : analysisCard.quickScan.source === 'description'
-                          ? 'README 未取得，使用仓库简介'
-                          : '可用资料有限'}
+                      {analysisCard.overview.source === 'provider'
+                        ? 'AI 易读总结'
+                        : 'AI 总结暂不可用'}
                     </span>
                   </div>
                   <p className="mt-1 whitespace-pre-wrap text-slate-700">
-                    {analysisCard.quickScan.readmeSummary}
+                    {analysisCard.overview.summary}
                   </p>
-                </section>
-
-                <section className="rounded bg-white p-2">
-                  <h4 className="font-medium">主要功能</h4>
-                  {analysisCard.quickScan.features.length ? (
+                  {analysisCard.overview.highlights.length ? (
                     <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
-                      {analysisCard.quickScan.features.map((feature, index) => (
-                        <li key={`${index}:${feature.slice(0, 40)}`}>{feature}</li>
+                      {analysisCard.overview.highlights.map((highlight, index) => (
+                        <li key={`${index}:${highlight.slice(0, 40)}`}>{highlight}</li>
                       ))}
                     </ul>
-                  ) : (
-                    <p className="mt-1 text-slate-500">未从受限 README 片段识别出明确功能清单</p>
-                  )}
-                </section>
-
-                <section className="rounded bg-white p-2">
-                  <h4 className="font-medium">文件、配置与实现</h4>
-                  {analysisCard.quickScan.configuration.length ? (
-                    <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
-                      {analysisCard.quickScan.configuration.map((item, index) => (
-                        <li className="break-words" key={`${index}:${item.slice(0, 40)}`}>
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="mt-1 text-slate-500">未识别出可靠配置线索</p>
-                  )}
-                  {analysisCard.structure.directories.length ? (
-                    <p className="mt-2 break-words text-slate-600">
-                      目录：{analysisCard.structure.directories.join(' · ')}
-                    </p>
                   ) : null}
-                  {analysisCard.structure.keyFiles.length ? (
-                    <ul className="mt-2 space-y-2">
-                      {analysisCard.structure.keyFiles.map((file) => (
-                        <li className="rounded border border-slate-200 p-2" key={file.path}>
-                          <p className="break-all font-medium">
-                            <code>{file.path}</code>
-                            <span className="ml-1 font-normal text-slate-500">· {file.role}</span>
-                          </p>
+                </section>
+
+                <details
+                  className="rounded border border-slate-200 bg-white px-2 py-1"
+                  data-testid="repository-details"
+                >
+                  <summary className="cursor-pointer py-1 font-medium text-slate-700">
+                    详细介绍
+                  </summary>
+                  <div className="space-y-3 border-t border-slate-200 py-2">
+                    <section>
+                      <h4 className="font-medium">项目是做什么的</h4>
+                      <p className="mt-1 text-slate-600">{analysisCard.purpose}</p>
+                    </section>
+                    {analysisCard.details.readmeSummary ? (
+                      <section>
+                        <h4 className="font-medium">项目介绍</h4>
+                        <p className="mt-1 whitespace-pre-wrap text-slate-600">
+                          {analysisCard.details.readmeSummary}
+                        </p>
+                      </section>
+                    ) : null}
+                    <section>
+                      <h4 className="font-medium">主要功能</h4>
+                      {analysisCard.details.features.length ? (
+                        <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                          {analysisCard.details.features.map((feature, index) => (
+                            <li key={`${index}:${feature.slice(0, 40)}`}>{feature}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-1 text-slate-500">暂未整理出可靠功能说明</p>
+                      )}
+                    </section>
+                    {analysisCard.details.configuration.length ||
+                    analysisCard.details.implementation.length ? (
+                      <section>
+                        <h4 className="font-medium">技术说明</h4>
+                        <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                          {[
+                            ...analysisCard.details.configuration,
+                            ...analysisCard.details.implementation,
+                          ].map((item, index) => (
+                            <li className="break-words" key={`${index}:${item.slice(0, 40)}`}>
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ) : null}
+                    <section>
+                      <h4 className="font-medium">
+                        安装与运行
+                        <span className="ml-1 font-normal text-slate-500">
+                          （
+                          {analysisCard.installation.source === 'readme'
+                            ? 'README 提取'
+                            : analysisCard.installation.source === 'provider'
+                              ? 'Provider 建议'
+                              : '未获取'}
+                          ）
+                        </span>
+                      </h4>
+                      {analysisCard.installation.steps.length ? (
+                        <ol className="mt-1 list-decimal space-y-1 pl-4">
+                          {analysisCard.installation.steps.map((step, index) => (
+                            <li className="break-words" key={`${index}:${step.slice(0, 40)}`}>
+                              <code>{step}</code>
+                            </li>
+                          ))}
+                        </ol>
+                      ) : (
+                        <p className="mt-1 text-slate-500">未找到可靠安装步骤</p>
+                      )}
+                    </section>
+                    <section>
+                      <h4 className="font-medium">上手难度：{analysisCard.difficulty.level}</h4>
+                      <p className="mt-1 text-slate-600">{analysisCard.difficulty.reason}</p>
+                    </section>
+                    <section>
+                      <h4 className="font-medium">需要注意</h4>
+                      {analysisCard.risks.length ? (
+                        <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                          {analysisCard.risks.map((risk, index) => (
+                            <li key={`${index}:${risk.slice(0, 40)}`}>{risk}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-1 text-slate-500">
+                          当前有限数据中未识别出明确风险；仍需自行核对。
+                        </p>
+                      )}
+                    </section>
+                    <section>
+                      <h4 className="font-medium">建议下一步</h4>
+                      <ol className="mt-1 list-decimal space-y-1 pl-4 text-slate-700">
+                        {analysisCard.nextSteps.map((step, index) => (
+                          <li key={`${index}:${step.slice(0, 40)}`}>{step}</li>
+                        ))}
+                      </ol>
+                    </section>
+                  </div>
+                </details>
+
+                <details
+                  className="rounded border border-slate-200 bg-white px-2 py-1"
+                  data-testid="repository-source-summary"
+                >
+                  <summary className="cursor-pointer py-1 font-medium text-slate-700">
+                    原项目文件摘要
+                  </summary>
+                  <div className="space-y-3 border-t border-slate-200 py-2">
+                    <section>
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="font-medium">README 摘要</h4>
+                        <span className="text-[11px] text-slate-500">
+                          {analysisCard.sourceSummary.source === 'readme'
+                            ? '来自受限 README 片段'
+                            : analysisCard.sourceSummary.source === 'description'
+                              ? 'README 未取得，使用仓库简介'
+                              : '可用资料有限'}
+                        </span>
+                      </div>
+                      <p className="mt-1 whitespace-pre-wrap text-slate-700">
+                        {analysisCard.sourceSummary.readmeSummary}
+                      </p>
+                      {analysisCard.sourceSummary.features.length ? (
+                        <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                          {analysisCard.sourceSummary.features.map((feature, index) => (
+                            <li key={`${index}:${feature.slice(0, 40)}`}>{feature}</li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </section>
+                    <section>
+                      <h4 className="font-medium">文件、配置与实现</h4>
+                      {analysisCard.sourceSummary.configuration.length ? (
+                        <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                          {analysisCard.sourceSummary.configuration.map((item, index) => (
+                            <li className="break-words" key={`${index}:${item.slice(0, 40)}`}>
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-1 text-slate-500">未识别出可靠配置线索</p>
+                      )}
+                      {analysisCard.structure.directories.length ? (
+                        <p className="mt-2 break-words text-slate-600">
+                          目录：{analysisCard.structure.directories.join(' · ')}
+                        </p>
+                      ) : null}
+                      {analysisCard.structure.keyFiles.length ? (
+                        <ul className="mt-2 space-y-2">
+                          {analysisCard.structure.keyFiles.map((file) => (
+                            <li className="rounded border border-slate-200 p-2" key={file.path}>
+                              <p className="break-all font-medium">
+                                <code>{file.path}</code>
+                                <span className="ml-1 font-normal text-slate-500">
+                                  · {file.role}
+                                </span>
+                              </p>
+                              <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                                {file.findings.map((finding, index) => (
+                                  <li key={`${file.path}:${index}`}>{finding}</li>
+                                ))}
+                              </ul>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-slate-500">未获取关键文件内容</p>
+                      )}
+                      {analysisCard.sourceSummary.implementation.length ? (
+                        <>
+                          <p className="mt-2 font-medium text-slate-700">简单实现分析</p>
                           <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
-                            {file.findings.map((finding, index) => (
-                              <li key={`${file.path}:${index}`}>{finding}</li>
+                            {analysisCard.sourceSummary.implementation.map((item, index) => (
+                              <li className="break-words" key={`${index}:${item.slice(0, 40)}`}>
+                                {item}
+                              </li>
                             ))}
                           </ul>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="mt-2 text-slate-500">未获取关键文件内容</p>
-                  )}
-                  {analysisCard.quickScan.implementation.length ? (
-                    <>
-                      <p className="mt-2 font-medium text-slate-700">简单实现分析</p>
-                      <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
-                        {analysisCard.quickScan.implementation.map((item, index) => (
-                          <li className="break-words" key={`${index}:${item.slice(0, 40)}`}>
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  ) : null}
-                  {analysisCard.structure.truncated ? (
-                    <p className="mt-2 text-slate-500">
-                      这里只展示受限样本，未读取的目录和文件不能据此推断。
-                    </p>
-                  ) : null}
-                </section>
-
-                <section className="rounded bg-white p-2">
-                  <h4 className="font-medium">
-                    安装与运行
-                    <span className="ml-1 font-normal text-slate-500">
-                      （
-                      {analysisCard.installation.source === 'readme'
-                        ? 'README 提取'
-                        : analysisCard.installation.source === 'provider'
-                          ? 'Provider 建议'
-                          : '未获取'}
-                      ）
-                    </span>
-                  </h4>
-                  {analysisCard.installation.steps.length ? (
-                    <ol className="mt-1 list-decimal space-y-1 pl-4">
-                      {analysisCard.installation.steps.map((step, index) => (
-                        <li className="break-words" key={`${index}:${step.slice(0, 40)}`}>
-                          <code>{step}</code>
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <p className="mt-1 text-slate-500">未找到可靠安装步骤</p>
-                  )}
-                </section>
-
-                <section>
-                  <h4 className="font-medium">上手难度：{analysisCard.difficulty.level}</h4>
-                  <p className="mt-1 text-slate-600">{analysisCard.difficulty.reason}</p>
-                </section>
-
-                <section>
-                  <h4 className="font-medium">风险</h4>
-                  {analysisCard.risks.length ? (
-                    <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
-                      {analysisCard.risks.map((risk, index) => (
-                        <li key={`${index}:${risk.slice(0, 40)}`}>{risk}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="mt-1 text-slate-500">
-                      当前有限数据中未识别出明确风险；仍需自行核对。
-                    </p>
-                  )}
-                </section>
-
-                <section>
-                  <h4 className="font-medium">建议下一步</h4>
-                  <ol className="mt-1 list-decimal space-y-1 pl-4 text-slate-700">
-                    {analysisCard.nextSteps.map((step, index) => (
-                      <li key={`${index}:${step.slice(0, 40)}`}>{step}</li>
-                    ))}
-                  </ol>
-                </section>
+                        </>
+                      ) : null}
+                      {analysisCard.structure.truncated ? (
+                        <p className="mt-2 text-slate-500">
+                          这里只展示受限样本，未读取的目录和文件不能据此推断。
+                        </p>
+                      ) : null}
+                    </section>
+                  </div>
+                </details>
 
                 <details
                   className="rounded border border-slate-200 bg-slate-50 px-2 py-1"

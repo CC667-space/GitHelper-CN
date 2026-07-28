@@ -435,3 +435,14 @@
 - **证据**：红测分别复现默认英文 README 覆盖根目录中文 README、英文功能先于 Provider 中文功能、英文 description 覆盖中文 README 用途；修复后定向 24/24、常规 Vitest 206 项、typecheck、lint、build、安全扫描与隔离 Chrome E2E 全过。E2E 明确同时提供英文默认和中文 README，实际证据选择 `README.zh-CN.md`，卡片包含中文概括/功能且不出现英文默认功能句。
 - **范围**：Phase 11 第五轮人工复核内部补丁；不新增 Provider 调用上限、Chrome 权限、Host、GitHub API 请求、文件/文本预算或持久数据类别。
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28
+
+## D-057 仓库分析分为新手总结、详细介绍与原文件摘要
+- **决策**：
+  - `RepositoryAnalysisCard` 明确分为三个语义层：`overview` 是 Provider 重新组织后的新手总结，`details` 是较完整的中文解释，`sourceSummary` 只保存本地确定性提取的 README、配置与实现证据。Provider 输出不得覆盖 `sourceSummary`。
+  - Panel 仅默认展示“总结速览”；“详细介绍”“原项目文件摘要”和“仓库事实”均默认折叠。总结速览只显示 1–2 句说明与 2–3 个直接价值要点，不展示目录、脚本或依赖清单；Schema 对总结和单个要点分别设 180/60 字符硬上限。
+  - Provider Prompt 要求先理解项目再按自然中文重组，不逐句翻译、不沿用英文句序、不复制字段清单，并避免堆砌专业名词。存在 README、简介或已检查文件时，`overview` 及至少 2 个要点为本地必检字段；缺失或英文叙述按既有上限最多重试一次。
+  - 中文叙述校验对面向用户的解释字段严格生效；`configuration`、`implementationNotes` 等证据字段仅允许纯命令、路径、包名和代码标识符保留原文，普通英文解释句仍须重写为中文。
+- **理由**：前一实现把 Provider 解释与本地文件提取合并进同一个 `quickScan`，导致默认区出现直译式长文、专业名词和字段清单，也无法区分“AI 已理解后的说明”与“原项目证据”。按阅读目的拆层后，新手先获得可理解结论，需要核对时再展开技术细节和原始证据。
+- **证据**：红测先复现缺少/过长的新手总结、Provider 改写覆盖原 README 摘要、技术标识符触发中文校验、英文技术解释漏检和三块界面未分层；修复后定向 35/35、常规 Vitest 211 项通过（另 1 项 live test 默认跳过），typecheck、lint、build、安全扫描与隔离 Chrome E2E 全过。E2E 断言仅 `overview` 默认显示，`details` / `sourceSummary` / `facts` 均默认折叠。
+- **范围**：Phase 11 第六轮人工复核内部补丁；不增加 Provider 请求上限、Chrome 权限、Host、GitHub API 请求、文件/文本预算或持久数据类别。
+- 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28

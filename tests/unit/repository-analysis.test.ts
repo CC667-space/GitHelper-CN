@@ -192,7 +192,7 @@ describe('RepositoryAnalysisExecutor', () => {
 
     expect(card.popularity.stars).toBe(12_345);
     expect(card.sources.provider).toBe(false);
-    expect(card.quickScan).toMatchObject({
+    expect(card.sourceSummary).toMatchObject({
       source: 'readme',
       readmeSummary: expect.stringMatching(/组件化用户界面/u),
       features: expect.arrayContaining([
@@ -200,7 +200,7 @@ describe('RepositoryAnalysisExecutor', () => {
         expect.stringMatching(/Web 和原生平台/u),
       ]),
     });
-    expect(card.quickScan.configuration).toEqual(
+    expect(card.sourceSummary.configuration).toEqual(
       expect.arrayContaining([expect.stringMatching(/npm install react/iu)]),
     );
     expect(card.degradedNotice).toContain('本地确定性说明');
@@ -293,16 +293,16 @@ describe('RepositoryAnalysisExecutor', () => {
         }),
       ]),
     );
-    expect(card.quickScan.configuration).toEqual(
+    expect(card.sourceSummary.configuration).toEqual(
       expect.arrayContaining([
         expect.stringMatching(/package\.json.*build.*test/iu),
         expect.stringMatching(/package\.json.*react.*zod/iu),
       ]),
     );
-    expect(card.quickScan.implementation).toEqual(
+    expect(card.sourceSummary.implementation).toEqual(
       expect.arrayContaining([expect.stringMatching(/src\/main\.ts.*startApp/iu)]),
     );
-    expect(card.quickScan.features).toEqual(
+    expect(card.sourceSummary.features).toEqual(
       expect.arrayContaining([expect.stringMatching(/受限的配置文件证据/u)]),
     );
     expect(JSON.stringify(card)).not.toMatch(/<img|\uFFFD/iu);
@@ -358,9 +358,12 @@ describe('RepositoryAnalysisExecutor', () => {
     });
 
     expect(card.sources.provider).toBe(true);
-    expect(card.quickScan.readmeSummary).toContain('实际项目文件');
-    expect(card.quickScan.features[0]).toBe('识别项目配置与入口文件');
-    expect(card.quickScan.features.join(' ')).not.toContain('Inspect repository');
+    expect(card.details.readmeSummary).toContain('实际项目文件');
+    expect(card.details.features[0]).toBe('识别项目配置与入口文件');
+    expect(card.sourceSummary.readmeSummary).toContain('README 主要内容为外文');
+    expect(card.sourceSummary.features).toContain(
+      'Inspect repository configuration and entry files',
+    );
     expect(card.purpose).toContain('中文速览');
     expect(card.difficulty.level).toBe('未知');
     expect(card.nextSteps.length).toBeGreaterThan(0);
@@ -409,11 +412,68 @@ describe('RepositoryAnalysisExecutor', () => {
     });
 
     expect(card.purpose).toMatch(/中文项目速览/u);
-    expect(card.quickScan.readmeSummary).toMatch(/读取仓库文件/u);
-    expect(card.quickScan.features).toEqual(['识别项目配置和入口文件', '概括 README 中的核心用途']);
+    expect(card.sourceSummary.readmeSummary).toMatch(/读取仓库文件/u);
+    expect(card.sourceSummary.features).toEqual([
+      '识别项目配置和入口文件',
+      '概括 README 中的核心用途',
+    ]);
     expect(
-      [card.purpose, card.quickScan.readmeSummary, ...card.quickScan.features].join(' '),
+      [card.purpose, card.sourceSummary.readmeSummary, ...card.sourceSummary.features].join(' '),
     ).not.toMatch(/English description|English fallback/u);
+  });
+
+  it('AI 新手总结与原项目文件摘要分层保存，不用模型改写覆盖原始证据摘要', async () => {
+    const repository = 'example/beginner-overview';
+    const localizedReadme = [
+      '# 原项目说明',
+      '',
+      '原始文档用语：这是一个具备闭环自我改进机制并支持多终端后端的智能代理。',
+      '',
+      '## 主要功能',
+      '',
+      '- 原始功能条目：支持跨会话记忆持久化',
+    ].join('\n');
+    const beginnerGenerator = vi.fn(async () => ({
+      providerId: 'deepseek' as const,
+      insights: {
+        overview: {
+          summary: '它是一个能记住使用经验、逐步改进工作方式的 AI 助手。',
+          highlights: ['适合长期重复使用', '可以在多种聊天工具和命令行中使用'],
+        },
+        purpose: '这是一个可持续学习和保存经验的个人 AI 助手。',
+        readmeSummary: '项目提供记忆、自动任务和多入口使用能力。',
+        features: ['保存并复用过去的工作经验'],
+      },
+    })) as unknown as RepositoryInsightGenerator;
+    const executor = new RepositoryAnalysisExecutor(
+      {
+        getRepositoryBundle: vi.fn(async () =>
+          bundle(repository, {
+            fileSnapshot: {
+              directories: ['src'],
+              truncated: false,
+              inspectedFiles: [{ path: 'README.zh-CN.md', content: localizedReadme }],
+            },
+          }),
+        ),
+      } as unknown as GitHubApiClient,
+      beginnerGenerator,
+    );
+
+    const card = await executor.analyze({
+      page: page(repository, localizedReadme),
+      signal: new AbortController().signal,
+      now: new Date('2026-07-28T00:00:00.000Z'),
+    });
+
+    expect(card.overview).toEqual({
+      summary: '它是一个能记住使用经验、逐步改进工作方式的 AI 助手。',
+      highlights: ['适合长期重复使用', '可以在多种聊天工具和命令行中使用'],
+      source: 'provider',
+    });
+    expect(card.sourceSummary.readmeSummary).toContain('原始文档用语');
+    expect(card.sourceSummary.readmeSummary).not.toContain('逐步改进工作方式');
+    expect(card.sourceSummary.features).toEqual(['原始功能条目：支持跨会话记忆持久化']);
   });
 
   it('私有页面在 API 与 Provider 前零出站', async () => {

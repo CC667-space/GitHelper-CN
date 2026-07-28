@@ -1,17 +1,15 @@
-import type { RepositoryAnalysisCard, RepositoryInsights } from '../lib/repository-analysis';
+import type { RepositoryAnalysisCard } from '../lib/repository-analysis';
 
 interface StructureSummary {
   directories: string[];
   keyFiles: Array<{ path: string; role: string; findings: string[] }>;
 }
 
-interface QuickScanInput {
+interface SourceSummaryInput {
   readme?: string;
   description?: string;
   installCommands: string[];
   structure: StructureSummary;
-  insights: RepositoryInsights;
-  providerUsed: boolean;
 }
 
 export function hasChineseNarrative(value: string, minimumCharacters = 4): boolean {
@@ -155,61 +153,29 @@ function localImplementation(structure: StructureSummary): string[] {
   return [...new Set([...directoryEvidence, ...fileEvidence])].slice(0, 6);
 }
 
-function localizedLimited(
-  providerItems: string[] | undefined,
-  localItems: string[],
-  providerUsed: boolean,
-  limit = 6,
-): string[] {
-  const cleanChineseItems = (items: string[]): string[] =>
-    items
-      .map((item) => cleanRepositoryMarkdownText(item))
-      .filter((item) => Boolean(item) && hasChineseNarrative(item, 2));
-  const provider = providerUsed ? cleanChineseItems(providerItems ?? []) : [];
-  const local = cleanChineseItems(localItems);
-  return [...new Set(provider.length ? [...provider, ...local] : local)].slice(0, limit);
+function cleanedLimited(items: string[], limit = 6): string[] {
+  return [...new Set(items.map((item) => cleanRepositoryMarkdownText(item)).filter(Boolean))].slice(
+    0,
+    limit,
+  );
 }
 
-function usefulProviderSummary(value: string | undefined): string | undefined {
-  if (!value || /<(?:img|picture|source)\b/iu.test(value)) {
-    return undefined;
-  }
-  const cleaned = cleanRepositoryMarkdownText(value);
-  if (cleaned.length < 16) {
-    return undefined;
-  }
-  return hasChineseNarrative(cleaned, 6) ? cleaned : undefined;
-}
-
-export function buildRepositoryQuickScan(
-  input: QuickScanInput,
-): RepositoryAnalysisCard['quickScan'] {
+export function buildRepositorySourceSummary(
+  input: SourceSummaryInput,
+): RepositoryAnalysisCard['sourceSummary'] {
   const readmeSummary = input.readme ? extractReadmeSummary(input.readme) : undefined;
   const localSummary =
     readmeSummary ?? input.description?.trim().slice(0, 1_000) ?? '未获取到可概括的 README 内容。';
   const cleanedLocalSummary = cleanRepositoryMarkdownText(localSummary);
   const summary =
-    (input.providerUsed ? usefulProviderSummary(input.insights.readmeSummary) : undefined) ??
     (hasChineseNarrative(cleanedLocalSummary, 4) ? cleanedLocalSummary : undefined) ??
-    'README 主要内容为外文，当前未获得可用的中文概括。';
+    'README 主要内容为外文；这里保留原项目证据，不把它当作 AI 中文总结。';
 
   return {
     readmeSummary: summary.slice(0, 1_000),
-    features: localizedLimited(
-      input.insights.features ?? [],
-      input.readme ? extractReadmeFeatures(input.readme) : [],
-      input.providerUsed,
-    ),
-    configuration: localizedLimited(
-      input.insights.configuration ?? [],
-      localConfiguration(input.installCommands, input.structure),
-      input.providerUsed,
-    ),
-    implementation: localizedLimited(
-      input.insights.implementationNotes ?? [],
-      localImplementation(input.structure),
-      input.providerUsed,
-    ),
+    features: cleanedLimited(input.readme ? extractReadmeFeatures(input.readme) : []),
+    configuration: cleanedLimited(localConfiguration(input.installCommands, input.structure)),
+    implementation: cleanedLimited(localImplementation(input.structure)),
     source: input.readme ? 'readme' : input.description ? 'description' : 'limited',
   };
 }

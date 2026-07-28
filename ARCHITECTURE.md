@@ -223,7 +223,7 @@ Provider 输入仍是带不可信标记并经 sanitizer 处理的 user 数据，
 
 **Phase 11 第三轮补丁（D-054）**：README 在既有 3 文件取样配额内具有最高优先级；当
 Contents API 与 DOM 都提供 README 片段时，优先采用路径和大小均经校验的 API 片段。固定卡片的
-`quickScan` 先展示 README 概括、主要功能、配置/运行与简单实现线索；Provider 可生成简练中文解释，
+原 `quickScan` 先展示 README 概括、主要功能、配置/运行与简单实现线索；Provider 可生成简练中文解释，
 但缺失/非法输出时由本地 Markdown 段落、功能章节、安装命令和文件摘要确定性降级。Star、语言、
 Release、许可证等事实仍由 DOM/API 回填，并集中放入默认关闭的仓库事实区。
 
@@ -239,6 +239,22 @@ README → 根目录默认 README → 根目录其他本地化 README → 嵌套
 简体中文，英文结果最多按既有上限重试一次；展示层以中文 Provider 结果为先，再合并中文本地证据，
 并让中文 README 用途优先于英文仓库 description。只有外文证据且 Provider 不可用时显示中文降级说明，
 不直接把英文叙述作为中文速览。
+
+**Phase 11 第六轮补丁（D-057）**：固定卡片不再混用 `quickScan`，而是拆为三个明确 seam：
+
+```
+受限 README / 关键文件
+  ├─ Provider 理解并重组 → overview（新手总结，默认显示）
+  │                     └─ details（较完整解释，默认折叠）
+  └─ 本地确定性提取     → sourceSummary（原项目文件摘要，默认折叠）
+
+DOM / GitHub API 可变事实 → facts 区（默认折叠）
+```
+
+`overview` 只包含 1–2 句自然中文和 2–3 个价值要点；不得放目录、脚本或依赖清单。Provider
+不能写入 `sourceSummary`，因此模型重写不会覆盖原文件证据。技术字段仅允许纯命令、路径和标识符
+保留原文，普通英文解释仍会被中文校验拒绝；总结、用途、功能、风险等同样须通过中文叙述校验。存在项目证据却缺少有效 `overview`
+时，仅使用 D-048 既有的一次重试机会；不增加 Provider 调用上限。
 
 ### 3.8 确认流程（OperationConfirmation，v1.1 收紧 C-3）
 需确认操作弹出：操作说明 + 影响 + 推荐选择 + **[允许本次] / [拒绝]** 两项。
