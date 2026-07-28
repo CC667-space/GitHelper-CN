@@ -629,8 +629,8 @@ describe('Panel → Background → Content → Panel', () => {
         implementation: ['核心代码位于 packages 目录。'],
       },
       sourceSummary: {
-        readmeSummary: 'React 使用组件构建用户界面。',
-        features: ['组件化界面'],
+        readmeEvidence: '已读取 README.md；原文仅作为分析依据，不在这里重复展示。',
+        readmeSections: ['章节：主要功能'],
         configuration: ['package.json：脚本 test'],
         implementation: ['packages：核心包目录'],
         source: 'readme' as const,

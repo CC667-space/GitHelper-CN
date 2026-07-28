@@ -317,7 +317,13 @@ function selectRepositoryFiles(
   const nonReadmes = ranked.filter(
     ({ entry }) => !/(^|\/)readme(?:\.[a-z0-9_-]+)?\.(?:md|mdx|rst|txt)$/iu.test(entry.path),
   );
-  return [...(readme ? [readme] : []), ...nonReadmes]
+  const implementation = nonReadmes.find(({ priority }) => priority === 85 || priority === 60);
+  const configuration = nonReadmes.find(({ priority }) => priority !== 85 && priority !== 60);
+  const preferred = [readme, configuration, implementation].filter(
+    (item): item is (typeof ranked)[number] => Boolean(item),
+  );
+  const remaining = nonReadmes.filter((item) => !preferred.includes(item));
+  return [...preferred, ...remaining]
     .slice(0, MAX_INSPECTED_REPOSITORY_FILES)
     .map(({ entry }) => entry);
 }

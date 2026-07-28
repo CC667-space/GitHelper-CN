@@ -194,12 +194,10 @@ describe('RepositoryAnalysisExecutor', () => {
     expect(card.sources.provider).toBe(false);
     expect(card.sourceSummary).toMatchObject({
       source: 'readme',
-      readmeSummary: expect.stringMatching(/组件化用户界面/u),
-      features: expect.arrayContaining([
-        expect.stringMatching(/可复用组件/u),
-        expect.stringMatching(/Web 和原生平台/u),
-      ]),
+      readmeEvidence: expect.stringMatching(/当前页面 README 片段.*仅作为分析依据/u),
+      readmeSections: ['章节：主要功能', '章节：Installation'],
     });
+    expect(JSON.stringify(card.sourceSummary)).not.toMatch(/可复用组件|Web 和原生平台/u);
     expect(card.sourceSummary.configuration).toEqual(
       expect.arrayContaining([expect.stringMatching(/npm install react/iu)]),
     );
@@ -302,9 +300,8 @@ describe('RepositoryAnalysisExecutor', () => {
     expect(card.sourceSummary.implementation).toEqual(
       expect.arrayContaining([expect.stringMatching(/src\/main\.ts.*startApp/iu)]),
     );
-    expect(card.sourceSummary.features).toEqual(
-      expect.arrayContaining([expect.stringMatching(/受限的配置文件证据/u)]),
-    );
+    expect(card.sourceSummary.readmeEvidence).toMatch(/README\.md.*仅作为分析依据/u);
+    expect(JSON.stringify(card.sourceSummary)).not.toContain('受限的配置文件证据');
     expect(JSON.stringify(card)).not.toMatch(/<img|\uFFFD/iu);
     expect(card.languages.length).toBeLessThanOrEqual(5);
   });
@@ -360,8 +357,9 @@ describe('RepositoryAnalysisExecutor', () => {
     expect(card.sources.provider).toBe(true);
     expect(card.details.readmeSummary).toContain('实际项目文件');
     expect(card.details.features[0]).toBe('识别项目配置与入口文件');
-    expect(card.sourceSummary.readmeSummary).toContain('README 主要内容为外文');
-    expect(card.sourceSummary.features).toContain(
+    expect(card.sourceSummary.readmeEvidence).toMatch(/README\.md.*仅作为分析依据/u);
+    expect(card.sourceSummary.readmeSections).toEqual(['章节：Features']);
+    expect(JSON.stringify(card.sourceSummary)).not.toContain(
       'Inspect repository configuration and entry files',
     );
     expect(card.purpose).toContain('中文速览');
@@ -412,14 +410,11 @@ describe('RepositoryAnalysisExecutor', () => {
     });
 
     expect(card.purpose).toMatch(/中文项目速览/u);
-    expect(card.sourceSummary.readmeSummary).toMatch(/读取仓库文件/u);
-    expect(card.sourceSummary.features).toEqual([
-      '识别项目配置和入口文件',
-      '概括 README 中的核心用途',
-    ]);
-    expect(
-      [card.purpose, card.sourceSummary.readmeSummary, ...card.sourceSummary.features].join(' '),
-    ).not.toMatch(/English description|English fallback/u);
+    expect(card.sourceSummary.readmeEvidence).toMatch(/README\.zh-CN\.md.*仅作为分析依据/u);
+    expect(card.sourceSummary.readmeSections).toEqual(['章节：主要功能']);
+    expect(JSON.stringify(card.sourceSummary)).not.toMatch(
+      /English description|English fallback|识别项目配置和入口文件/u,
+    );
   });
 
   it('AI 新手总结与原项目文件摘要分层保存，不用模型改写覆盖原始证据摘要', async () => {
@@ -471,9 +466,12 @@ describe('RepositoryAnalysisExecutor', () => {
       highlights: ['适合长期重复使用', '可以在多种聊天工具和命令行中使用'],
       source: 'provider',
     });
-    expect(card.sourceSummary.readmeSummary).toContain('原始文档用语');
-    expect(card.sourceSummary.readmeSummary).not.toContain('逐步改进工作方式');
-    expect(card.sourceSummary.features).toEqual(['原始功能条目：支持跨会话记忆持久化']);
+    expect(card.sourceSummary).toMatchObject({
+      readmeEvidence: expect.stringMatching(/README\.zh-CN\.md.*仅作为分析依据/u),
+      readmeSections: ['章节：主要功能'],
+    });
+    expect(JSON.stringify(card.sourceSummary)).not.toContain('闭环自我改进机制');
+    expect(JSON.stringify(card.sourceSummary)).not.toContain('原始功能条目');
   });
 
   it('私有页面在 API 与 Provider 前零出站', async () => {

@@ -450,13 +450,12 @@ export class RepositoryAnalysisExecutor {
     const canonicalRepository = api?.details.fullName ?? repository;
     const description = api?.details.description ?? dom.description;
     const inspectedFiles = api?.fileSnapshot?.inspectedFiles ?? [];
-    const inspectedReadme =
-      inspectedFiles.find((file) => /(^|\/)readme\.(?:md|mdx|rst|txt)$/iu.test(file.path))
-        ?.content ??
+    const inspectedReadmeFile =
+      inspectedFiles.find((file) => /(^|\/)readme\.(?:md|mdx|rst|txt)$/iu.test(file.path)) ??
       inspectedFiles.find((file) =>
         /(^|\/)readme\.[a-z0-9_-]+\.(?:md|mdx|rst|txt)$/iu.test(file.path),
-      )?.content;
-    const readme = inspectedReadme ?? dom.readme;
+      );
+    const readme = inspectedReadmeFile?.content ?? dom.readme;
     const primaryLanguage = api?.details.primaryLanguage ?? dom.primaryLanguage;
     const topics = api?.details.topics ?? [];
     const languages = languagePercentages(
@@ -535,6 +534,7 @@ export class RepositoryAnalysisExecutor {
       },
       sourceSummary: buildRepositorySourceSummary({
         readme,
+        readmePath: inspectedReadmeFile?.path,
         description,
         installCommands,
         structure,

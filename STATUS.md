@@ -194,10 +194,18 @@
   - 自动门禁：定向回归 35/35；typecheck、lint 通过；Vitest 45 files / 211 tests 全过（另 1 个 Phase 9 live test 默认跳过）；build（406 modules）、构建安全扫描与隔离 Chrome E2E 通过
   - E2E 断言 `overview` 为唯一默认内容，`details` / `sourceSummary` / `facts` 均默认折叠；展开后中文 README、`package.json` / `src/server.js` 证据及事实数字可见；Provider 请求 0、页面异常 0
   - 最新本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `c795e80b7d5bc92bbe9236d924ff7dee68585ef255828272cafd0b7cd855a6eb`
+- [x] **Phase 11 — 第七轮人工复核补丁（2026-07-28）完成**：
+  - Provider JSON 改为逐字段校验与累积；overview 不合格时保留首轮用途、功能和配置，第二次调用只补写失败字段，不增加既有最多两次请求上限
+  - Prompt 采用“用户能做什么 → 适合场景 → 必要原理”的中文组织顺序，并对已复现的“闭环学习”“跨会话回溯”“多终端后端”等生硬直译表达按字段拒绝后重写
+  - `sourceSummary` 收敛为 README 路径/章节与配置/实现证据索引；Panel 不再显示 README 段落、功能原文或 README 关键文件卡片摘录
+  - 三文件预算固定优先覆盖 1 份 README、1 份配置清单、1 份实现/入口文件，多个清单不再挤掉唯一源码样本；记录 D-058
+  - 自动门禁：定向回归 45/45；typecheck、lint 通过；Vitest 45 files / 213 tests 全过（另 1 个 Phase 9 live test 默认跳过）；build（406 modules）、构建安全扫描与隔离 Chrome E2E 通过
+  - E2E 记录实际 `README.zh-CN.md` 与“章节：安装”，不显示 README 原文，仍显示 `package.json` / `src/server.js`；Provider 请求 0、页面异常 0
+  - 最新本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `7304e100581e045944597a29d04f25063ceefc06af8ce3ddee4b46cfa2f98871`
 
 ## 下一任务
 **Phase 11 强制确认节点 ② — S1–S5 批量体验复核**（见 `docs/USER_GUIDE.md` 第 9 节）。
-用户在真实 Chrome 重新加载最新 `dist/` 后，复核 S1–S5 及前六轮人工问题；确认全部通过后，执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
+用户在真实 Chrome 重新加载最新 `dist/` 后，复核 S1–S5 及前七轮人工问题；确认全部通过后，执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -214,7 +222,7 @@
 | 8 NL 搜索（MVP 必达） | ✅ 已完成 |
 | 9 一键仓库分析 | ✅ 已完成 |
 | 10 安全加固 + 红队测试 | ✅ 已完成 |
-| 11 测试 + 打包 + MVP 验收 | ⏸ 前六轮问题补丁自动验收通过，待人工复核 |
+| 11 测试 + 打包 + MVP 验收 | ⏸ 前七轮问题补丁自动验收通过，待人工复核 |
 
 ## 待处理的强制确认节点
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
@@ -225,7 +233,7 @@
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-仅等待 Phase 11 规定的真实 Chrome S1–S5 与前六轮问题补丁复核；无其他实现、安全、权限或 Provider 阻塞。
+仅等待 Phase 11 规定的真实 Chrome S1–S5 与前七轮问题补丁复核；无其他实现、安全、权限或 Provider 阻塞。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -264,3 +272,4 @@
 - 2026-07-28：Phase 11 第四轮人工复核补丁完成；多语言 README 去重、HTML 功能表与乱码清洗、Provider 部分结果合并、文件详情大小复核落地（D-055）；204 项常规测试及升级后的完整 E2E/构建门禁通过，等待用户复核。
 - 2026-07-28：Phase 11 第五轮人工复核补丁完成；根目录中文 README 优先、用途/功能中文合并、Provider 中文叙述校验与英文降级阻断落地（D-056）；206 项常规测试及中英文 README 共存 E2E/构建门禁通过，等待用户复核。
 - 2026-07-28：Phase 11 第六轮人工复核补丁完成；新手总结/详细解释/原文件证据三层分离、自然中文重组与长度约束、技术标识符与英文解释分流校验及三块默认折叠落地（D-057）；211 项常规测试及完整 E2E/构建门禁通过，等待用户复核。
+- 2026-07-28：Phase 11 第七轮人工复核补丁完成；Provider 逐字段恢复与定向补写、生硬直译表达拒绝、原项目文件摘要证据索引化及 README/配置/实现三类取样槽位落地（D-058）；213 项常规测试及完整 E2E/构建/打包门禁通过，等待用户复核。

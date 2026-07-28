@@ -393,9 +393,13 @@ try {
   assert(detailsText.includes('上手难度'), 'E2E 详细介绍缺少上手难度');
   await repositorySourceSummary.locator('summary').click();
   const sourceText = await repositorySourceSummary.innerText();
-  assert(sourceText.includes('README 摘要'), 'E2E 原项目文件摘要缺少 README 摘要');
-  assert(sourceText.includes('启动本地问候服务器'), 'E2E 分析卡缺少中文 README 功能证据');
-  assert(sourceText.includes('学习真实项目结构'), 'E2E 分析卡缺少中文 README 概括');
+  assert(sourceText.includes('README 取样记录'), 'E2E 原项目文件摘要缺少 README 取样记录');
+  assert(sourceText.includes('已读取 README.zh-CN.md'), 'E2E 未记录实际读取的中文 README');
+  assert(sourceText.includes('章节：安装'), 'E2E 未记录 README 中已识别的章节');
+  assert(
+    !sourceText.includes('启动本地问候服务器') && !sourceText.includes('学习真实项目结构'),
+    'E2E 原项目文件摘要仍在复制 README 原文',
+  );
   assert(
     !sourceText.includes('Starts a local greeting server'),
     'E2E 分析卡错误展示了默认英文 README',

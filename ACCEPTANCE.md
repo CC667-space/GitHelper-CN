@@ -63,11 +63,11 @@
 - 框选集成链断言充分结构只走文本；不足结构由 Background 裁剪后才携图走视觉；`visionEnabled=false` 时截图/Provider/会话写入均为零
 - 搜索集成链断言 Panel→Background→只读工具→匿名 API→Panel；打开结果只接受 `https://github.com/*`
 - 仓库分析链断言当前 PageContext→core/Provider→固定卡片；私有页面 core/Provider 均零调用；Provider 不能覆盖 API 数字事实
-- 仓库分析读取固定 Contents API 的受限文件样本：最多 2 个源码目录、3 个文件、每文件 4KB 文本；锁文件/路径穿越拒绝，根目录中英文 README 共存时选择中文说明，卡片显示实际文件证据且不返回原文
+- 仓库分析读取固定 Contents API 的受限文件样本：最多 2 个源码目录、3 个文件、每文件 4KB 文本；锁文件/路径穿越拒绝，根目录中英文 README 共存时选择中文说明；三个文件名额优先覆盖 1 份 README、1 份配置清单与 1 份实现/入口文件；`sourceSummary` 只记录 README 路径/章节和配置/实现证据，不返回 README 段落或功能原文
 - 单轮问答收展互不影响；问答删除与 session 删除均须垃圾桶后 `✓/×` 二次确认，`×` 零变更，`✓` 不误删相邻轮次或非目标 session
 
 ### 4. E2E（Playwright，加载扩展，Phase 11）
-- 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片；默认仅显示新手总结，详细介绍、原项目文件摘要和仓库事实均关闭；展开原项目文件摘要后，中英文 README 共存且含 banner HTML/功能表时应优先中文 README，无乱码、无默认英文说明透传，并包含配置与实际关键文件证据；展开事实区后数字可见
+- 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片；默认仅显示新手总结，详细介绍、原项目文件摘要和仓库事实均关闭；展开原项目文件摘要后，中英文 README 共存且含 banner HTML/功能表时应记录实际选择的中文 README 与章节，不显示 README 原文，并包含配置与实际实现文件证据；展开事实区后数字可见
 - SPA 导航后上下文刷新且无重复初始化
 - 会话恢复；切换 GitHub 页面后活动会话仍保留，Panel 重载后继续恢复；逐轮收展及两类确认删除可操作
 

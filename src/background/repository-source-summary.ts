@@ -7,6 +7,7 @@ interface StructureSummary {
 
 interface SourceSummaryInput {
   readme?: string;
+  readmePath?: string;
   description?: string;
   installCommands: string[];
   structure: StructureSummary;
@@ -130,6 +131,33 @@ export function extractReadmeFeatures(readme: string): string[] {
   return features;
 }
 
+export function extractReadmeSections(readme: string): string[] {
+  const sections: string[] = [];
+  let skippedDocumentTitle = false;
+  for (const rawLine of readme.split(/\r?\n/gu)) {
+    const heading = /^(#{1,6})\s+(.+?)\s*#*\s*$/u.exec(rawLine.trim());
+    if (!heading?.[1] || !heading[2]) {
+      continue;
+    }
+    const title = cleanRepositoryMarkdownText(heading[2]).slice(0, 90);
+    if (!title || /^(?:table of contents|contents|目录)$/iu.test(title)) {
+      continue;
+    }
+    if (heading[1].length === 1 && !skippedDocumentTitle) {
+      skippedDocumentTitle = true;
+      continue;
+    }
+    const label = `章节：${title}`;
+    if (!sections.includes(label)) {
+      sections.push(label);
+    }
+    if (sections.length >= 6) {
+      break;
+    }
+  }
+  return sections;
+}
+
 function localConfiguration(installCommands: string[], structure: StructureSummary): string[] {
   const installation = installCommands.map((command) => `安装/运行：${command}`);
   const fileEvidence = structure.keyFiles.flatMap((file) =>
@@ -163,17 +191,15 @@ function cleanedLimited(items: string[], limit = 6): string[] {
 export function buildRepositorySourceSummary(
   input: SourceSummaryInput,
 ): RepositoryAnalysisCard['sourceSummary'] {
-  const readmeSummary = input.readme ? extractReadmeSummary(input.readme) : undefined;
-  const localSummary =
-    readmeSummary ?? input.description?.trim().slice(0, 1_000) ?? '未获取到可概括的 README 内容。';
-  const cleanedLocalSummary = cleanRepositoryMarkdownText(localSummary);
-  const summary =
-    (hasChineseNarrative(cleanedLocalSummary, 4) ? cleanedLocalSummary : undefined) ??
-    'README 主要内容为外文；这里保留原项目证据，不把它当作 AI 中文总结。';
+  const readmeEvidence = input.readme
+    ? `已读取 ${input.readmePath ?? '当前页面 README 片段'}；原文仅作为分析依据，不在这里重复展示。`
+    : input.description
+      ? '未读取到 README 文件；当前仅取得仓库简介作为有限证据。'
+      : '未获取 README 或仓库简介。';
 
   return {
-    readmeSummary: summary.slice(0, 1_000),
-    features: cleanedLimited(input.readme ? extractReadmeFeatures(input.readme) : []),
+    readmeEvidence,
+    readmeSections: input.readme ? extractReadmeSections(input.readme) : [],
     configuration: cleanedLimited(localConfiguration(input.installCommands, input.structure)),
     implementation: cleanedLimited(localImplementation(input.structure)),
     source: input.readme ? 'readme' : input.description ? 'description' : 'limited',

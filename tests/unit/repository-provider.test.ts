@@ -134,6 +134,8 @@ describe('ProviderRuntime repository structured analysis', () => {
     );
     expect(chat.mock.calls[0]?.[0].messages[0]?.content).toContain('不要逐句翻译');
     expect(chat.mock.calls[0]?.[0].messages[0]?.content).toContain('避免堆砌专业名词');
+    expect(chat.mock.calls[0]?.[0].messages[0]?.content).toContain('先说用户能做什么');
+    expect(chat.mock.calls[0]?.[0].messages[0]?.content).toContain('不要写成“闭环学习”');
     expect(chat.mock.calls[0]?.[0].messages[1]?.content).toContain(
       '"content":"{\\"name\\":\\"react\\",\\"scripts\\":{\\"test\\":\\"yarn test\\"}}"',
     );
@@ -246,6 +248,51 @@ describe('ProviderRuntime repository structured analysis', () => {
     expect(chat.mock.calls[1]?.[0].messages[1]?.content).toContain('均为简体中文');
   });
 
+  it('生硬直译术语会被拒绝，并在重试时改写为新手能理解的中文', async () => {
+    stubStorage(false);
+    const chat = vi
+      .fn<Provider['chat']>()
+      .mockResolvedValueOnce({
+        content: JSON.stringify({
+          overview: {
+            summary: '这是一个提供闭环学习与跨会话回溯的智能代理。',
+            highlights: ['随你所在', '支持多终端后端'],
+          },
+          purpose: '这是一个会积累使用经验的个人 AI 助手。',
+          features: ['保存并复用过去的工作经验'],
+        }),
+      })
+      .mockResolvedValueOnce({
+        content: JSON.stringify({
+          overview: {
+            summary: '它会记住过去的使用经验，之后处理相似任务时可以直接复用。',
+            highlights: ['适合长期重复使用', '换一个入口也能继续之前的工作'],
+          },
+        }),
+      });
+    const runtime = new ProviderRuntime(
+      new Map<ProviderId, Provider>([['deepseek', provider(chat, false)]]),
+    );
+
+    const result = await runtime.generateRepositoryInsights({
+      requestId: 'analysis-natural-chinese',
+      facts: facts(),
+      signal: new AbortController().signal,
+    });
+
+    expect(result.insights).toMatchObject({
+      overview: {
+        summary: '它会记住过去的使用经验，之后处理相似任务时可以直接复用。',
+      },
+      purpose: '这是一个会积累使用经验的个人 AI 助手。',
+      features: ['保存并复用过去的工作经验'],
+    });
+    expect(chat).toHaveBeenCalledTimes(2);
+    expect(chat.mock.calls[1]?.[0].messages[1]?.content).toContain(
+      '只补充或修正以下字段：overview',
+    );
+  });
+
   it('有仓库文件证据时必须返回新手总结，缺失后只重试一次', async () => {
     stubStorage(false);
     const chat = vi
@@ -303,6 +350,58 @@ describe('ProviderRuntime repository structured analysis', () => {
 
     expect(result.insights.overview?.summary.length).toBeLessThanOrEqual(180);
     expect(chat).toHaveBeenCalledTimes(2);
+  });
+
+  it('修复 overview 时保留首轮已经可用的详细介绍字段', async () => {
+    stubStorage(false);
+    const chat = vi
+      .fn<Provider['chat']>()
+      .mockResolvedValueOnce({
+        content: JSON.stringify({
+          overview: {
+            summary: '',
+            highlights: [],
+          },
+          purpose: '这是一个会积累使用经验、帮助用户持续完成任务的个人 AI 助手。',
+          readmeSummary: '项目提供记忆、定时任务、多平台消息入口和终端操作能力。',
+          features: ['记住过去的对话和工作经验', '通过聊天软件或命令行继续同一项工作'],
+          configuration: ['package.json: scripts.install:web'],
+        }),
+      })
+      .mockResolvedValueOnce({
+        content: JSON.stringify({
+          overview: {
+            summary: '它是一个能记住使用经验，并在不同设备上继续工作的个人 AI 助手。',
+            highlights: ['适合长期重复使用', '可以从聊天软件或命令行使用'],
+          },
+        }),
+      });
+    const runtime = new ProviderRuntime(
+      new Map<ProviderId, Provider>([['deepseek', provider(chat, false)]]),
+    );
+
+    const result = await runtime.generateRepositoryInsights({
+      requestId: 'analysis-overview-repair',
+      facts: facts(),
+      signal: new AbortController().signal,
+    });
+
+    expect(result.insights).toMatchObject({
+      overview: {
+        summary: '它是一个能记住使用经验，并在不同设备上继续工作的个人 AI 助手。',
+      },
+      purpose: '这是一个会积累使用经验、帮助用户持续完成任务的个人 AI 助手。',
+      readmeSummary: '项目提供记忆、定时任务、多平台消息入口和终端操作能力。',
+      features: ['记住过去的对话和工作经验', '通过聊天软件或命令行继续同一项工作'],
+      configuration: ['package.json: scripts.install:web'],
+    });
+    expect(chat).toHaveBeenCalledTimes(2);
+    expect(chat.mock.calls[1]?.[0].messages[1]?.content).toContain(
+      '只补充或修正以下字段：overview',
+    );
+    expect(chat.mock.calls[1]?.[0].messages[1]?.content).not.toContain(
+      'purpose、readmeSummary、features',
+    );
   });
 
   it('技术字段可保留命令和包名，不会被误判为英文自然语言', async () => {

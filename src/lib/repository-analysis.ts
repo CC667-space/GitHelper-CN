@@ -57,8 +57,8 @@ export const repositoryAnalysisCardSchema = z
       .strict(),
     sourceSummary: z
       .object({
-        readmeSummary: z.string().min(1).max(1_000),
-        features: z.array(z.string().min(1).max(300)).max(6),
+        readmeEvidence: z.string().min(1).max(300),
+        readmeSections: z.array(z.string().min(1).max(100)).max(6),
         configuration: z.array(z.string().min(1).max(300)).max(6),
         implementation: z.array(z.string().min(1).max(300)).max(6),
         source: z.enum(['readme', 'description', 'limited']),

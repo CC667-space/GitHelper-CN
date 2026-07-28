@@ -256,6 +256,12 @@ DOM / GitHub API 可变事实 → facts 区（默认折叠）
 保留原文，普通英文解释仍会被中文校验拒绝；总结、用途、功能、风险等同样须通过中文叙述校验。存在项目证据却缺少有效 `overview`
 时，仅使用 D-048 既有的一次重试机会；不增加 Provider 调用上限。
 
+**Phase 11 第七轮补丁（D-058）**：Provider 响应不再整份成败，而是逐字段校验并累积；第二次请求只补写
+失败字段，因此 `overview` 修复不会丢失首轮已经合格的 `purpose` / `readmeSummary` / `features` /
+`configuration`。`sourceSummary` 收敛为 README 路径与章节索引、配置证据和实现证据，Panel 不渲染
+README 关键文件卡片的段落摘录。三文件选择在同一预算内优先覆盖 README、配置清单、实现/入口三类，
+避免多个清单挤掉唯一源码样本；所有请求、目录、大小和文本上限保持不变。
+
 ### 3.8 确认流程（OperationConfirmation，v1.1 收紧 C-3）
 需确认操作弹出：操作说明 + 影响 + 推荐选择 + **[允许本次] / [拒绝]** 两项。
 **不提供"始终允许该类操作"**——高风险权限不能一次点击永久放开。`operationPolicy` 只在允许的枚举范围内配置（见 §5 UserPreferences）。

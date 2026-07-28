@@ -446,3 +446,14 @@
 - **证据**：红测先复现缺少/过长的新手总结、Provider 改写覆盖原 README 摘要、技术标识符触发中文校验、英文技术解释漏检和三块界面未分层；修复后定向 35/35、常规 Vitest 211 项通过（另 1 项 live test 默认跳过），typecheck、lint、build、安全扫描与隔离 Chrome E2E 全过。E2E 断言仅 `overview` 默认显示，`details` / `sourceSummary` / `facts` 均默认折叠。
 - **范围**：Phase 11 第六轮人工复核内部补丁；不增加 Provider 请求上限、Chrome 权限、Host、GitHub API 请求、文件/文本预算或持久数据类别。
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28
+
+## D-058 仓库分析按字段恢复并将原文件摘要收敛为证据索引
+- **决策**：
+  - Provider JSON 改为按字段通过 `RepositoryInsightPatch` 校验并累积有效结果；单个 `overview` 或其他字段失败时保留首轮已合格的详细介绍，第二次请求只补写失败字段。最多两次请求的既有上限不变；最终仍缺 `overview` 时，可从已通过的用途、功能、风险与下一步派生受限速览。
+  - Provider Prompt 明确按“用户能做什么、适合什么场景、必要原理”的中文顺序组织内容；用途限一句、README 总结限 2–4 句、功能限 4 项、配置/实现各限 3 项。对“随你所在”“闭环学习”“跨会话回溯”“多终端后端”等已复现的生硬直译表达按字段拒绝并要求白话改写。
+  - `sourceSummary` 不再保存 README 概括或功能条目，只记录实际读取的 README 路径、识别到的章节和本地配置/实现证据；Panel 同时隐藏 README 关键文件卡片中的段落摘录，避免从另一渲染路径重新复制原文。
+  - D-053 的三文件预算改为优先覆盖 1 份 README、1 份配置清单、1 份实现/入口文件；存在多个清单时不得挤掉唯一实现样本。目录深度、候选大小、正文长度与请求数量均不变。
+- **理由**：旧解析器用整份 JSON 成败决定结果，导致一个不合格的 `overview` 同时丢弃已经可用的用途、功能和配置，第二次响应又会覆盖首轮字段；旧 `sourceSummary` 及 README 文件卡片仍直接展示原文；多个高优先级清单还会占满采样名额。这三点共同造成总结/详细介绍为空，而原项目文件摘要继续堆放直译长文。
+- **证据**：红测分别复现 overview 修复丢失首轮详细字段、生硬直译中文被接纳、`package.json` + `pyproject.toml` 挤掉入口源码、README 段落从 sourceSummary/关键文件卡片重复展示；修复后定向 45/45、常规 Vitest 213 项通过（另 1 项 live test 默认跳过），typecheck、lint、build、安全扫描、13 条目本地打包与隔离 Chrome E2E 全过。E2E 记录 `README.zh-CN.md` 与“章节：安装”，不显示 README 原文，仍显示 `package.json` / `src/server.js`，Provider 请求 0、页面异常 0。
+- **范围**：Phase 11 第七轮人工复核内部补丁；不增加 Provider 调用上限、Chrome 权限、Host、GitHub API 请求、目录深度、文件/文本预算、持久数据类别或 MVP 功能。
+- 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28

@@ -445,7 +445,7 @@ describe('GitHubApiClient', () => {
     expect(fetchMock).toHaveBeenCalledTimes(9);
   });
 
-  it('根目录本地化 README 优先于源码目录 README，并拒绝详情响应中超出大小预算的文件', async () => {
+  it('根目录本地化 README 优先，并在多个清单文件存在时为实现文件保留取样槽位', async () => {
     const coreHeaders = {
       'Content-Type': 'application/json',
       'X-RateLimit-Resource': 'core',
@@ -455,6 +455,7 @@ describe('GitHubApiClient', () => {
     const canonicalReadme = '# English README\n\nThis is the default English project overview.';
     const nestedReadme = '# src internals\n\nThis only documents the source directory.';
     const packageJson = '{"name":"localized-root","scripts":{"build":"vite build"}}';
+    const pyproject = '[project]\nname = "localized-root"';
     const mainSource = 'export function startApp() { return true; }';
     const base64 = (value: string) => Buffer.from(value, 'utf8').toString('base64');
     const fileResponse = (path: string, content: string, size = Buffer.byteLength(content)) =>
@@ -504,6 +505,13 @@ describe('GitHubApiClient', () => {
               size: Buffer.byteLength(packageJson),
               sha: 'package-json',
             },
+            {
+              name: 'pyproject.toml',
+              path: 'pyproject.toml',
+              type: 'file',
+              size: Buffer.byteLength(pyproject),
+              sha: 'pyproject',
+            },
           ]),
           { status: 200, headers: coreHeaders },
         );
@@ -540,6 +548,9 @@ describe('GitHubApiClient', () => {
       }
       if (url.includes('/contents/package.json?')) {
         return fileResponse('package.json', packageJson);
+      }
+      if (url.includes('/contents/pyproject.toml?')) {
+        return fileResponse('pyproject.toml', pyproject);
       }
       if (url.includes('/contents/src/main.ts?')) {
         return fileResponse('src/main.ts', mainSource, 24 * 1024 + 1);
@@ -579,6 +590,7 @@ describe('GitHubApiClient', () => {
     expect(urls.some((url) => url.includes('/contents/src/README.md?'))).toBe(false);
     expect(urls.some((url) => url.includes('/contents/README.md?'))).toBe(false);
     expect(urls.some((url) => url.includes('/contents/src/main.ts?'))).toBe(true);
+    expect(urls.some((url) => url.includes('/contents/pyproject.toml?'))).toBe(false);
   });
 
   it('仓库没有 Release 时返回缺字段而非失败', async () => {

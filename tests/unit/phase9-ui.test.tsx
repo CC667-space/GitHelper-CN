@@ -90,8 +90,8 @@ describe('Phase 9 repository analysis Panel', () => {
             implementation: ['核心功能按 packages 目录拆分。'],
           },
           sourceSummary: {
-            readmeSummary: 'React 是一个使用组件构建 Web 与原生用户界面的库。',
-            features: ['以可复用组件组合界面', '支持 Web 与原生渲染'],
+            readmeEvidence: '已读取 README.md；原文仅作为分析依据，不在这里重复展示。',
+            readmeSections: ['章节：主要功能', '章节：安装'],
             configuration: ['package.json：脚本 build、test', '安装：npm install react'],
             implementation: ['packages：核心包目录', 'main.js：定义 startApp'],
             source: 'readme',
@@ -103,6 +103,11 @@ describe('Phase 9 repository analysis Panel', () => {
           structure: {
             directories: ['packages', 'scripts', 'fixtures'],
             keyFiles: [
+              {
+                path: 'README.md',
+                role: '项目说明',
+                findings: ['简介：这里是不得重复展示的 README 原文'],
+              },
               {
                 path: 'package.json',
                 role: '依赖与构建清单',
@@ -164,12 +169,14 @@ describe('Phase 9 repository analysis Panel', () => {
 
     await user.click(screen.getByText('原项目文件摘要'));
     expect(sourceSummary.open).toBe(true);
-    expect(screen.getByRole('heading', { name: 'README 摘要' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'README 取样记录' })).toBeTruthy();
+    expect(screen.getByText(/已读取 README\.md.*不在这里重复展示/u)).toBeTruthy();
     expect(screen.getByRole('heading', { name: '文件、配置与实现' })).toBeTruthy();
     expect(screen.getByText('npm install react')).toBeTruthy();
     expect(screen.getByText('package.json')).toBeTruthy();
     expect(screen.getByText(/脚本：build、test/)).toBeTruthy();
     expect(screen.getByText(/packages · scripts · fixtures/)).toBeTruthy();
+    expect(within(sourceSummary).queryByText(/不得重复展示的 README 原文/u)).toBeNull();
     const facts = screen.getByTestId('repository-facts') as HTMLDetailsElement;
     expect(facts.open).toBe(false);
     await user.click(screen.getByText('仓库事实（Star、语言、Release 等）'));
@@ -227,8 +234,8 @@ describe('Phase 9 repository analysis Panel', () => {
             implementation: [],
           },
           sourceSummary: {
-            readmeSummary: '未获取到可概括的 README 内容。',
-            features: [],
+            readmeEvidence: '未获取 README 或仓库简介。',
+            readmeSections: [],
             configuration: [],
             implementation: [],
             source: 'limited',
@@ -260,7 +267,7 @@ describe('Phase 9 repository analysis Panel', () => {
     expect(sourceSummary.open).toBe(false);
     await user.click(screen.getByText('原项目文件摘要'));
     expect(sourceSummary.open).toBe(true);
-    expect(within(sourceSummary).getByText('未获取到可概括的 README 内容。')).toBeTruthy();
+    expect(within(sourceSummary).getByText('未获取 README 或仓库简介。')).toBeTruthy();
     expect(within(sourceSummary).getByText('未获取关键文件内容')).toBeTruthy();
     const facts = screen.getByTestId('repository-facts') as HTMLDetailsElement;
     expect(facts.open).toBe(false);

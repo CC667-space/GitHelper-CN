@@ -545,7 +545,7 @@ export function PanelApp({
                   <div className="space-y-3 border-t border-slate-200 py-2">
                     <section>
                       <div className="flex items-center justify-between gap-2">
-                        <h4 className="font-medium">README 摘要</h4>
+                        <h4 className="font-medium">README 取样记录</h4>
                         <span className="text-[11px] text-slate-500">
                           {analysisCard.sourceSummary.source === 'readme'
                             ? '来自受限 README 片段'
@@ -555,12 +555,12 @@ export function PanelApp({
                         </span>
                       </div>
                       <p className="mt-1 whitespace-pre-wrap text-slate-700">
-                        {analysisCard.sourceSummary.readmeSummary}
+                        {analysisCard.sourceSummary.readmeEvidence}
                       </p>
-                      {analysisCard.sourceSummary.features.length ? (
+                      {analysisCard.sourceSummary.readmeSections.length ? (
                         <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
-                          {analysisCard.sourceSummary.features.map((feature, index) => (
-                            <li key={`${index}:${feature.slice(0, 40)}`}>{feature}</li>
+                          {analysisCard.sourceSummary.readmeSections.map((section, index) => (
+                            <li key={`${index}:${section.slice(0, 40)}`}>{section}</li>
                           ))}
                         </ul>
                       ) : null}
@@ -583,23 +583,27 @@ export function PanelApp({
                           目录：{analysisCard.structure.directories.join(' · ')}
                         </p>
                       ) : null}
-                      {analysisCard.structure.keyFiles.length ? (
+                      {analysisCard.structure.keyFiles.some(
+                        (file) => !/(^|\/)readme(?:\.[^/]*)?$/iu.test(file.path),
+                      ) ? (
                         <ul className="mt-2 space-y-2">
-                          {analysisCard.structure.keyFiles.map((file) => (
-                            <li className="rounded border border-slate-200 p-2" key={file.path}>
-                              <p className="break-all font-medium">
-                                <code>{file.path}</code>
-                                <span className="ml-1 font-normal text-slate-500">
-                                  · {file.role}
-                                </span>
-                              </p>
-                              <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
-                                {file.findings.map((finding, index) => (
-                                  <li key={`${file.path}:${index}`}>{finding}</li>
-                                ))}
-                              </ul>
-                            </li>
-                          ))}
+                          {analysisCard.structure.keyFiles
+                            .filter((file) => !/(^|\/)readme(?:\.[^/]*)?$/iu.test(file.path))
+                            .map((file) => (
+                              <li className="rounded border border-slate-200 p-2" key={file.path}>
+                                <p className="break-all font-medium">
+                                  <code>{file.path}</code>
+                                  <span className="ml-1 font-normal text-slate-500">
+                                    · {file.role}
+                                  </span>
+                                </p>
+                                <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+                                  {file.findings.map((finding, index) => (
+                                    <li key={`${file.path}:${index}`}>{finding}</li>
+                                  ))}
+                                </ul>
+                              </li>
+                            ))}
                         </ul>
                       ) : (
                         <p className="mt-2 text-slate-500">未获取关键文件内容</p>
