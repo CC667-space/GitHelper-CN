@@ -124,6 +124,7 @@ export const panelSearchRequestSchema = z
   .object({
     naturalLanguage: z.string().trim().min(1).max(500),
     target: searchTargetSchema,
+    providerId: z.enum(['deepseek', 'uuapi', 'openrouter']).optional(),
   })
   .strict();
 export const panelOpenGitHubPageSchema = z

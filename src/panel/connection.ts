@@ -37,7 +37,7 @@ export interface PanelConnection {
   cancelPick?(): void;
   startRegion?(): void;
   cancelRegion?(): void;
-  search?(naturalLanguage: string, target: SearchTarget): void;
+  search?(naturalLanguage: string, target: SearchTarget, providerId?: ProviderId): void;
   openGitHubPage?(url: string): void;
   analyzeRepository?(providerId?: ProviderId): void;
   disconnect(): void;
@@ -199,11 +199,12 @@ export function connectPanel(
     cancelRegion() {
       activePort?.postMessage(createEnvelope('PANEL_REGION_CANCEL', {}));
     },
-    search(naturalLanguage, target) {
+    search(naturalLanguage, target, providerId) {
       activePort?.postMessage(
         createEnvelope('PANEL_SEARCH', {
           naturalLanguage,
           target,
+          providerId,
         }),
       );
     },

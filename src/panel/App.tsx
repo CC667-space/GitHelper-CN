@@ -189,7 +189,7 @@ export function PanelApp({
     if (!text || !connected || searchStatus === 'searching') {
       return;
     }
-    connection.current?.search?.(text, searchTarget);
+    connection.current?.search?.(text, searchTarget, selectedTextProviderId);
   }
 
   function focusQuestionInput(): void {
@@ -729,8 +729,11 @@ export function PanelApp({
       <section className="border-b border-slate-200 bg-white p-3" data-testid="github-search">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">中文搜索 GitHub</h2>
-          <span className="text-xs text-emerald-700">不调用 AI Provider</span>
+          <span className="text-xs text-amber-700">使用当前文本 Provider · 本地安全校验</span>
         </div>
+        <p className="mt-1 text-xs text-slate-500">
+          每次搜索最多调用 1 次，仅发送搜索描述，可能产生少量费用；失败时自动改用本地规则。
+        </p>
         <form
           className="mt-2"
           onSubmit={(event) => {
@@ -787,6 +790,9 @@ export function PanelApp({
                   ? `GitHub API 共返回 ${searchResult.totalCount.toLocaleString('zh-CN')} 条，显示前 ${searchResult.items.length} 条。`
                   : searchResult.notice}
               </p>
+              {searchResult.status === 'ok' && searchResult.notice ? (
+                <p className="mt-1 text-amber-800">{searchResult.notice}</p>
+              ) : null}
             </div>
             {searchResult.items.map((item) => (
               <article

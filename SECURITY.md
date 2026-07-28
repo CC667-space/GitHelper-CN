@@ -147,7 +147,9 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
   - `downloadFile` 类操作：**逐次确认**（`download` 类确认弹窗），且遵守 downloads 无 'auto' 约束。
 - **所有导航/打开类工具一律拒绝**非 `https:` Scheme：`javascript:`、`data:`、`file:`、`chrome:`、`chrome-extension:`、`blob:`、`vbscript:` 等直接拒绝并返回类型化错误（zod 校验 + 收端二次校验）。
 
-### 8.2 匿名 GitHub 搜索边界（D-047）
+### 8.2 中文语义转换与匿名 GitHub 搜索边界（D-047/D-060）
+- 用户主动输入的搜索描述可发送给当前文本 Provider；发送字段仅限脱敏后的搜索描述、目标类型和当前日期，不附带 PageContext、选区、仓库文件或会话历史。每次搜索最多调用一次，失败不重试并自动降级本地转换。
+- Provider 只返回 strict zod 校验的受限 `SearchIntent`，不能返回或控制 fetch URL、Header、GitHub Token、工具名或任意 query 片段；相对日期和 GitHub 限定词由本地编译器生成。
 - 搜索请求只由 Background 用固定 `https://api.github.com/search/repositories|issues` 构造；Panel/Content 不能传入 fetch URL、Header 或 GitHub Token。
 - 中文输入与生成 query 分别限制为 500/256 字符；工具参数 strict zod 校验，多余字段拒绝。
 - GitHub API 响应视为不可信远端数据，只投影最多 10 条有限字段；结果 URL 与降级 URL必须再次满足 `https://github.com/*` Schema，不能把 API 响应变成任意导航。

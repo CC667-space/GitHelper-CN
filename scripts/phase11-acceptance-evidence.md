@@ -2,19 +2,19 @@
 
 > 日期：2026-07-28
 >
-> 状态：自动验收及前八轮人工问题补丁已通过；真实 Chrome 的 S1–S5 批量体验复核仍待用户完成。
+> 状态：自动验收及前九轮人工问题补丁已通过；真实 Chrome 的 S1–S5 批量体验复核仍待用户完成。
 
 ## 自动门禁
 
 | 门禁                     | 结果                                                                                                                                                       |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vitest                   | 45 个文件通过、1 个 opt-in live 文件默认跳过；215 项通过、1 项跳过                                                                                         |
+| Vitest                   | 46 个文件通过、1 个 opt-in live 文件默认跳过；221 项通过、1 项跳过                                                                                         |
 | TypeScript               | `pnpm typecheck` 通过                                                                                                                                      |
 | ESLint                   | `pnpm lint` 通过                                                                                                                                           |
 | Production build         | `pnpm build` 通过，406 modules transformed                                                                                                                 |
 | Build safety             | `pnpm scan:build` 通过；无 eval/new Function/远程运行时脚本                                                                                                |
 | Playwright extension E2E | 通过；Chrome for Testing 149，隔离临时 profile，Provider 请求 0                                                                                            |
-| Package                  | `artifacts\GitHelper-CN-v0.1.0.zip`，13 entries，根目录 `manifest.json` 已校验；SHA-256 `2390c040b4791605821f609d147cadae53e89a541a78badb349d17f4367a957a` |
+| Package                  | `artifacts\GitHelper-CN-v0.1.0.zip`，13 entries，根目录 `manifest.json` 已校验；SHA-256 `a3528ad3609526a1581a1caa72fd3c209e803c5c6c957d1f90618ff411d378bd` |
 
 Phase 9 的三仓库匿名 live test 默认不进入常规 `pnpm test`，但已在 Phase 9 独立真实运行通过，证据见 `scripts/phase9-live-evidence.md`。
 
@@ -43,8 +43,9 @@ pnpm test:e2e
     "factsDefaultExpanded": false
   },
   "s3ChineseSearch": {
-    "input": "Star 超过 1000 的 Python 项目",
-    "result": "octocat/python-starter",
+    "input": "最近两个月 Star 超过 1000 的 AI 相关项目",
+    "result": "octocat/ai-starter",
+    "intentPath": "provider-unavailable-local-fallback",
     "providerRequests": 0
   },
   "spa": {
@@ -75,7 +76,7 @@ pnpm test:e2e
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | S1 公开仓库一键分析 | `tests/unit/github-api.test.ts`、`tests/unit/repository-analysis.test.ts`、`tests/unit/repository-provider.test.ts`、`tests/integration/panel-roundtrip.test.ts`、`tests/unit/phase9-ui.test.tsx`、`tests/integration/public-repository-analysis.live.test.ts`、Phase 11 E2E | 三个真实公开仓库已在 Phase 9 通过；AI 新手总结、详细解释与本地原文件证据已在 Schema 层分离，Provider 按字段保留合格结果并只补写失败字段，已复现的生硬直译表达会触发改写；E2E 确认只显示 overview，details/sourceSummary/facts 默认折叠，sourceSummary 仅记录中文 README 路径/章节及 `package.json` / `src/server.js` 证据，不复制 README 原文 |
 | S2 点击/框选提问    | `tests/unit/pick.test.ts`、`tests/unit/region.test.ts`、`tests/unit/capture.test.ts`、`tests/integration/panel-roundtrip.test.ts`、Phase 6/7 UI 测试                                                                                        | 点击结构、框选结构、文本/视觉分路、错页与偏好护栏全过；选择后下一步 CTA 可聚焦输入框             |
-| S3 NL→搜索          | `tests/unit/search-query.test.ts`、`tests/unit/search-executor.test.ts`、`tests/unit/github-api.test.ts`、Phase 8 UI/集成测试、Phase 11 E2E                                                                                                  | 7 组转换（≥5），无页面上下文仍可搜索、私有页面仍零出站，仓库/Issue 结果、限流零重试和 DOM/网页降级全过；E2E 验证真实 Panel 中文输入至结果卡完整链路 |
+| S3 NL→搜索          | `tests/unit/search-query.test.ts`、`tests/unit/search-provider.test.ts`、`tests/unit/search-executor.test.ts`、`tests/unit/github-api.test.ts`、Phase 8 UI/集成测试、Phase 11 E2E                                                                                                  | 受限 AI 意图解析、strict Schema、本地编译、单次调用与失败降级均通过；无页面上下文仍可搜索、私有页面仍零出站。E2E 以截图原句验证无 Provider 环境仍生成 AI/Star/最近两个月限定并返回结果 |
 | S4 会话保存恢复     | `tests/unit/session-store.test.ts`、`tests/unit/active-session-store.test.ts`、`tests/unit/panel-connection.test.ts`、Phase 5 UI/集成测试、Phase 11 E2E                                                                                       | CRUD、显式选择/新建、逐轮收展、问答/session 二次确认删除、活动指针、过期/容量淘汰、断线重连、跨页面与 Panel 重载恢复全过 |
 | S5 敏感信息遮蔽     | `tests/unit/sanitizer.test.ts`、`tests/unit/logger.test.ts`、`tests/unit/router.test.ts`、`tests/security/leakage.test.ts`、`tests/security/private-zero-out.test.ts`、Phase 11 E2E                                                         | 实际 Provider 请求体、日志、普通消息、Session 持久化、Panel 重载与私有页面出口均无测试哨兵明文 |
 

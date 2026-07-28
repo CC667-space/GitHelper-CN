@@ -150,8 +150,12 @@ try {
     const path = `${url.pathname}${url.search}`;
     if (url.pathname === '/search/repositories') {
       const query = url.searchParams.get('q') ?? '';
-      assert(query.includes('language:Python'), 'E2E 中文搜索未转换 Python 语言限定词');
+      assert(/(^|\s)AI(\s|$)/i.test(query), 'E2E 中文搜索未保留 AI 关键词');
       assert(query.includes('stars:>1000'), 'E2E 中文搜索未转换 Star 限定词');
+      assert(
+        /pushed:>=\d{4}-\d{2}-\d{2}/.test(query),
+        'E2E 中文搜索未转换“最近两个月”更新时间限定词',
+      );
       assert(url.searchParams.get('per_page') === '10', 'E2E 中文搜索结果数未限制为 10');
       await route.fulfill({
         status: 200,
@@ -161,9 +165,9 @@ try {
           items: [
             {
               id: 2,
-              full_name: 'octocat/python-starter',
-              html_url: 'https://github.com/octocat/python-starter',
-              description: 'A beginner-friendly Python repository.',
+              full_name: 'octocat/ai-starter',
+              html_url: 'https://github.com/octocat/ai-starter',
+              description: 'A beginner-friendly AI repository.',
               language: 'Python',
               stargazers_count: 2_600,
               updated_at: '2026-07-22T00:00:00.000Z',
@@ -400,13 +404,20 @@ try {
   await panel.locator('[title="Background 已连接"]').waitFor({ timeout: 10_000 });
 
   const githubSearch = panel.getByTestId('github-search');
-  await githubSearch.getByLabel('描述要搜索的仓库或 Issue').fill('Star 超过 1000 的 Python 项目');
+  await githubSearch
+    .getByLabel('描述要搜索的仓库或 Issue')
+    .fill('最近两个月 Star 超过 1000 的 AI 相关项目');
   await githubSearch.getByRole('button', { name: '搜索' }).click();
-  await githubSearch.getByText('octocat/python-starter', { exact: true }).waitFor({
+  await githubSearch.getByText('octocat/ai-starter', { exact: true }).waitFor({
     timeout: 10_000,
   });
   const githubSearchText = await githubSearch.innerText();
-  assert(githubSearchText.includes('language:Python'), 'E2E 搜索结果缺少查询解释');
+  assert(githubSearchText.includes('stars:>1000'), 'E2E 搜索结果缺少 Star 查询解释');
+  assert(githubSearchText.includes('pushed:>='), 'E2E 搜索结果缺少时间查询解释');
+  assert(
+    githubSearchText.includes('AI 理解暂不可用，已自动使用本地规则生成查询。'),
+    'E2E 无 Provider 环境未显示本地降级说明',
+  );
   assert(githubSearchText.includes('2,600'), 'E2E 搜索结果缺少 Star 数据');
 
   await panel.getByRole('button', { name: '一键分析' }).click();
@@ -549,8 +560,9 @@ try {
         factsDefaultExpanded: false,
       },
       s3ChineseSearch: {
-        input: 'Star 超过 1000 的 Python 项目',
-        result: 'octocat/python-starter',
+        input: '最近两个月 Star 超过 1000 的 AI 相关项目',
+        result: 'octocat/ai-starter',
+        intentPath: 'provider-unavailable-local-fallback',
         providerRequests: 0,
       },
       spa: {

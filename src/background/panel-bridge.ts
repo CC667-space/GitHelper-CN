@@ -107,6 +107,8 @@ export interface PanelBridgeDependencies {
     naturalLanguage: string;
     target: SearchTarget;
     page?: PageInfo;
+    manualProviderId?: ProviderId;
+    requestId: string;
     signal: AbortSignal;
   }): Promise<GitHubSearchResult>;
   analyzeRepository?(input: {
@@ -432,7 +434,10 @@ export class PanelBridge {
         page = currentPage;
       }
       const result = await this.dependencies.search({
-        ...request,
+        naturalLanguage: request.naturalLanguage,
+        target: request.target,
+        manualProviderId: request.providerId,
+        requestId: context.requestId,
         page,
         signal: context.signal,
       });
@@ -614,7 +619,9 @@ export function registerPanelPortBridge(
   runtime: import('./provider-runtime').ProviderRuntime,
 ): void {
   const githubApi = new GitHubApiClient();
-  const searchExecutor = new GitHubSearchExecutor(githubApi);
+  const searchExecutor = new GitHubSearchExecutor(githubApi, (input) =>
+    runtime.generateSearchIntent(input),
+  );
   const repositoryAnalyzer = new RepositoryAnalysisExecutor(
     githubApi,
     async (facts, signal, manualProviderId, requestId) =>
@@ -700,7 +707,7 @@ export function registerPanelPortBridge(
       startRegion: requestActivePageRegion,
       cancelRegion: cancelActivePageRegion,
       captureRegion: captureActivePageRegion,
-      search: async ({ naturalLanguage, target, page, signal }) => {
+      search: async ({ naturalLanguage, target, page, manualProviderId, requestId, signal }) => {
         if (page?.pageContext) {
           assertPublicContext(page.pageContext);
         }
@@ -708,6 +715,8 @@ export function registerPanelPortBridge(
           naturalLanguage,
           target,
           page: page?.pageContext,
+          manualProviderId,
+          requestId,
           signal,
         });
       },

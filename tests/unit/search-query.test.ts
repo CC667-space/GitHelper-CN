@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   SEARCH_CONVERSION_SYSTEM_PROMPT,
+  compileProviderSearchIntent,
   convertNaturalLanguageSearch,
+  parseProviderSearchIntent,
 } from '../../src/background/search-query';
 
 const NOW = new Date('2026-07-24T08:00:00.000Z');
@@ -57,6 +59,59 @@ describe('中文自然语言 GitHub 搜索转换', () => {
     expect(result.query.match(/language:Go/gu)).toHaveLength(1);
     expect(result.query.match(/stars:>=200/gu)).toHaveLength(1);
     expect(result.query).toContain('archived:false');
+  });
+
+  it('把“最近两个月 Star 超过 1000 的 AI 相关项目”转换为可执行查询', () => {
+    const result = convertNaturalLanguageSearch(
+      '最近两个月 Star 超过 1000 的 AI 相关项目',
+      'auto',
+      new Date('2026-07-28T08:00:00.000Z'),
+    );
+
+    expect(result.target).toBe('repositories');
+    expect(result.query).toBe('AI stars:>1000 pushed:>=2026-05-28');
+    expect(result.query).not.toMatch(/最近|相关|项目|(?:^|\s)的(?:\s|$)/u);
+  });
+
+  it('把 Provider 的受限语义结构编译为本地校验的 GitHub query', () => {
+    const result = compileProviderSearchIntent(
+      '最近两个月 Star 超过 1000 的 AI 相关项目',
+      'auto',
+      {
+        target: 'repositories',
+        keywords: ['AI'],
+        stars: { operator: '>', value: 1_000 },
+        pushedWithin: { amount: 2, unit: 'months' },
+      },
+      new Date('2026-07-28T08:00:00.000Z'),
+    );
+
+    expect(result).toEqual({
+      naturalLanguage: '最近两个月 Star 超过 1000 的 AI 相关项目',
+      target: 'repositories',
+      query: 'AI stars:>1000 pushed:>=2026-05-28',
+      explanation: '搜索公开仓库；关键词为 AI；Star >1000；最近更新时间不早于 2026-05-28。',
+    });
+  });
+
+  it('只接受严格 JSON 的 Provider 搜索语义，不接受 URL 或额外字段', () => {
+    expect(
+      parseProviderSearchIntent(
+        '```json\n{"target":"repositories","keywords":["AI"],"stars":{"operator":">","value":1000}}\n```',
+      ),
+    ).toEqual({
+      target: 'repositories',
+      keywords: ['AI'],
+      stars: { operator: '>', value: 1_000 },
+    });
+    expect(() =>
+      parseProviderSearchIntent(
+        '{"target":"repositories","keywords":["https://example.com"],"url":"https://example.com"}',
+      ),
+    ).toThrow(/Provider|Schema|JSON/u);
+    expect(() =>
+      parseProviderSearchIntent('{"target":"repositories","keywords":["AI","OR","malware"]}'),
+    ).toThrow(/Provider|Schema|JSON/u);
   });
 
   it('拒绝空输入，并冻结只读转换 Prompt 边界', () => {

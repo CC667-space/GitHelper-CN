@@ -60,15 +60,23 @@ describe('Phase 8 Panel GitHub search', () => {
         };
       },
     );
+    usePanelStore.setState({ selectedTextProviderId: 'deepseek' });
     const user = userEvent.setup();
     render(<PanelApp connect={connect} />);
 
+    expect(screen.queryByText('不调用 AI Provider')).toBeNull();
+    expect(screen.getByText('使用当前文本 Provider · 本地安全校验')).toBeTruthy();
+    expect(screen.getByText(/每次搜索最多调用 1 次/)).toBeTruthy();
     await user.type(
       screen.getByLabelText('描述要搜索的仓库或 Issue'),
       'Star 超过 1000 的 Python 项目',
     );
     await user.click(screen.getByRole('button', { name: '搜索' }));
-    expect(search).toHaveBeenCalledExactlyOnceWith('Star 超过 1000 的 Python 项目', 'auto');
+    expect(search).toHaveBeenCalledExactlyOnceWith(
+      'Star 超过 1000 的 Python 项目',
+      'auto',
+      'deepseek',
+    );
 
     act(() =>
       emitSearchState?.({
@@ -83,6 +91,7 @@ describe('Phase 8 Panel GitHub search', () => {
             explanation: '搜索公开仓库；语言为 Python；Star >1000。',
           },
           totalCount: 20,
+          notice: '已由 DeepSeek 理解中文需求，并由本地规则校验后执行；本次调用可能产生少量费用。',
           items: [
             {
               kind: 'repository',
@@ -101,6 +110,7 @@ describe('Phase 8 Panel GitHub search', () => {
     );
 
     expect(screen.getByText('language:Python stars:>1000')).toBeTruthy();
+    expect(screen.getByText(/已由 DeepSeek 理解中文需求/)).toBeTruthy();
     expect(screen.getByText('octocat/demo')).toBeTruthy();
     expect(screen.getByText(/1,234/)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '打开' }));

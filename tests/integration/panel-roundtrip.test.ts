@@ -585,6 +585,7 @@ describe('Panel → Background → Content → Panel', () => {
         {
           naturalLanguage: 'Star 超过 1000 的 Python 项目',
           target: 'auto',
+          providerId: 'deepseek',
         },
         { id: 'search-roundtrip' },
       ),
@@ -595,6 +596,8 @@ describe('Panel → Background → Content → Panel', () => {
       expect.objectContaining({
         naturalLanguage: 'Star 超过 1000 的 Python 项目',
         target: 'auto',
+        manualProviderId: 'deepseek',
+        requestId: 'search-roundtrip',
       }),
     );
     expect(emitSearchState).toHaveBeenNthCalledWith(1, {
@@ -651,6 +654,8 @@ describe('Panel → Background → Content → Panel', () => {
       naturalLanguage: '适合新手的 TypeScript 项目',
       target: 'repositories',
       page: undefined,
+      manualProviderId: undefined,
+      requestId: 'search-without-page',
       signal: expect.any(AbortSignal),
     });
     expect(emitSearchState).toHaveBeenLastCalledWith({
