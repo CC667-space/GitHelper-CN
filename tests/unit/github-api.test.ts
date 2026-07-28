@@ -452,6 +452,7 @@ describe('GitHubApiClient', () => {
       'X-RateLimit-Remaining': '50',
     };
     const localizedReadme = '# 中文说明\n\n这是根目录中的项目说明与使用概览。';
+    const canonicalReadme = '# English README\n\nThis is the default English project overview.';
     const nestedReadme = '# src internals\n\nThis only documents the source directory.';
     const packageJson = '{"name":"localized-root","scripts":{"build":"vite build"}}';
     const mainSource = 'export function startApp() { return true; }';
@@ -482,6 +483,13 @@ describe('GitHubApiClient', () => {
         return new Response(
           JSON.stringify([
             { name: 'src', path: 'src', type: 'dir', size: 0, sha: 'src-dir' },
+            {
+              name: 'README.md',
+              path: 'README.md',
+              type: 'file',
+              size: Buffer.byteLength(canonicalReadme),
+              sha: 'canonical-readme',
+            },
             {
               name: 'README.zh-CN.md',
               path: 'README.zh-CN.md',
@@ -523,6 +531,9 @@ describe('GitHubApiClient', () => {
       }
       if (url.includes('/contents/README.zh-CN.md?')) {
         return fileResponse('README.zh-CN.md', localizedReadme);
+      }
+      if (url.includes('/contents/README.md?')) {
+        return fileResponse('README.md', canonicalReadme);
       }
       if (url.includes('/contents/src/README.md?')) {
         return fileResponse('src/README.md', nestedReadme);
@@ -566,6 +577,7 @@ describe('GitHubApiClient', () => {
     ]);
     const urls = fetchMock.mock.calls.map(([url]) => String(url));
     expect(urls.some((url) => url.includes('/contents/src/README.md?'))).toBe(false);
+    expect(urls.some((url) => url.includes('/contents/README.md?'))).toBe(false);
     expect(urls.some((url) => url.includes('/contents/src/main.ts?'))).toBe(true);
   });
 

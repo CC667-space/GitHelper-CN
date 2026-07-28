@@ -214,11 +214,11 @@ function repositoryFilePriority(path: string): number {
   const lower = path.toLowerCase();
   const name = lower.split('/').at(-1) ?? lower;
   const isRootFile = !lower.includes('/');
+  if (/^readme\.zh(?:[-_](?:cn|hans|hant))?\.(?:md|mdx|rst|txt)$/u.test(name)) {
+    return isRootFile ? 145 : 125;
+  }
   if (/^readme\.(?:md|mdx|rst|txt)$/u.test(name)) {
     return isRootFile ? 140 : 120;
-  }
-  if (/^readme\.zh(?:[-_](?:cn|hans|hant))?\.(?:md|mdx|rst|txt)$/u.test(name)) {
-    return isRootFile ? 135 : 115;
   }
   if (/^readme\.[a-z0-9_-]+\.(?:md|mdx|rst|txt)$/u.test(name)) {
     return isRootFile ? 130 : 110;

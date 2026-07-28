@@ -32,6 +32,24 @@ const analysisReadme = [
   '',
   'npm install',
 ].join('\n');
+const analysisReadmeZhCn = [
+  '<p align="center"><img src="assets/banner.png" alt="Hello World"></p>',
+  '# Hello World 中文说明 �',
+  '<p align="center"><a href="/">项目主页</a> | <a href="/">桌面版</a></p>',
+  '',
+  '<p align="center"><img src="https://img.shields.io/badge/docs-blue" alt="Docs"></p>',
+  '',
+  '这是一个用于学习真实项目结构的小型示例服务器，可检查受限的配置文件与源码证据。',
+  '',
+  '<table>',
+  '<tr><td><b>启动本地问候服务器</b></td><td>从已检查的 JavaScript 入口文件运行。</td></tr>',
+  '<tr><td><b>展示真实项目证据</b></td><td>概括已检查的清单文件与源码文件。</td></tr>',
+  '</table>',
+  '',
+  '## 安装',
+  '',
+  'npm install',
+].join('\n');
 
 await mkdir(artifactsPath, { recursive: true });
 process.env.PLAYWRIGHT_BROWSERS_PATH ??= browserPath;
@@ -218,7 +236,7 @@ try {
             name: 'README.zh-CN.md',
             path: 'README.zh-CN.md',
             type: 'file',
-            size: 512,
+            size: Buffer.byteLength(analysisReadmeZhCn),
             sha: 'readme-zh-sha',
           },
           {
@@ -242,6 +260,20 @@ try {
           size: Buffer.byteLength(analysisReadme),
           encoding: 'base64',
           content: Buffer.from(analysisReadme, 'utf8').toString('base64'),
+        }),
+      });
+      return;
+    }
+    if (path === '/repos/octocat/Hello-World/contents/README.zh-CN.md?ref=main') {
+      await route.fulfill({
+        status: 200,
+        headers: apiHeaders(),
+        body: JSON.stringify({
+          type: 'file',
+          path: 'README.zh-CN.md',
+          size: Buffer.byteLength(analysisReadmeZhCn),
+          encoding: 'base64',
+          content: Buffer.from(analysisReadmeZhCn, 'utf8').toString('base64'),
         }),
       });
       return;
@@ -348,7 +380,17 @@ try {
   assert(analysisText.includes('octocat/Hello-World'), 'E2E 分析卡缺少仓库名');
   assert(analysisText.includes('README 速览'), 'E2E 分析卡缺少 README 速览');
   assert(analysisText.includes('主要功能'), 'E2E 分析卡缺少主要功能');
-  assert(analysisText.includes('Starts a local greeting server'), 'E2E 分析卡缺少 README 功能证据');
+  assert(analysisText.includes('启动本地问候服务器'), 'E2E 分析卡缺少中文 README 功能证据');
+  assert(analysisText.includes('学习真实项目结构'), 'E2E 分析卡缺少中文 README 概括');
+  assert(
+    !analysisText.includes('Starts a local greeting server'),
+    'E2E 分析卡错误展示了默认英文 README',
+  );
+  assert(
+    !analysisText.includes('A tiny example server') &&
+      !analysisText.includes('A first repository for testing GitHub APIs'),
+    'E2E 分析卡仍透传英文 README 概括或仓库用途',
+  );
   assert(!analysisText.includes('�'), 'E2E 分析卡仍包含 UTF-8 替换字符');
   assert(!analysisText.includes('<img'), 'E2E 分析卡仍包含 README banner HTML');
   assert(analysisText.includes('文件、配置与实现'), 'E2E 分析卡缺少文件配置分析');
@@ -447,7 +489,7 @@ try {
       s1RepositoryAnalysis: {
         repository: 'octocat/Hello-World',
         apiFacts: ['stars', 'license', 'release', 'openPullRequests'],
-        fileEvidence: ['README.md', 'package.json', 'src/server.js'],
+        fileEvidence: ['README.zh-CN.md', 'package.json', 'src/server.js'],
         defaultVisible: ['readmeSummary', 'features', 'configuration', 'implementation'],
         factsDefaultExpanded: false,
       },

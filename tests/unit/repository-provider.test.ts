@@ -125,6 +125,9 @@ describe('ProviderRuntime repository structured analysis', () => {
     });
     expect(chat.mock.calls[0]?.[0].messages[0]?.content).toContain('不得输出或改写 Star');
     expect(chat.mock.calls[0]?.[0].messages[0]?.content).toContain('实际检查的关键文件');
+    expect(chat.mock.calls[0]?.[0].messages[0]?.content).toContain(
+      '所有面向用户的自然语言内容必须使用简体中文',
+    );
     expect(chat.mock.calls[0]?.[0].messages[1]?.content).toContain(
       '"content":"{\\"name\\":\\"react\\",\\"scripts\\":{\\"test\\":\\"yarn test\\"}}"',
     );
@@ -149,7 +152,7 @@ describe('ProviderRuntime repository structured analysis', () => {
     ).resolves.toMatchObject({ providerId: 'deepseek' });
     expect(chat).toHaveBeenCalledTimes(2);
     expect(chat.mock.calls[0]?.[0].responseFormat).toBeUndefined();
-    expect(chat.mock.calls[1]?.[0].messages[1]?.content).toContain('未通过本地 zod 校验');
+    expect(chat.mock.calls[1]?.[0].messages[1]?.content).toContain('未通过本地校验');
   });
 
   it('保留 Provider 已返回的有效速览字段，忽略额外事实字段且不重试', async () => {
@@ -179,6 +182,42 @@ describe('ProviderRuntime repository structured analysis', () => {
     });
     expect(result.insights).not.toHaveProperty('stars');
     expect(chat).toHaveBeenCalledOnce();
+  });
+
+  it('Provider 返回英文自然语言字段时重试并只接受中文结果', async () => {
+    stubStorage(false);
+    const chat = vi
+      .fn<Provider['chat']>()
+      .mockResolvedValueOnce({
+        content: JSON.stringify({
+          purpose: 'A repository analysis helper for GitHub beginners.',
+          features: ['Summarizes README and project configuration.'],
+        }),
+      })
+      .mockResolvedValueOnce({
+        content: JSON.stringify({
+          purpose: '面向 GitHub 新手的仓库分析助手。',
+          features: ['概括 README 与项目配置'],
+        }),
+      });
+    const runtime = new ProviderRuntime(
+      new Map<ProviderId, Provider>([['deepseek', provider(chat, false)]]),
+    );
+
+    await expect(
+      runtime.generateRepositoryInsights({
+        requestId: 'analysis-chinese-retry',
+        facts: facts(),
+        signal: new AbortController().signal,
+      }),
+    ).resolves.toMatchObject({
+      insights: {
+        purpose: '面向 GitHub 新手的仓库分析助手。',
+        features: ['概括 README 与项目配置'],
+      },
+    });
+    expect(chat).toHaveBeenCalledTimes(2);
+    expect(chat.mock.calls[1]?.[0].messages[1]?.content).toContain('均为简体中文');
   });
 
   it('网络/Provider 错误不重复请求，交由上层降级', async () => {

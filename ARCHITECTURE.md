@@ -234,6 +234,12 @@ Provider 合法但字段不全的 JSON 先投影为已知 `RepositoryInsightPatc
 本地完整 `RepositoryInsights` 合并；畸形 JSON/零已知字段仍最多重试一次。文件详情响应须再次通过路径
 与 `(0, 24KB]` 大小校验，未增加请求次数、目录深度或文本预算。
 
+**Phase 11 第五轮补丁（D-056）**：中文界面下的单份 README 选择顺序修订为根目录中文
+README → 根目录默认 README → 根目录其他本地化 README → 嵌套说明。Provider 的自然语言字段须为
+简体中文，英文结果最多按既有上限重试一次；展示层以中文 Provider 结果为先，再合并中文本地证据，
+并让中文 README 用途优先于英文仓库 description。只有外文证据且 Provider 不可用时显示中文降级说明，
+不直接把英文叙述作为中文速览。
+
 ### 3.8 确认流程（OperationConfirmation，v1.1 收紧 C-3）
 需确认操作弹出：操作说明 + 影响 + 推荐选择 + **[允许本次] / [拒绝]** 两项。
 **不提供"始终允许该类操作"**——高风险权限不能一次点击永久放开。`operationPolicy` 只在允许的枚举范围内配置（见 §5 UserPreferences）。

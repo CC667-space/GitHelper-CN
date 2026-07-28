@@ -174,12 +174,12 @@ describe('RepositoryAnalysisExecutor', () => {
         [
           '# React',
           '',
-          'A library for building component-based user interfaces.',
+          '一个用于构建组件化用户界面的开发库。',
           '',
-          '## Features',
+          '## 主要功能',
           '',
-          '- Build interfaces from reusable components',
-          '- Render on web and native platforms',
+          '- 使用可复用组件构建界面',
+          '- 支持 Web 和原生平台',
           '',
           '## Installation',
           '',
@@ -194,10 +194,10 @@ describe('RepositoryAnalysisExecutor', () => {
     expect(card.sources.provider).toBe(false);
     expect(card.quickScan).toMatchObject({
       source: 'readme',
-      readmeSummary: expect.stringMatching(/library.*component-based/iu),
+      readmeSummary: expect.stringMatching(/组件化用户界面/u),
       features: expect.arrayContaining([
-        expect.stringMatching(/reusable components/iu),
-        expect.stringMatching(/web and native/iu),
+        expect.stringMatching(/可复用组件/u),
+        expect.stringMatching(/Web 和原生平台/u),
       ]),
     });
     expect(card.quickScan.configuration).toEqual(
@@ -239,8 +239,8 @@ describe('RepositoryAnalysisExecutor', () => {
               'A toolkit for inspecting actual project files.',
               '',
               '<table>',
-              '<tr><td><b>Bounded evidence</b></td><td>Reads bounded configuration evidence.</td></tr>',
-              '<tr><td><b>Safe summaries</b></td><td>Builds concise findings from inspected files.</td></tr>',
+              '<tr><td><b>受限证据</b></td><td>读取受限的配置文件证据。</td></tr>',
+              '<tr><td><b>安全概括</b></td><td>根据已检查文件生成简练结论。</td></tr>',
               '</table>',
             ].join('\n'),
           },
@@ -303,7 +303,7 @@ describe('RepositoryAnalysisExecutor', () => {
       expect.arrayContaining([expect.stringMatching(/src\/main\.ts.*startApp/iu)]),
     );
     expect(card.quickScan.features).toEqual(
-      expect.arrayContaining([expect.stringMatching(/bounded configuration evidence/iu)]),
+      expect.arrayContaining([expect.stringMatching(/受限的配置文件证据/u)]),
     );
     expect(JSON.stringify(card)).not.toMatch(/<img|\uFFFD/iu);
     expect(card.languages.length).toBeLessThanOrEqual(5);
@@ -314,6 +314,7 @@ describe('RepositoryAnalysisExecutor', () => {
     const partialGenerator = vi.fn(async () => ({
       providerId: 'deepseek' as const,
       insights: {
+        purpose: '用于读取实际仓库文件并生成中文速览。',
         readmeSummary: '这是一个读取实际项目文件并生成仓库速览的工具。',
         features: ['识别项目配置与入口文件'],
       },
@@ -328,7 +329,15 @@ describe('RepositoryAnalysisExecutor', () => {
               inspectedFiles: [
                 {
                   path: 'README.md',
-                  content: '# Partial Provider\n\nA tool that inspects real repository files.',
+                  content: [
+                    '# Partial Provider',
+                    '',
+                    'A tool that inspects real repository files.',
+                    '',
+                    '## Features',
+                    '',
+                    '- Inspect repository configuration and entry files',
+                  ].join('\n'),
                 },
                 {
                   path: 'package.json',
@@ -350,10 +359,61 @@ describe('RepositoryAnalysisExecutor', () => {
 
     expect(card.sources.provider).toBe(true);
     expect(card.quickScan.readmeSummary).toContain('实际项目文件');
-    expect(card.quickScan.features).toContain('识别项目配置与入口文件');
-    expect(card.purpose).toContain(repository);
+    expect(card.quickScan.features[0]).toBe('识别项目配置与入口文件');
+    expect(card.quickScan.features.join(' ')).not.toContain('Inspect repository');
+    expect(card.purpose).toContain('中文速览');
     expect(card.difficulty.level).toBe('未知');
     expect(card.nextSteps.length).toBeGreaterThan(0);
+  });
+
+  it('英文仓库简介不能覆盖根目录中文 README 的用途、概括与功能说明', async () => {
+    const repository = 'example/localized-readme';
+    const localizedReadme = [
+      '# 中文项目说明',
+      '',
+      '这是一个读取仓库文件并生成中文项目速览的开发工具。',
+      '',
+      '## 主要功能',
+      '',
+      '- 识别项目配置和入口文件',
+      '- 概括 README 中的核心用途',
+    ].join('\n');
+    const partialGenerator = vi.fn(async () => ({
+      providerId: 'deepseek' as const,
+      insights: {
+        configuration: ['通过 package.json 管理构建脚本'],
+      },
+    })) as unknown as RepositoryInsightGenerator;
+    const localizedBundle = bundle(repository, {
+      details: {
+        ...bundle(repository).details,
+        description: 'An English description that must not become the Chinese-facing purpose.',
+      },
+      fileSnapshot: {
+        directories: ['src'],
+        truncated: false,
+        inspectedFiles: [{ path: 'README.zh-CN.md', content: localizedReadme }],
+      },
+    });
+    const executor = new RepositoryAnalysisExecutor(
+      {
+        getRepositoryBundle: vi.fn(async () => localizedBundle),
+      } as unknown as GitHubApiClient,
+      partialGenerator,
+    );
+
+    const card = await executor.analyze({
+      page: page(repository, '# English DOM README\n\nEnglish fallback content.'),
+      signal: new AbortController().signal,
+      now: new Date('2026-07-28T00:00:00.000Z'),
+    });
+
+    expect(card.purpose).toMatch(/中文项目速览/u);
+    expect(card.quickScan.readmeSummary).toMatch(/读取仓库文件/u);
+    expect(card.quickScan.features).toEqual(['识别项目配置和入口文件', '概括 README 中的核心用途']);
+    expect(
+      [card.purpose, card.quickScan.readmeSummary, ...card.quickScan.features].join(' '),
+    ).not.toMatch(/English description|English fallback/u);
   });
 
   it('私有页面在 API 与 Provider 前零出站', async () => {

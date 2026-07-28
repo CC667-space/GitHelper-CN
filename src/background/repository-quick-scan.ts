@@ -14,6 +14,19 @@ interface QuickScanInput {
   providerUsed: boolean;
 }
 
+export function hasChineseNarrative(value: string, minimumCharacters = 4): boolean {
+  let count = 0;
+  for (const character of value) {
+    if (/[\u3400-\u9fff]/u.test(character)) {
+      count += 1;
+      if (count >= minimumCharacters) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function cleanRepositoryMarkdownText(value: string): string {
   return value
     .replace(/\uFFFD+/gu, ' ')
@@ -58,7 +71,7 @@ export function extractReadmeSummary(readme: string): string | undefined {
       /[\u3400-\u9fff]/u.test(character),
     ).length;
     if (
-      cleaned.length >= 20 &&
+      (cleaned.length >= 20 || chineseCharacterCount >= 12) &&
       (wordCount >= 5 || chineseCharacterCount >= 12) &&
       !isMediaOrNavigationBlock(block, cleaned)
     ) {
@@ -142,14 +155,19 @@ function localImplementation(structure: StructureSummary): string[] {
   return [...new Set([...directoryEvidence, ...fileEvidence])].slice(0, 6);
 }
 
-function uniqueLimited(primary: string[] | undefined, secondary: string[], limit = 6): string[] {
-  return [
-    ...new Set(
-      [...(primary ?? []), ...secondary]
-        .map((item) => cleanRepositoryMarkdownText(item))
-        .filter(Boolean),
-    ),
-  ].slice(0, limit);
+function localizedLimited(
+  providerItems: string[] | undefined,
+  localItems: string[],
+  providerUsed: boolean,
+  limit = 6,
+): string[] {
+  const cleanChineseItems = (items: string[]): string[] =>
+    items
+      .map((item) => cleanRepositoryMarkdownText(item))
+      .filter((item) => Boolean(item) && hasChineseNarrative(item, 2));
+  const provider = providerUsed ? cleanChineseItems(providerItems ?? []) : [];
+  const local = cleanChineseItems(localItems);
+  return [...new Set(provider.length ? [...provider, ...local] : local)].slice(0, limit);
 }
 
 function usefulProviderSummary(value: string | undefined): string | undefined {
@@ -160,13 +178,7 @@ function usefulProviderSummary(value: string | undefined): string | undefined {
   if (cleaned.length < 16) {
     return undefined;
   }
-  const chineseCharacterCount = [...cleaned].filter((character) =>
-    /[\u3400-\u9fff]/u.test(character),
-  ).length;
-  const wordCount = cleaned.split(/\s+/u).filter(Boolean).length;
-  return chineseCharacterCount >= 6 || (wordCount >= 6 && /[.!?。！？]/u.test(cleaned))
-    ? cleaned
-    : undefined;
+  return hasChineseNarrative(cleaned, 6) ? cleaned : undefined;
 }
 
 export function buildRepositoryQuickScan(
@@ -175,23 +187,28 @@ export function buildRepositoryQuickScan(
   const readmeSummary = input.readme ? extractReadmeSummary(input.readme) : undefined;
   const localSummary =
     readmeSummary ?? input.description?.trim().slice(0, 1_000) ?? '未获取到可概括的 README 内容。';
+  const cleanedLocalSummary = cleanRepositoryMarkdownText(localSummary);
   const summary =
     (input.providerUsed ? usefulProviderSummary(input.insights.readmeSummary) : undefined) ??
-    cleanRepositoryMarkdownText(localSummary);
+    (hasChineseNarrative(cleanedLocalSummary, 4) ? cleanedLocalSummary : undefined) ??
+    'README 主要内容为外文，当前未获得可用的中文概括。';
 
   return {
     readmeSummary: summary.slice(0, 1_000),
-    features: uniqueLimited(
-      input.readme ? extractReadmeFeatures(input.readme) : [],
+    features: localizedLimited(
       input.insights.features ?? [],
+      input.readme ? extractReadmeFeatures(input.readme) : [],
+      input.providerUsed,
     ),
-    configuration: uniqueLimited(
-      localConfiguration(input.installCommands, input.structure),
+    configuration: localizedLimited(
       input.insights.configuration ?? [],
+      localConfiguration(input.installCommands, input.structure),
+      input.providerUsed,
     ),
-    implementation: uniqueLimited(
-      localImplementation(input.structure),
+    implementation: localizedLimited(
       input.insights.implementationNotes ?? [],
+      localImplementation(input.structure),
+      input.providerUsed,
     ),
     source: input.readme ? 'readme' : input.description ? 'description' : 'limited',
   };

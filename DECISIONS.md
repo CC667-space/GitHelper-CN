@@ -425,3 +425,13 @@
 - **证据**：红测分别复现三份 README 挤出 `package.json`/源码、HTML 功能表得到空功能、banner/`�` 泄漏、根目录本地化 README 被嵌套 README 覆盖、文件详情大小膨胀仍被接纳，以及 Provider 部分 JSON 被整份拒绝；修复后定向 22/22、常规 Vitest 204 项、typecheck、lint、build、安全扫描和隔离 Chrome E2E 全过。E2E 使用多语言 README + HTML banner/功能表，Provider 请求 0、页面异常 0。
 - **范围**：Phase 11 第四轮人工复核内部补丁；不新增 Chrome 权限、Host、GitHub Token/写操作、Provider 调用次数、目录深度、文件/文本预算或持久数据类别。
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28
+
+## D-056 中文仓库速览优先本地化证据并在展示层拒绝英文叙述
+- **决策**：
+  - 当根目录同时存在默认 README 与 `README.zh` / `README.zh-CN` / `README.zh-Hans` / `README.zh-Hant` 时，中文 README 优先；随后才是根目录默认、其他本地化及嵌套说明。仍只读取一份 README，不改变 D-053 文件预算。
+  - 本地用途说明优先采用可靠中文仓库简介或中文 README 概括；英文 description 不得覆盖已取得的中文 README。若 Provider 不可用且只有外文证据，展示明确中文降级说明，不把外文段落冒充中文速览。
+  - Provider Prompt 明确要求所有自然语言字段使用简体中文，技术标识符可保留原文；本地校验发现自然语言字段未中文化时，按既有上限最多重试一次。展示层仅合并中文 Provider 叙述和中文本地叙述，Provider 中文功能项优先于外文 README 原文。
+- **理由**：D-055 的“默认 README 优先”在 Hermes Agent 同时提供英文默认与中文本地化 README 时仍会选择英文；部分 Provider 结果又会让缺失用途继承英文 description，且本地英文功能项先占满列表上限。三者共同造成中文界面中核心内容仍为英文。
+- **证据**：红测分别复现默认英文 README 覆盖根目录中文 README、英文功能先于 Provider 中文功能、英文 description 覆盖中文 README 用途；修复后定向 24/24、常规 Vitest 206 项、typecheck、lint、build、安全扫描与隔离 Chrome E2E 全过。E2E 明确同时提供英文默认和中文 README，实际证据选择 `README.zh-CN.md`，卡片包含中文概括/功能且不出现英文默认功能句。
+- **范围**：Phase 11 第五轮人工复核内部补丁；不新增 Provider 调用上限、Chrome 权限、Host、GitHub API 请求、文件/文本预算或持久数据类别。
+- 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28

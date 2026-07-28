@@ -53,7 +53,7 @@
 - Panel 点击选择状态覆盖 active/selected/cancelled；已选元素随问题提交，旧页面选择被清除；选择成功后有可聚焦输入框的下一步操作
 - Panel 框选状态覆盖 active/selected/cancelled；结构充分提示“不截图”，不足时在提交前提示视觉 Provider 与可能费用；框选成功后有可聚焦输入框的下一步操作
 - Panel 中文搜索覆盖自动/仓库/Issue 目标、查询解释与语法、仓库/Issue 结果卡、限流提示、本地 DOM 结果与安全网页入口；搜索链不调用 AI Provider
-- Panel 一键仓库分析覆盖运行/完成/错误、固定字段卡片、数据源、缺字段与 degradedNotice；README/功能/配置/实现速览默认展开，Star/语言/Release 等事实区默认折叠并可展开
+- Panel 一键仓库分析覆盖运行/完成/错误、固定字段卡片、数据源、缺字段与 degradedNotice；README/功能/配置/实现速览默认展开且自然语言为中文，Star/语言/Release 等事实区默认折叠并可展开
 
 ### 3. 扩展集成测试
 - Panel→BG→Content→Panel 消息往返（经来源+Schema 校验）
@@ -63,11 +63,11 @@
 - 框选集成链断言充分结构只走文本；不足结构由 Background 裁剪后才携图走视觉；`visionEnabled=false` 时截图/Provider/会话写入均为零
 - 搜索集成链断言 Panel→Background→只读工具→匿名 API→Panel；打开结果只接受 `https://github.com/*`
 - 仓库分析链断言当前 PageContext→core/Provider→固定卡片；私有页面 core/Provider 均零调用；Provider 不能覆盖 API 数字事实
-- 仓库分析读取固定 Contents API 的受限文件样本：最多 2 个源码目录、3 个文件、每文件 4KB 文本；锁文件/路径穿越拒绝，卡片显示实际文件证据且不返回原文
+- 仓库分析读取固定 Contents API 的受限文件样本：最多 2 个源码目录、3 个文件、每文件 4KB 文本；锁文件/路径穿越拒绝，根目录中英文 README 共存时选择中文说明，卡片显示实际文件证据且不返回原文
 - 单轮问答收展互不影响；问答删除与 session 删除均须垃圾桶后 `✓/×` 二次确认，`×` 零变更，`✓` 不误删相邻轮次或非目标 session
 
 ### 4. E2E（Playwright，加载扩展，Phase 11）
-- 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片；多语言 README 共存且包含 banner HTML/功能表时，默认显示无乱码的 README 概括、主要功能、配置与实际关键文件证据，仓库事实默认折叠且展开后数字可见
+- 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片；中英文 README 共存且包含 banner HTML/功能表时，优先中文 README，默认显示无乱码、无英文叙述透传的中文概括、主要功能、配置与实际关键文件证据，仓库事实默认折叠且展开后数字可见
 - SPA 导航后上下文刷新且无重复初始化
 - 会话恢复；切换 GitHub 页面后活动会话仍保留，Panel 重载后继续恢复；逐轮收展及两类确认删除可操作
 

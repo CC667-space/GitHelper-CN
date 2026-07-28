@@ -18,6 +18,7 @@ import {
   buildRepositoryQuickScan,
   cleanRepositoryMarkdownText,
   extractReadmeSummary,
+  hasChineseNarrative,
 } from './repository-quick-scan';
 
 export interface RepositoryAnalysisFacts {
@@ -297,8 +298,18 @@ function detectPlatforms(text: string, topics: string[]): string[] {
 }
 
 function localPurpose(facts: RepositoryAnalysisFacts): string {
-  const source = facts.description ?? facts.readmeExcerpt;
+  const description = facts.description
+    ? cleanRepositoryMarkdownText(facts.description)
+    : undefined;
+  const readmeSummary = facts.readmeExcerpt ? extractReadmeSummary(facts.readmeExcerpt) : undefined;
+  const source = [description, readmeSummary].find(
+    (candidate): candidate is string =>
+      Boolean(candidate) && hasChineseNarrative(candidate ?? '', 4),
+  );
   if (!source) {
+    if (description || readmeSummary) {
+      return '仓库公开说明主要为外文，当前未获得可用的中文用途概括。';
+    }
     return '公开信息不足，暂时无法可靠判断该仓库的主要用途。';
   }
   const firstSentence = source.split(/(?<=[。！？.!?])\s*/u)[0]?.trim();
@@ -500,7 +511,7 @@ export class RepositoryAnalysisExecutor {
     return repositoryAnalysisCardSchema.parse({
       repository: facts.repository,
       url: facts.url,
-      purpose: insights.purpose,
+      purpose: hasChineseNarrative(insights.purpose, 4) ? insights.purpose : local.purpose,
       quickScan: buildRepositoryQuickScan({
         readme,
         description,
