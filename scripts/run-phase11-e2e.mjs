@@ -148,6 +148,32 @@ try {
   await context.route('https://api.github.com/**', async (route) => {
     const url = new URL(route.request().url());
     const path = `${url.pathname}${url.search}`;
+    if (url.pathname === '/search/repositories') {
+      const query = url.searchParams.get('q') ?? '';
+      assert(query.includes('language:Python'), 'E2E 中文搜索未转换 Python 语言限定词');
+      assert(query.includes('stars:>1000'), 'E2E 中文搜索未转换 Star 限定词');
+      assert(url.searchParams.get('per_page') === '10', 'E2E 中文搜索结果数未限制为 10');
+      await route.fulfill({
+        status: 200,
+        headers: apiHeaders('search'),
+        body: JSON.stringify({
+          total_count: 1,
+          items: [
+            {
+              id: 2,
+              full_name: 'octocat/python-starter',
+              html_url: 'https://github.com/octocat/python-starter',
+              description: 'A beginner-friendly Python repository.',
+              language: 'Python',
+              stargazers_count: 2_600,
+              updated_at: '2026-07-22T00:00:00.000Z',
+              archived: false,
+            },
+          ],
+        }),
+      });
+      return;
+    }
     if (path === '/repos/octocat/Hello-World') {
       await route.fulfill({
         status: 200,
@@ -373,6 +399,16 @@ try {
   await panel.getByTestId('side-panel').waitFor({ timeout: 10_000 });
   await panel.locator('[title="Background 已连接"]').waitFor({ timeout: 10_000 });
 
+  const githubSearch = panel.getByTestId('github-search');
+  await githubSearch.getByLabel('描述要搜索的仓库或 Issue').fill('Star 超过 1000 的 Python 项目');
+  await githubSearch.getByRole('button', { name: '搜索' }).click();
+  await githubSearch.getByText('octocat/python-starter', { exact: true }).waitFor({
+    timeout: 10_000,
+  });
+  const githubSearchText = await githubSearch.innerText();
+  assert(githubSearchText.includes('language:Python'), 'E2E 搜索结果缺少查询解释');
+  assert(githubSearchText.includes('2,600'), 'E2E 搜索结果缺少 Star 数据');
+
   await panel.getByRole('button', { name: '一键分析' }).click();
   const analysisCard = panel.getByTestId('repository-analysis-card');
   await analysisCard.waitFor({ timeout: 20_000 });
@@ -511,6 +547,11 @@ try {
         defaultVisible: ['overview'],
         defaultCollapsed: ['details', 'sourceSummary', 'facts'],
         factsDefaultExpanded: false,
+      },
+      s3ChineseSearch: {
+        input: 'Star 超过 1000 的 Python 项目',
+        result: 'octocat/python-starter',
+        providerRequests: 0,
       },
       spa: {
         pageType: spaContext.pageType,

@@ -611,6 +611,100 @@ describe('Panel → Background → Content → Panel', () => {
     );
   });
 
+  it('当前页面上下文暂不可用时仍可执行独立的公开 GitHub 搜索', async () => {
+    const emitSearchState = vi.fn();
+    const search = vi.fn(async () => ({
+      status: 'ok' as const,
+      conversion: {
+        naturalLanguage: '适合新手的 TypeScript 项目',
+        target: 'repositories' as const,
+        query: '适合新手 language:TypeScript',
+        explanation: '搜索公开仓库；语言为 TypeScript。',
+      },
+      totalCount: 1,
+      items: [],
+    }));
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(async () => {
+        throw new Error('当前 GitHub 页面尚未完成解析');
+      }),
+      streamAnswer: vi.fn(),
+      search,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitSearchState,
+    });
+
+    await bridge.dispatch(
+      createEnvelope(
+        'PANEL_SEARCH',
+        {
+          naturalLanguage: '适合新手的 TypeScript 项目',
+          target: 'repositories',
+        },
+        { id: 'search-without-page' },
+      ),
+      panelSender,
+    );
+
+    expect(search).toHaveBeenCalledWith({
+      naturalLanguage: '适合新手的 TypeScript 项目',
+      target: 'repositories',
+      page: undefined,
+      signal: expect.any(AbortSignal),
+    });
+    expect(emitSearchState).toHaveBeenLastCalledWith({
+      status: 'done',
+      requestId: 'search-without-page',
+      result: expect.objectContaining({ totalCount: 1 }),
+    });
+  });
+
+  it('当前页面明确为私有仓库时仍阻断搜索出站', async () => {
+    const emitSearchState = vi.fn();
+    const search = vi.fn();
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(async () => ({
+        url: 'https://github.com/example/private-repo',
+        title: 'Private repository',
+        placeholder: false,
+        capturedAt: '2026-07-24T00:00:00.000Z',
+        pageContext: {
+          url: 'https://github.com/example/private-repo',
+          pageType: 'repo' as const,
+          repository: 'example/private-repo',
+          isPrivate: true,
+          extracted: {},
+          capturedAt: '2026-07-24T00:00:00.000Z',
+        },
+      })),
+      streamAnswer: vi.fn(),
+      search,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitSearchState,
+    });
+
+    await bridge.dispatch(
+      createEnvelope(
+        'PANEL_SEARCH',
+        {
+          naturalLanguage: 'TypeScript 项目',
+          target: 'repositories',
+        },
+        { id: 'search-private-page' },
+      ),
+      panelSender,
+    );
+
+    expect(search).not.toHaveBeenCalled();
+    expect(emitSearchState).toHaveBeenLastCalledWith({
+      status: 'error',
+      requestId: 'search-private-page',
+      error: expect.stringMatching(/私有|禁止出站/u),
+    });
+  });
+
   it('一键仓库分析经当前 PageContext 执行并推回固定卡片', async () => {
     const emitRepositoryAnalysisState = vi.fn();
     const card = {

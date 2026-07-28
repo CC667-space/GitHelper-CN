@@ -106,7 +106,7 @@ export interface PanelBridgeDependencies {
   search?(input: {
     naturalLanguage: string;
     target: SearchTarget;
-    page: PageInfo;
+    page?: PageInfo;
     signal: AbortSignal;
   }): Promise<GitHubSearchResult>;
   analyzeRepository?(input: {
@@ -418,11 +418,19 @@ export class PanelBridge {
       requestId: context.requestId,
     });
     try {
-      const page = await this.dependencies.requestPageInfo(context.signal);
-      if (!page.pageContext) {
-        throw new Error('当前页面上下文尚未就绪');
+      let page: PageInfo | undefined;
+      let currentPage: PageInfo | undefined;
+      try {
+        currentPage = await this.dependencies.requestPageInfo(context.signal);
+      } catch (error: unknown) {
+        if (context.signal.aborted) {
+          throw error;
+        }
       }
-      assertPublicContext(page.pageContext);
+      if (currentPage?.pageContext) {
+        assertPublicContext(currentPage.pageContext);
+        page = currentPage;
+      }
       const result = await this.dependencies.search({
         ...request,
         page,
@@ -693,14 +701,13 @@ export function registerPanelPortBridge(
       cancelRegion: cancelActivePageRegion,
       captureRegion: captureActivePageRegion,
       search: async ({ naturalLanguage, target, page, signal }) => {
-        if (!page.pageContext) {
-          throw new Error('当前页面上下文尚未就绪');
+        if (page?.pageContext) {
+          assertPublicContext(page.pageContext);
         }
-        assertPublicContext(page.pageContext);
         return await searchExecutor.search({
           naturalLanguage,
           target,
-          page: page.pageContext,
+          page: page?.pageContext,
           signal,
         });
       },

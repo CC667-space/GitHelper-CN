@@ -457,3 +457,14 @@
 - **证据**：红测分别复现 overview 修复丢失首轮详细字段、生硬直译中文被接纳、`package.json` + `pyproject.toml` 挤掉入口源码、README 段落从 sourceSummary/关键文件卡片重复展示；修复后定向 45/45、常规 Vitest 213 项通过（另 1 项 live test 默认跳过），typecheck、lint、build、安全扫描、13 条目本地打包与隔离 Chrome E2E 全过。E2E 记录 `README.zh-CN.md` 与“章节：安装”，不显示 README 原文，仍显示 `package.json` / `src/server.js`，Provider 请求 0、页面异常 0。
 - **范围**：Phase 11 第七轮人工复核内部补丁；不增加 Provider 调用上限、Chrome 权限、Host、GitHub API 请求、目录深度、文件/文本预算、持久数据类别或 MVP 功能。
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28
+
+## D-059 中文搜索不依赖当前页面解析完成
+- **决策**：
+  - 用户在独立搜索区主动输入的中文描述可直接进入本地转换器和公开 GitHub Search API，不再把 Content Script 已返回完整 `PageContext` 作为前置条件。
+  - 当前页面信息只用于 search 限流后的可选本地 DOM 结果；页面解析暂不可用时以 `page: undefined` 执行搜索。请求已被取消时不得继续，仍沿用原取消信号。
+  - 若已取得的 `PageContext` 明确为私有仓库或无权限页面，继续在搜索执行器及任何 GitHub API 出站前阻断；不得把该页面内容作为回退数据。
+  - Phase 11 隔离 Chrome E2E 固定覆盖“Panel 输入中文 → Background → 固定 GitHub Search API → 结果卡”，并断言限定词、每页最多 10 条、Provider 请求 0。
+- **理由**：中文搜索是用户主动发起的独立公开搜索，不应因 GitHub SPA 切换、Content Script 暂未就绪或页面解析失败而完全不可用；同时，已明确识别出的私有上下文仍必须遵守零出站边界。
+- **证据**：集成红测先确认页面解析异常会让 `search` 调用为 0；修复后“无页面上下文仍搜索”与“私有页面仍零出站”双向测试通过。隔离 Chrome E2E 以“Star 超过 1000 的 Python 项目”验证 `language:Python`、`stars:>1000`、`per_page=10` 和结果卡；全量 215 项常规测试通过（另 1 项 live test 默认跳过），typecheck、lint、build 与 E2E 通过。
+- **范围**：Phase 11 中文搜索可用性补丁；不新增 Provider 调用、GitHub Token、Chrome 权限、Host、写操作、外部导航能力或持久数据类别。
+- 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28
