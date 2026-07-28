@@ -118,7 +118,7 @@ describe('ProviderRuntime repository structured analysis', () => {
       signal: new AbortController().signal,
     });
 
-    expect(result.insights.difficulty.level).toBe('入门');
+    expect(result.insights.difficulty?.level).toBe('入门');
     expect(chat).toHaveBeenCalledOnce();
     expect(chat.mock.calls[0]?.[0]).toMatchObject({
       responseFormat: { type: 'json_object' },
@@ -150,6 +150,35 @@ describe('ProviderRuntime repository structured analysis', () => {
     expect(chat).toHaveBeenCalledTimes(2);
     expect(chat.mock.calls[0]?.[0].responseFormat).toBeUndefined();
     expect(chat.mock.calls[1]?.[0].messages[1]?.content).toContain('未通过本地 zod 校验');
+  });
+
+  it('保留 Provider 已返回的有效速览字段，忽略额外事实字段且不重试', async () => {
+    stubStorage(false);
+    const chat = vi.fn<Provider['chat']>(async () => ({
+      content: JSON.stringify({
+        readmeSummary: '这是一个可扩展的个人 AI 助手框架。',
+        features: ['支持多种 Agent 与应用入口'],
+        configuration: ['通过项目清单安装依赖'],
+        stars: 999_999,
+      }),
+    }));
+    const runtime = new ProviderRuntime(
+      new Map<ProviderId, Provider>([['deepseek', provider(chat, false)]]),
+    );
+
+    const result = await runtime.generateRepositoryInsights({
+      requestId: 'analysis-partial',
+      facts: facts(),
+      signal: new AbortController().signal,
+    });
+
+    expect(result.insights).toEqual({
+      readmeSummary: '这是一个可扩展的个人 AI 助手框架。',
+      features: ['支持多种 Agent 与应用入口'],
+      configuration: ['通过项目清单安装依赖'],
+    });
+    expect(result.insights).not.toHaveProperty('stars');
+    expect(chat).toHaveBeenCalledOnce();
   });
 
   it('网络/Provider 错误不重复请求，交由上层降级', async () => {

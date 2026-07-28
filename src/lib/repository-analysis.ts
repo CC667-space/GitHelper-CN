@@ -22,6 +22,13 @@ export const repositoryInsightsSchema = z
   })
   .strict();
 
+export const repositoryInsightPatchSchema = repositoryInsightsSchema
+  .partial()
+  .strip()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: '至少需要一个仓库分析字段',
+  });
+
 export const repositoryAnalysisCardSchema = z
   .object({
     repository: z.string().min(1).max(500),
@@ -129,4 +136,5 @@ export const repositoryAnalysisCardSchema = z
   .strict();
 
 export type RepositoryInsights = z.infer<typeof repositoryInsightsSchema>;
+export type RepositoryInsightPatch = z.infer<typeof repositoryInsightPatchSchema>;
 export type RepositoryAnalysisCard = z.infer<typeof repositoryAnalysisCardSchema>;

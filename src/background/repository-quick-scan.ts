@@ -14,8 +14,9 @@ interface QuickScanInput {
   providerUsed: boolean;
 }
 
-function cleanMarkdownInline(value: string): string {
+export function cleanRepositoryMarkdownText(value: string): string {
   return value
+    .replace(/\uFFFD+/gu, ' ')
     .replace(/!\[[^\n]*\]\([^)\n]*\)/gu, '')
     .replace(/\[([^\n]+)\]\([^)\n]*\)/gu, '$1')
     .replace(/<[^>]+>/gu, ' ')
@@ -25,7 +26,18 @@ function cleanMarkdownInline(value: string): string {
     .trim();
 }
 
-function readmeParagraph(readme: string): string | undefined {
+function isMediaOrNavigationBlock(rawBlock: string, cleaned: string): boolean {
+  if (/<(?:img|picture|source)\b|shields\.io|\bbadge\b|align\s*=\s*["']?center/iu.test(rawBlock)) {
+    return true;
+  }
+  const linkCount =
+    [...rawBlock.matchAll(/\[[^\]\n]+\]\([^)\n]+\)/gu)].length +
+    [...rawBlock.matchAll(/<a\b[^>]*>/giu)].length;
+  const hasSentencePunctuation = /[.!?。！？]/u.test(cleaned);
+  return linkCount >= 2 && !hasSentencePunctuation;
+}
+
+export function extractReadmeSummary(readme: string): string | undefined {
   const blocks = readme.split(/\r?\n\s*\r?\n/gu);
   for (const block of blocks) {
     const lines = block
@@ -40,15 +52,23 @@ function readmeParagraph(readme: string): string | undefined {
     ) {
       continue;
     }
-    const cleaned = cleanMarkdownInline(lines.join(' '));
-    if (cleaned.length >= 20) {
+    const cleaned = cleanRepositoryMarkdownText(lines.join(' '));
+    const wordCount = cleaned.split(/\s+/u).filter(Boolean).length;
+    const chineseCharacterCount = [...cleaned].filter((character) =>
+      /[\u3400-\u9fff]/u.test(character),
+    ).length;
+    if (
+      cleaned.length >= 20 &&
+      (wordCount >= 5 || chineseCharacterCount >= 12) &&
+      !isMediaOrNavigationBlock(block, cleaned)
+    ) {
       return cleaned.slice(0, 1_000);
     }
   }
   return undefined;
 }
 
-function readmeFeatures(readme: string): string[] {
+export function extractReadmeFeatures(readme: string): string[] {
   const headingPattern =
     /^(?:features?|highlights?|capabilit(?:y|ies)|what (?:it|this project) does|核心功能|主要功能|功能|特性|亮点)$/iu;
   const features: string[] = [];
@@ -59,7 +79,7 @@ function readmeFeatures(readme: string): string[] {
       if (inFeatureSection) {
         break;
       }
-      inFeatureSection = headingPattern.test(cleanMarkdownInline(heading[1]));
+      inFeatureSection = headingPattern.test(cleanRepositoryMarkdownText(heading[1]));
       continue;
     }
     if (!inFeatureSection) {
@@ -69,12 +89,31 @@ function readmeFeatures(readme: string): string[] {
     if (!item) {
       continue;
     }
-    const cleaned = cleanMarkdownInline(item);
+    const cleaned = cleanRepositoryMarkdownText(item);
     if (cleaned && !features.includes(cleaned)) {
       features.push(cleaned.slice(0, 300));
     }
     if (features.length >= 6) {
       break;
+    }
+  }
+  if (features.length < 6) {
+    for (const row of readme.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/giu)) {
+      const cells = [...(row[1] ?? '').matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/giu)].map((cell) =>
+        cleanRepositoryMarkdownText(cell[1] ?? ''),
+      );
+      const title = cells[0];
+      const detail = cells.slice(1).filter(Boolean).join('；');
+      if (!title || !detail || /^(?:features?|功能|特性)$/iu.test(title)) {
+        continue;
+      }
+      const finding = `${title}：${detail}`.slice(0, 300);
+      if (!features.includes(finding)) {
+        features.push(finding);
+      }
+      if (features.length >= 6) {
+        break;
+      }
     }
   }
   return features;
@@ -105,25 +144,45 @@ function localImplementation(structure: StructureSummary): string[] {
 
 function uniqueLimited(primary: string[] | undefined, secondary: string[], limit = 6): string[] {
   return [
-    ...new Set([...(primary ?? []), ...secondary].map((item) => item.trim()).filter(Boolean)),
+    ...new Set(
+      [...(primary ?? []), ...secondary]
+        .map((item) => cleanRepositoryMarkdownText(item))
+        .filter(Boolean),
+    ),
   ].slice(0, limit);
+}
+
+function usefulProviderSummary(value: string | undefined): string | undefined {
+  if (!value || /<(?:img|picture|source)\b/iu.test(value)) {
+    return undefined;
+  }
+  const cleaned = cleanRepositoryMarkdownText(value);
+  if (cleaned.length < 16) {
+    return undefined;
+  }
+  const chineseCharacterCount = [...cleaned].filter((character) =>
+    /[\u3400-\u9fff]/u.test(character),
+  ).length;
+  const wordCount = cleaned.split(/\s+/u).filter(Boolean).length;
+  return chineseCharacterCount >= 6 || (wordCount >= 6 && /[.!?。！？]/u.test(cleaned))
+    ? cleaned
+    : undefined;
 }
 
 export function buildRepositoryQuickScan(
   input: QuickScanInput,
 ): RepositoryAnalysisCard['quickScan'] {
-  const readmeSummary = input.readme ? readmeParagraph(input.readme) : undefined;
+  const readmeSummary = input.readme ? extractReadmeSummary(input.readme) : undefined;
   const localSummary =
     readmeSummary ?? input.description?.trim().slice(0, 1_000) ?? '未获取到可概括的 README 内容。';
   const summary =
-    input.insights.readmeSummary ??
-    (input.providerUsed ? input.insights.purpose : undefined) ??
-    localSummary;
+    (input.providerUsed ? usefulProviderSummary(input.insights.readmeSummary) : undefined) ??
+    cleanRepositoryMarkdownText(localSummary);
 
   return {
     readmeSummary: summary.slice(0, 1_000),
     features: uniqueLimited(
-      input.readme ? readmeFeatures(input.readme) : [],
+      input.readme ? extractReadmeFeatures(input.readme) : [],
       input.insights.features ?? [],
     ),
     configuration: uniqueLimited(

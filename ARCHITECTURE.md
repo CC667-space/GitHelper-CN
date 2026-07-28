@@ -227,6 +227,13 @@ Contents API 与 DOM 都提供 README 片段时，优先采用路径和大小均
 但缺失/非法输出时由本地 Markdown 段落、功能章节、安装命令和文件摘要确定性降级。Star、语言、
 Release、许可证等事实仍由 DOM/API 回填，并集中放入默认关闭的仓库事实区。
 
+**Phase 11 第四轮补丁（D-055）**：3 文件配额内最多只取 1 份 README，顺序为根目录默认
+README → 根目录中文 README → 根目录其他本地化 README → 嵌套说明，避免多语言文档挤出清单和入口。
+README 提取会跳过 banner、badge、居中导航与 `�`，并从普通段落、功能章节或 HTML 功能表生成本地证据。
+Provider 合法但字段不全的 JSON 先投影为已知 `RepositoryInsightPatch`，丢弃 Star 等未知事实字段，再与
+本地完整 `RepositoryInsights` 合并；畸形 JSON/零已知字段仍最多重试一次。文件详情响应须再次通过路径
+与 `(0, 24KB]` 大小校验，未增加请求次数、目录深度或文本预算。
+
 ### 3.8 确认流程（OperationConfirmation，v1.1 收紧 C-3）
 需确认操作弹出：操作说明 + 影响 + 推荐选择 + **[允许本次] / [拒绝]** 两项。
 **不提供"始终允许该类操作"**——高风险权限不能一次点击永久放开。`operationPolicy` 只在允许的枚举范围内配置（见 §5 UserPreferences）。

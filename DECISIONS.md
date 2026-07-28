@@ -415,3 +415,13 @@
 - **证据**：GitHub API 测试断言 README 在 3 文件上限内优先且仍只读受限内容；分析器测试覆盖 API README 优先、功能/配置/实现本地降级；Panel 测试断言速览默认显示、事实区默认关闭并可展开；隔离 Chrome E2E 同时验证 README 功能证据、`package.json`/`src/server.js` 证据及展开后的 Star/许可证，Provider 请求为 0。
 - **范围**：Phase 11 第三轮人工复核内部补丁；不新增 Chrome 权限、Host、GitHub Token/写操作、Provider 调用次数、文件预算或持久数据类别。
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28
+
+## D-055 多语言 README 去重、HTML 证据提取与 Provider 部分结果合并
+- **决策**：
+  - D-053 的最多 3 文件配额内只允许 1 份 README；优先根目录默认 README，其次根目录中文/其他本地化 README，最后才考虑嵌套 README。剩余名额继续用于配置、入口或源码文件。文件详情响应除路径身份外再次校验声明大小仍在 `(0, 24KB]`。
+  - README 本地提取跳过 banner、badge、居中导航和 Unicode 替换字符；除 Markdown 功能章节外，识别 `<table><tr><td>` 形式的功能名称与说明。分析卡不展示原始 HTML。
+  - Provider 输出先经 `RepositoryInsightPatch` 白名单 Schema：允许只返回有证据的定性字段，未知字段（包括 Star 等事实）直接丢弃，至少须有一个已知字段；合法部分结果与本地完整降级结果合并。只有畸形 JSON 或零已知字段才按 D-048 最多重试一次，网络错误仍不重试。
+- **理由**：真实 `NousResearch/hermes-agent` 同时包含默认、西语、乌尔都语和中文 README，旧选择逻辑让三份 README 占满采样配额；其功能清单使用 HTML 表格，banner/导航又会被误当摘要。部分 Provider JSON 已包含有用字段时整份拒绝既损失信息，也可能产生一次无必要重试。
+- **证据**：红测分别复现三份 README 挤出 `package.json`/源码、HTML 功能表得到空功能、banner/`�` 泄漏、根目录本地化 README 被嵌套 README 覆盖、文件详情大小膨胀仍被接纳，以及 Provider 部分 JSON 被整份拒绝；修复后定向 22/22、常规 Vitest 204 项、typecheck、lint、build、安全扫描和隔离 Chrome E2E 全过。E2E 使用多语言 README + HTML banner/功能表，Provider 请求 0、页面异常 0。
+- **范围**：Phase 11 第四轮人工复核内部补丁；不新增 Chrome 权限、Host、GitHub Token/写操作、Provider 调用次数、目录深度、文件/文本预算或持久数据类别。
+- 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28

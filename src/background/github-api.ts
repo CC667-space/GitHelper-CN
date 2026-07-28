@@ -213,8 +213,15 @@ function encodeRepositoryContentPath(path: string): string {
 function repositoryFilePriority(path: string): number {
   const lower = path.toLowerCase();
   const name = lower.split('/').at(-1) ?? lower;
-  if (/^readme(?:\.[a-z0-9_-]+)?\.(?:md|mdx|rst|txt)$/u.test(name)) {
-    return 110;
+  const isRootFile = !lower.includes('/');
+  if (/^readme\.(?:md|mdx|rst|txt)$/u.test(name)) {
+    return isRootFile ? 140 : 120;
+  }
+  if (/^readme\.zh(?:[-_](?:cn|hans|hant))?\.(?:md|mdx|rst|txt)$/u.test(name)) {
+    return isRootFile ? 135 : 115;
+  }
+  if (/^readme\.[a-z0-9_-]+\.(?:md|mdx|rst|txt)$/u.test(name)) {
+    return isRootFile ? 130 : 110;
   }
   if (/^(package\.json|pyproject\.toml|cargo\.toml|go\.mod|pom\.xml)$/u.test(name)) {
     return 100;
@@ -289,7 +296,7 @@ function selectRepositoryDirectories(
 function selectRepositoryFiles(
   entries: z.infer<typeof repositoryContentsSchema>,
 ): Array<z.infer<typeof repositoryContentsSchema>[number]> {
-  return entries
+  const ranked = entries
     .filter(
       (entry) =>
         entry.type === 'file' &&
@@ -303,7 +310,14 @@ function selectRepositoryFiles(
     .sort(
       (left, right) =>
         right.priority - left.priority || left.entry.path.localeCompare(right.entry.path),
-    )
+    );
+  const readme = ranked.find(({ entry }) =>
+    /(^|\/)readme(?:\.[a-z0-9_-]+)?\.(?:md|mdx|rst|txt)$/iu.test(entry.path),
+  );
+  const nonReadmes = ranked.filter(
+    ({ entry }) => !/(^|\/)readme(?:\.[a-z0-9_-]+)?\.(?:md|mdx|rst|txt)$/iu.test(entry.path),
+  );
+  return [...(readme ? [readme] : []), ...nonReadmes]
     .slice(0, MAX_INSPECTED_REPOSITORY_FILES)
     .map(({ entry }) => entry);
 }
@@ -559,11 +573,17 @@ export class GitHubApiClient {
             signal,
             true,
           );
-          if (result.data?.path === file.path) {
+          if (
+            result.data?.path === file.path &&
+            result.data.size > 0 &&
+            result.data.size <= MAX_INSPECTED_FILE_SIZE
+          ) {
             inspectedFiles.push({
               path: result.data.path,
               content: decodeRepositoryFile(result.data.content),
             });
+          } else {
+            fileReadFailed = true;
           }
         } catch (error: unknown) {
           if (error instanceof GitHubRateLimitError) {

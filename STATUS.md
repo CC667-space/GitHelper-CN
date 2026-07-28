@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 11 — 测试、打包与 MVP 验收：前三轮人工复核问题均已修复并通过自动验收，等待 S1–S5 复核。**
+**Phase 11 — 测试、打包与 MVP 验收：前四轮人工复核问题均已修复并通过自动验收，等待 S1–S5 复核。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -171,10 +171,18 @@
   - Panel 默认先展示 README/功能/文件配置；Star、Issue/PR、语言、平台、Release、许可证等移入默认关闭且可展开的“仓库事实”
   - 记录 D-054；自动门禁：typecheck、lint 通过；Vitest 45 files / 201 tests 全过（另 1 个 Phase 9 live test 默认跳过）；build（406 modules）、构建安全扫描与隔离 Chrome E2E 通过；E2E 断言 README 功能、`package.json` / `src/server.js` 证据及事实区默认折叠，Provider 请求 0、页面异常 0
   - 最新本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `c579144a4d6800fabb5cfcb12efa4ac79e5d6e89184bb9db409fa357cee1394a`
+- [x] **Phase 11 — 第四轮人工复核补丁（2026-07-28）完成**：
+  - 修复多语言 README 抢占全部 3 个文件名额：只选 1 份 README，根目录默认优先；默认缺失时优先根目录中文/其他本地化说明，再考虑嵌套 README，配置和入口文件仍有名额
+  - README 本地提取跳过 banner、badge、居中导航与 `�`，新增 HTML 功能表解析；真实 `NousResearch/hermes-agent` 的功能组织方式已用于确定性回归设计
+  - Provider 合法但字段不全的 JSON 经白名单 `RepositoryInsightPatch` 投影后与本地完整结果合并；Star 等未知事实字段丢弃，不再因缺少非必要字段整份失败或触发无必要重试
+  - Contents 文件详情二次校验响应路径及 `(0, 24KB]` 大小，保持最多 3 文件、2 个目录、每文件 4KB 文本预算不变；记录 D-055
+  - 自动门禁：定向回归 22/22；typecheck、lint 通过；Vitest 45 files / 204 tests 全过（另 1 个 Phase 9 live test 默认跳过）；build（406 modules）、构建安全扫描与隔离 Chrome E2E 通过
+  - E2E 使用多语言 README + HTML banner/功能表，默认卡片无 `�`/原始 `<img>`，仍显示 `package.json` / `src/server.js`；Provider 请求 0、页面异常 0
+  - 最新本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `0adbe7ddf37d4583c846dffc556c746c11b42d5ab567aca90e85ff2d37f53d80`
 
 ## 下一任务
 **Phase 11 强制确认节点 ② — S1–S5 批量体验复核**（见 `docs/USER_GUIDE.md` 第 9 节）。
-用户在真实 Chrome 重新加载最新 `dist/` 后，复核 S1–S5 及前三轮人工问题；确认全部通过后，执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
+用户在真实 Chrome 重新加载最新 `dist/` 后，复核 S1–S5 及前四轮人工问题；确认全部通过后，执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -191,7 +199,7 @@
 | 8 NL 搜索（MVP 必达） | ✅ 已完成 |
 | 9 一键仓库分析 | ✅ 已完成 |
 | 10 安全加固 + 红队测试 | ✅ 已完成 |
-| 11 测试 + 打包 + MVP 验收 | ⏸ 前两轮问题补丁自动验收通过，待人工复核 |
+| 11 测试 + 打包 + MVP 验收 | ⏸ 前四轮问题补丁自动验收通过，待人工复核 |
 
 ## 待处理的强制确认节点
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
@@ -202,7 +210,7 @@
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-仅等待 Phase 11 规定的真实 Chrome S1–S5 与前两轮问题补丁复核；无其他实现、安全、权限或 Provider 阻塞。
+仅等待 Phase 11 规定的真实 Chrome S1–S5 与前四轮问题补丁复核；无其他实现、安全、权限或 Provider 阻塞。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -237,3 +245,5 @@
 - 2026-07-24：Phase 11 自动部分通过；真实扩展 fixture E2E、S1–S5 证据、可加载 dist、本地 zip 与使用说明完成，并修复问题明文进入 Session 的发布前缺口（D-050/D-051）；187 项常规测试及全套门禁通过，按强制确认节点 ② 暂停等待批量体验复核。
 - 2026-07-27：Phase 11 首轮人工复核补丁完成；精炼回答契约、分析/问答折叠、最近会话选择/新建、点击/框选下一步 CTA、fenced code 渲染与跨 GitHub 页面活动会话保持全部落地（D-052）；195 项常规测试及完整 E2E/构建门禁通过，等待用户复核。
 - 2026-07-27：Phase 11 第二轮人工复核补丁完成；仓库分析改为受限实际文件证据优先，逐轮 `>/∨` 收展与问答/session `🗑 → ✓/×` 删除落地（D-053）；201 项常规测试及完整 E2E/构建门禁通过，等待用户复核。
+- 2026-07-28：Phase 11 第三轮人工复核补丁完成；README/功能/配置/实现速览前置，仓库事实默认折叠（D-054）；201 项常规测试及完整 E2E/构建门禁通过，等待用户复核。
+- 2026-07-28：Phase 11 第四轮人工复核补丁完成；多语言 README 去重、HTML 功能表与乱码清洗、Provider 部分结果合并、文件详情大小复核落地（D-055）；204 项常规测试及升级后的完整 E2E/构建门禁通过，等待用户复核。

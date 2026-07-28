@@ -31,7 +31,7 @@
 - credential-store：Options 上下文只 write/delete、Background 只 read/inject（读写路径唯一）；普通 storage 接口读不到凭据；**构建期 import 边界：`src/content/**` 引用 credential-store 触发 lint 报错（D-028）**
 - tools registry：zod 校验通过/拒绝、白名单外拒绝、**openGitHubPage 仅接受 `https://github.com/*`、非 https Scheme（javascript/data/file/chrome/chrome-extension/blob）全部拒绝（D-013R）**
 - github-api：**限流分桶（core/search/code_search）、X-RateLimit-Resource/Remaining/Reset 与 Retry-After 解析、限流后不指数重试（mock 计时断言）、到点恢复（D-032）**
-- repository-analysis：固定 Schema；DOM/API 事实回填；README 在 3 文件配额内优先并生成概括/功能/配置/实现速览；README 安装优先；Provider 失败时本地确定性降级；缺 Release/许可证/语言降级；core 限流零重试；Provider structuredOutput 与 Prompt+zod 单次重试；网络错误不重试；canonical 仓库重定向
+- repository-analysis：固定 Schema；DOM/API 事实回填；3 文件配额内最多 1 份 README，根目录默认/中文 README 优先于嵌套说明并保留非 README 文件；README banner/替换字符不进入卡片，HTML 功能表可本地提取；README 安装优先；Provider 合法部分字段经白名单投影后与本地完整结果合并，未知字段丢弃，畸形 JSON 最多重试一次；Provider 失败、缺 Release/许可证/语言和 core 限流均确定性降级；网络错误不重试；canonical 仓库重定向
 - storage：读写、schemaVersion、迁移、getBytesInUse 容量检查、淘汰顺序
 - session-store：CRUD、同页面/同仓库关联、30 天过期、50 会话上限、摘要触发、Provider/Panel 上下文长度控制、容量淘汰顺序
 - prefs-store：合法偏好持久化；运行时拒绝 `downloads:auto` 和非 `deny` 的 `accountChanges`
@@ -67,7 +67,7 @@
 - 单轮问答收展互不影响；问答删除与 session 删除均须垃圾桶后 `✓/×` 二次确认，`×` 零变更，`✓` 不误删相邻轮次或非目标 session
 
 ### 4. E2E（Playwright，加载扩展，Phase 11）
-- 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片；默认显示 README 概括、主要功能、配置与实际关键文件证据，仓库事实默认折叠且展开后数字可见
+- 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片；多语言 README 共存且包含 banner HTML/功能表时，默认显示无乱码的 README 概括、主要功能、配置与实际关键文件证据，仓库事实默认折叠且展开后数字可见
 - SPA 导航后上下文刷新且无重复初始化
 - 会话恢复；切换 GitHub 页面后活动会话仍保留，Panel 重载后继续恢复；逐轮收展及两类确认删除可操作
 

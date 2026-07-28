@@ -14,6 +14,24 @@ const issueFixture = await readFile(
   join(projectRoot, 'tests', 'fixtures', 'github', 'issue.html'),
   'utf8',
 );
+const analysisReadme = [
+  '<p align="center"><img src="assets/banner.png" alt="Hello World"></p>',
+  '# Hello World �',
+  '<p align="center"><a href="/">Hello World</a> | <a href="/">Desktop</a></p>',
+  '',
+  '<p align="center"><img src="https://img.shields.io/badge/docs-blue" alt="Docs"></p>',
+  '',
+  '**A tiny example server for learning real project structure.** It inspects bounded configuration and source evidence.',
+  '',
+  '<table>',
+  '<tr><td><b>Starts a local greeting server</b></td><td>Runs from the inspected JavaScript entry point.</td></tr>',
+  '<tr><td><b>Shows real project evidence</b></td><td>Summarizes inspected manifests and source files.</td></tr>',
+  '</table>',
+  '',
+  '## Installation',
+  '',
+  'npm install',
+].join('\n');
 
 await mkdir(artifactsPath, { recursive: true });
 process.env.PLAYWRIGHT_BROWSERS_PATH ??= browserPath;
@@ -170,20 +188,6 @@ try {
     }
     if (path === '/repos/octocat/Hello-World/contents?ref=main') {
       const packageJson = '{"name":"hello-world","scripts":{"start":"node src/server.js"}}';
-      const readme = [
-        '# Hello World',
-        '',
-        'A tiny example server for learning the project structure.',
-        '',
-        '## Features',
-        '',
-        '- Starts a local greeting server',
-        '- Demonstrates a minimal JavaScript entry point',
-        '',
-        '## Installation',
-        '',
-        'npm install',
-      ].join('\n');
       await route.fulfill({
         status: 200,
         headers: apiHeaders(),
@@ -193,8 +197,29 @@ try {
             name: 'README.md',
             path: 'README.md',
             type: 'file',
-            size: readme.length,
+            size: Buffer.byteLength(analysisReadme),
             sha: 'readme-sha',
+          },
+          {
+            name: 'README.es.md',
+            path: 'README.es.md',
+            type: 'file',
+            size: 512,
+            sha: 'readme-es-sha',
+          },
+          {
+            name: 'README.ur-pk.md',
+            path: 'README.ur-pk.md',
+            type: 'file',
+            size: 512,
+            sha: 'readme-ur-sha',
+          },
+          {
+            name: 'README.zh-CN.md',
+            path: 'README.zh-CN.md',
+            type: 'file',
+            size: 512,
+            sha: 'readme-zh-sha',
           },
           {
             name: 'package.json',
@@ -208,29 +233,15 @@ try {
       return;
     }
     if (path === '/repos/octocat/Hello-World/contents/README.md?ref=main') {
-      const readme = [
-        '# Hello World',
-        '',
-        'A tiny example server for learning the project structure.',
-        '',
-        '## Features',
-        '',
-        '- Starts a local greeting server',
-        '- Demonstrates a minimal JavaScript entry point',
-        '',
-        '## Installation',
-        '',
-        'npm install',
-      ].join('\n');
       await route.fulfill({
         status: 200,
         headers: apiHeaders(),
         body: JSON.stringify({
           type: 'file',
           path: 'README.md',
-          size: readme.length,
+          size: Buffer.byteLength(analysisReadme),
           encoding: 'base64',
-          content: Buffer.from(readme, 'utf8').toString('base64'),
+          content: Buffer.from(analysisReadme, 'utf8').toString('base64'),
         }),
       });
       return;
@@ -338,6 +349,8 @@ try {
   assert(analysisText.includes('README 速览'), 'E2E 分析卡缺少 README 速览');
   assert(analysisText.includes('主要功能'), 'E2E 分析卡缺少主要功能');
   assert(analysisText.includes('Starts a local greeting server'), 'E2E 分析卡缺少 README 功能证据');
+  assert(!analysisText.includes('�'), 'E2E 分析卡仍包含 UTF-8 替换字符');
+  assert(!analysisText.includes('<img'), 'E2E 分析卡仍包含 README banner HTML');
   assert(analysisText.includes('文件、配置与实现'), 'E2E 分析卡缺少文件配置分析');
   assert(analysisText.includes('package.json'), 'E2E 分析卡缺少实际 package.json 证据');
   assert(analysisText.includes('src/server.js'), 'E2E 分析卡缺少受限源码文件证据');

@@ -19,7 +19,10 @@ import { OpenRouterProvider } from './providers/openrouter';
 import { createProviderTransport } from './providers/transport';
 import { UuapiProvider } from './providers/uuapi';
 import type { ProviderRuntimeView } from '../lib/bridge-protocol';
-import { repositoryInsightsSchema, type RepositoryInsights } from '../lib/repository-analysis';
+import {
+  repositoryInsightPatchSchema,
+  type RepositoryInsightPatch,
+} from '../lib/repository-analysis';
 import type { RepositoryAnalysisFacts } from './repository-analysis';
 import { sanitizeUnknown } from './sanitizer';
 
@@ -49,7 +52,7 @@ export interface StreamAnswerInput {
 
 export const REPOSITORY_ANALYSIS_SYSTEM_PROMPT = [
   '你是面向中文 GitHub 新手的只读仓库分析器。',
-  '只输出一个 JSON 对象，字段必须严格为 purpose、readmeSummary、features、configuration、implementationNotes、platforms、installation、difficulty、risks、nextSteps。',
+  '只输出一个 JSON 对象；允许字段仅为 purpose、readmeSummary、features、configuration、implementationNotes、platforms、installation、difficulty、risks、nextSteps。只返回有可靠证据的字段，未知字段可以省略。',
   'purpose 与 readmeSummary 各用 1–3 句简练中文；features、configuration、implementationNotes 各最多 6 项，只保留用户速览项目所需信息。',
   'difficulty 必须是 {level, reason}，level 只能为 入门、中等、进阶、未知。',
   '不得输出或改写 Star、Release、日期、许可证、Issue/PR 数量等可变事实；这些字段由本地事实层回填。',
@@ -58,7 +61,7 @@ export const REPOSITORY_ANALYSIS_SYSTEM_PROMPT = [
   '信息不足时明确写未知，不得猜测。',
 ].join('\n');
 
-function parseRepositoryInsights(content: string): RepositoryInsights {
+function parseRepositoryInsights(content: string): RepositoryInsightPatch {
   const trimmed = content.trim();
   const withoutFence = trimmed
     .replace(/^```(?:json)?\s*/iu, '')
@@ -72,7 +75,7 @@ function parseRepositoryInsights(content: string): RepositoryInsights {
   }
   for (const candidate of candidates) {
     try {
-      return repositoryInsightsSchema.parse(JSON.parse(candidate));
+      return repositoryInsightPatchSchema.parse(JSON.parse(candidate));
     } catch {
       // 尝试下一个有界 JSON 候选；最终统一抛出可读错误。
     }
@@ -170,7 +173,7 @@ export class ProviderRuntime {
     facts: RepositoryAnalysisFacts;
     manualProviderId?: ProviderId;
     signal: AbortSignal;
-  }): Promise<{ insights: RepositoryInsights; providerId: ProviderId }> {
+  }): Promise<{ insights: RepositoryInsightPatch; providerId: ProviderId }> {
     await this.ready;
     const provider = this.manager.resolve({
       needsVision: false,

@@ -1,7 +1,10 @@
 import type { PageContext, ProviderId } from '../lib/types';
 import {
+  repositoryInsightPatchSchema,
   repositoryAnalysisCardSchema,
+  repositoryInsightsSchema,
   type RepositoryAnalysisCard,
+  type RepositoryInsightPatch,
   type RepositoryInsights,
 } from '../lib/repository-analysis';
 import {
@@ -11,7 +14,11 @@ import {
   type RepositoryFileSnapshot,
 } from './github-api';
 import { assertPublicContext } from './outbound-policy';
-import { buildRepositoryQuickScan } from './repository-quick-scan';
+import {
+  buildRepositoryQuickScan,
+  cleanRepositoryMarkdownText,
+  extractReadmeSummary,
+} from './repository-quick-scan';
 
 export interface RepositoryAnalysisFacts {
   repository: string;
@@ -37,7 +44,7 @@ export interface RepositoryAnalysisFacts {
 }
 
 export interface RepositoryInsightGeneratorResult {
-  insights: RepositoryInsights;
+  insights: RepositoryInsightPatch;
   providerId: ProviderId;
 }
 
@@ -202,21 +209,29 @@ function sourceFindings(content: string): string[] {
 
 function markdownFindings(content: string): string[] {
   const headings = [...content.matchAll(/^#{1,6}\s+(.+?)\s*#*\s*$/gmu)]
-    .map((match) => match[1]?.trim())
+    .map((match) => (match[1] ? cleanRepositoryMarkdownText(match[1]).slice(0, 100) : undefined))
     .filter((heading): heading is string => Boolean(heading))
     .slice(0, 6);
   const findings: string[] = [];
   if (headings.length) {
     findings.push(`章节：${headings.join('、')}`);
   }
-  const intro = content
-    .split(/\r?\n\s*\r?\n/gu)
-    .map((block) => block.replace(/\s+/gu, ' ').trim())
-    .find((block) => block.length >= 20 && !/^#|^!\[/u.test(block));
+  const intro = extractReadmeSummary(content);
   if (intro) {
-    findings.push(`简介：${intro.replace(/[*_~`]+/gu, '').slice(0, 140)}`);
+    findings.push(`简介：${intro.slice(0, 140)}`);
   }
   return findings;
+}
+
+function mergeRepositoryInsights(
+  local: RepositoryInsights,
+  patch: RepositoryInsightPatch,
+): RepositoryInsights {
+  const validatedPatch = repositoryInsightPatchSchema.parse(patch);
+  return repositoryInsightsSchema.parse({
+    ...local,
+    ...validatedPatch,
+  });
 }
 
 function summarizeStructure(snapshot?: RepositoryFileSnapshot): {
@@ -414,9 +429,13 @@ export class RepositoryAnalysisExecutor {
     }
     const canonicalRepository = api?.details.fullName ?? repository;
     const description = api?.details.description ?? dom.description;
-    const inspectedReadme = api?.fileSnapshot?.inspectedFiles.find((file) =>
-      /(^|\/)readme(?:\.[a-z0-9_-]+)?\.(?:md|mdx|rst|txt)$/iu.test(file.path),
-    )?.content;
+    const inspectedFiles = api?.fileSnapshot?.inspectedFiles ?? [];
+    const inspectedReadme =
+      inspectedFiles.find((file) => /(^|\/)readme\.(?:md|mdx|rst|txt)$/iu.test(file.path))
+        ?.content ??
+      inspectedFiles.find((file) =>
+        /(^|\/)readme\.[a-z0-9_-]+\.(?:md|mdx|rst|txt)$/iu.test(file.path),
+      )?.content;
     const readme = inspectedReadme ?? dom.readme;
     const primaryLanguage = api?.details.primaryLanguage ?? dom.primaryLanguage;
     const topics = api?.details.topics ?? [];
@@ -459,7 +478,7 @@ export class RepositoryAnalysisExecutor {
           input.manualProviderId,
           input.requestId,
         );
-        insights = generated.insights;
+        insights = mergeRepositoryInsights(local, generated.insights);
         providerUsed = true;
       } catch (error: unknown) {
         degradedNotice = [

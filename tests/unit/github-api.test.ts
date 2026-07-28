@@ -290,7 +290,7 @@ describe('GitHubApiClient', () => {
     const readme = [
       '# Real Files',
       '',
-      'A small server toolkit.',
+      'A small server toolkit with 中文能力 ✅.',
       '',
       '## Features',
       '',
@@ -322,11 +322,25 @@ describe('GitHubApiClient', () => {
               sha: 'dir-sha',
             },
             {
+              name: 'README.es.md',
+              path: 'README.es.md',
+              type: 'file',
+              size: 512,
+              sha: 'readme-es-sha',
+            },
+            {
               name: 'README.md',
               path: 'README.md',
               type: 'file',
               size: readme.length,
               sha: 'readme-sha',
+            },
+            {
+              name: 'README.ur-pk.md',
+              path: 'README.ur-pk.md',
+              type: 'file',
+              size: 512,
+              sha: 'readme-ur-sha',
             },
             {
               name: 'package.json',
@@ -367,42 +381,34 @@ describe('GitHubApiClient', () => {
           { status: 200, headers: coreHeaders },
         ),
       )
-      .mockResolvedValueOnce(
-        new Response(
+      .mockImplementation(async (input) => {
+        const url = String(input);
+        const candidates = [
+          ['README.es.md', '# Hermes Agent\n\nDocumentación en español.'],
+          ['README.md', readme],
+          ['README.ur-pk.md', '# Hermes Agent\n\nاردو دستاویز'],
+          ['package.json', packageJson],
+          ['hermes_cli/server.ts', mainSource],
+        ] as const;
+        const match = candidates.find(
+          ([path]) =>
+            url.includes(`/contents/${path.replaceAll('/', '%2F')}`) ||
+            url.includes(`/contents/${path}`),
+        );
+        if (!match) {
+          return new Response('{}', { status: 404, headers: coreHeaders });
+        }
+        return new Response(
           JSON.stringify({
             type: 'file',
-            path: 'README.md',
-            size: readme.length,
+            path: match[0],
+            size: match[1].length,
             encoding: 'base64',
-            content: base64(readme),
+            content: base64(match[1]),
           }),
           { status: 200, headers: coreHeaders },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            type: 'file',
-            path: 'package.json',
-            size: packageJson.length,
-            encoding: 'base64',
-            content: base64(packageJson),
-          }),
-          { status: 200, headers: coreHeaders },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            type: 'file',
-            path: 'hermes_cli/server.ts',
-            size: mainSource.length,
-            encoding: 'base64',
-            content: base64(mainSource),
-          }),
-          { status: 200, headers: coreHeaders },
-        ),
-      );
+        );
+      });
     const setup = dependencies(fetchMock);
     const client = new GitHubApiClient(setup.dependencies);
 
@@ -437,6 +443,130 @@ describe('GitHubApiClient', () => {
     expect(urls.some((url) => url.includes('pnpm-lock.yaml'))).toBe(false);
     expect(urls.some((url) => url.includes('../issues'))).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(9);
+  });
+
+  it('根目录本地化 README 优先于源码目录 README，并拒绝详情响应中超出大小预算的文件', async () => {
+    const coreHeaders = {
+      'Content-Type': 'application/json',
+      'X-RateLimit-Resource': 'core',
+      'X-RateLimit-Remaining': '50',
+    };
+    const localizedReadme = '# 中文说明\n\n这是根目录中的项目说明与使用概览。';
+    const nestedReadme = '# src internals\n\nThis only documents the source directory.';
+    const packageJson = '{"name":"localized-root","scripts":{"build":"vite build"}}';
+    const mainSource = 'export function startApp() { return true; }';
+    const base64 = (value: string) => Buffer.from(value, 'utf8').toString('base64');
+    const fileResponse = (path: string, content: string, size = Buffer.byteLength(content)) =>
+      new Response(
+        JSON.stringify({
+          type: 'file',
+          path,
+          size,
+          encoding: 'base64',
+          content: base64(content),
+        }),
+        { status: 200, headers: coreHeaders },
+      );
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/languages')) {
+        return new Response('{}', { status: 200, headers: coreHeaders });
+      }
+      if (url.endsWith('/releases/latest')) {
+        return new Response('{}', { status: 404, headers: coreHeaders });
+      }
+      if (url.includes('/pulls?')) {
+        return new Response('[]', { status: 200, headers: coreHeaders });
+      }
+      if (url.endsWith('/contents?ref=main')) {
+        return new Response(
+          JSON.stringify([
+            { name: 'src', path: 'src', type: 'dir', size: 0, sha: 'src-dir' },
+            {
+              name: 'README.zh-CN.md',
+              path: 'README.zh-CN.md',
+              type: 'file',
+              size: Buffer.byteLength(localizedReadme),
+              sha: 'root-readme',
+            },
+            {
+              name: 'package.json',
+              path: 'package.json',
+              type: 'file',
+              size: Buffer.byteLength(packageJson),
+              sha: 'package-json',
+            },
+          ]),
+          { status: 200, headers: coreHeaders },
+        );
+      }
+      if (url.endsWith('/contents/src?ref=main')) {
+        return new Response(
+          JSON.stringify([
+            {
+              name: 'README.md',
+              path: 'src/README.md',
+              type: 'file',
+              size: Buffer.byteLength(nestedReadme),
+              sha: 'nested-readme',
+            },
+            {
+              name: 'main.ts',
+              path: 'src/main.ts',
+              type: 'file',
+              size: Buffer.byteLength(mainSource),
+              sha: 'main-source',
+            },
+          ]),
+          { status: 200, headers: coreHeaders },
+        );
+      }
+      if (url.includes('/contents/README.zh-CN.md?')) {
+        return fileResponse('README.zh-CN.md', localizedReadme);
+      }
+      if (url.includes('/contents/src/README.md?')) {
+        return fileResponse('src/README.md', nestedReadme);
+      }
+      if (url.includes('/contents/package.json?')) {
+        return fileResponse('package.json', packageJson);
+      }
+      if (url.includes('/contents/src/main.ts?')) {
+        return fileResponse('src/main.ts', mainSource, 24 * 1024 + 1);
+      }
+      return new Response(
+        JSON.stringify({
+          full_name: 'example/localized-root',
+          html_url: 'https://github.com/example/localized-root',
+          description: 'Localized root README fixture',
+          topics: [],
+          default_branch: 'main',
+          language: 'TypeScript',
+          stargazers_count: 1,
+          forks_count: 0,
+          watchers_count: 1,
+          open_issues_count: 0,
+          archived: false,
+          license: null,
+          pushed_at: '2026-07-28T00:00:00.000Z',
+          updated_at: '2026-07-28T00:00:00.000Z',
+        }),
+        { status: 200, headers: coreHeaders },
+      );
+    });
+    const client = new GitHubApiClient(dependencies(fetchMock).dependencies);
+
+    const result = await client.getRepositoryBundle(
+      'example/localized-root',
+      new AbortController().signal,
+    );
+
+    expect(result.fileSnapshot?.inspectedFiles).toEqual([
+      { path: 'README.zh-CN.md', content: localizedReadme },
+      { path: 'package.json', content: packageJson },
+    ]);
+    const urls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(urls.some((url) => url.includes('/contents/src/README.md?'))).toBe(false);
+    expect(urls.some((url) => url.includes('/contents/src/main.ts?'))).toBe(true);
   });
 
   it('仓库没有 Release 时返回缺字段而非失败', async () => {

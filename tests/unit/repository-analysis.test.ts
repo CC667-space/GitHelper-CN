@@ -232,13 +232,16 @@ describe('RepositoryAnalysisExecutor', () => {
           {
             path: 'README.md',
             content: [
-              '# real-files',
+              '<p align="center"><img src="assets/banner.png" alt="real-files"></p>',
+              '',
+              '# real-files �',
               '',
               'A toolkit for inspecting actual project files.',
               '',
-              '## Features',
-              '',
-              '- Reads bounded configuration evidence',
+              '<table>',
+              '<tr><td><b>Bounded evidence</b></td><td>Reads bounded configuration evidence.</td></tr>',
+              '<tr><td><b>Safe summaries</b></td><td>Builds concise findings from inspected files.</td></tr>',
+              '</table>',
             ].join('\n'),
           },
           {
@@ -302,7 +305,55 @@ describe('RepositoryAnalysisExecutor', () => {
     expect(card.quickScan.features).toEqual(
       expect.arrayContaining([expect.stringMatching(/bounded configuration evidence/iu)]),
     );
+    expect(JSON.stringify(card)).not.toMatch(/<img|\uFFFD/iu);
     expect(card.languages.length).toBeLessThanOrEqual(5);
+  });
+
+  it('Provider 只返回有用的速览字段时与本地完整降级结果合并', async () => {
+    const repository = 'example/partial-provider';
+    const partialGenerator = vi.fn(async () => ({
+      providerId: 'deepseek' as const,
+      insights: {
+        readmeSummary: '这是一个读取实际项目文件并生成仓库速览的工具。',
+        features: ['识别项目配置与入口文件'],
+      },
+    })) as unknown as RepositoryInsightGenerator;
+    const executor = new RepositoryAnalysisExecutor(
+      {
+        getRepositoryBundle: vi.fn(async () =>
+          bundle(repository, {
+            fileSnapshot: {
+              directories: ['src'],
+              truncated: false,
+              inspectedFiles: [
+                {
+                  path: 'README.md',
+                  content: '# Partial Provider\n\nA tool that inspects real repository files.',
+                },
+                {
+                  path: 'package.json',
+                  content: '{"scripts":{"build":"vite build"}}',
+                },
+              ],
+            },
+          }),
+        ),
+      } as unknown as GitHubApiClient,
+      partialGenerator,
+    );
+
+    const card = await executor.analyze({
+      page: page(repository, '# Partial Provider'),
+      signal: new AbortController().signal,
+      now: new Date('2026-07-24T00:00:00.000Z'),
+    });
+
+    expect(card.sources.provider).toBe(true);
+    expect(card.quickScan.readmeSummary).toContain('实际项目文件');
+    expect(card.quickScan.features).toContain('识别项目配置与入口文件');
+    expect(card.purpose).toContain(repository);
+    expect(card.difficulty.level).toBe('未知');
+    expect(card.nextSteps.length).toBeGreaterThan(0);
   });
 
   it('私有页面在 API 与 Provider 前零出站', async () => {
