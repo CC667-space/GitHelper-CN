@@ -282,8 +282,26 @@ describe('Phase 5 UI', () => {
     await user.click(screen.getByRole('button', { name: '展开问答：第一个问题' }));
     expect(screen.getByText('第一个回答')).toBeTruthy();
 
-    await user.click(screen.getByRole('button', { name: '删除问答：第一个问题' }));
+    const turnActions = screen.getAllByTestId('turn-actions').at(0);
+    expect(turnActions).toBeTruthy();
+    if (!turnActions) {
+      throw new Error('未找到问答操作栏');
+    }
+    expect(turnActions.className).not.toContain('absolute');
+    const deleteTurnButton = screen.getByRole('button', { name: '删除问答：第一个问题' });
+    expect(deleteTurnButton.querySelector('[data-icon="trash"]')).toBeTruthy();
+    await user.click(deleteTurnButton);
     expect(deleteTurn).not.toHaveBeenCalled();
+    expect(
+      screen
+        .getByRole('button', { name: '确认删除问答：第一个问题' })
+        .querySelector('[data-icon="check"]'),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole('button', { name: '取消删除问答：第一个问题' })
+        .querySelector('[data-icon="close"]'),
+    ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '取消删除问答：第一个问题' }));
     expect(screen.queryByRole('button', { name: '确认删除问答：第一个问题' })).toBeNull();
 
@@ -329,8 +347,20 @@ describe('Phase 5 UI', () => {
     render(<PanelApp connect={connect} />);
 
     await user.click(screen.getByText('管理会话（2）'));
-    await user.click(screen.getByRole('button', { name: '删除会话：第一个主题' }));
+    const deleteSessionButton = screen.getByRole('button', { name: '删除会话：第一个主题' });
+    expect(deleteSessionButton.querySelector('[data-icon="trash"]')).toBeTruthy();
+    await user.click(deleteSessionButton);
     expect(deleteSession).not.toHaveBeenCalled();
+    expect(
+      screen
+        .getByRole('button', { name: '确认删除会话：第一个主题' })
+        .querySelector('[data-icon="check"]'),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole('button', { name: '取消删除会话：第一个主题' })
+        .querySelector('[data-icon="close"]'),
+    ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '取消删除会话：第一个主题' }));
     expect(screen.queryByRole('button', { name: '确认删除会话：第一个主题' })).toBeNull();
 
