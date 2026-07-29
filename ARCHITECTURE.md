@@ -104,6 +104,7 @@ interface Envelope<T> {
 - 凭据永不出现在消息载荷中。
 - Panel↔Background 用长连接 `chrome.runtime.connect`（流式 token 推送）。
 - 扩展 action 与 `Alt+Shift+G` 是产品级 Side Panel 入口，用户手势中直接调用 `chrome.sidePanel.open({tabId})`；Phase 0 技术探针不挂载到产品入口。
+- Chrome 141+ 切换标签页时，Background 监听无需 `tabs` 权限的 `tabs.onActivated`，并以当前 `windowId` 调用 feature-detected `sidePanel.close()` 关闭本扩展的全局 Panel；较旧 Chrome 保留原行为。打开入口不得在 `open()` 前等待 `setOptions()`，否则会丢失 user gesture。返回原标签页自动重开、多 GitHub 标签页专属实例和跨实例 Session 刷新均未在本轮实现（D-062）。
 - React effect 每次建立的 Panel 长连接具有独立有效期；清理后的旧连接即使延迟触发 `onDisconnect`，也不能改写当前连接状态（D-040）。
 - Background port 断开后 Panel 以 250ms 起步、最高 5s 的指数退避自动重连；主动卸载停止重连，不用心跳强行常驻 MV3 Service Worker（D-041）。
 - Panel 输入语义：`Enter` 发送、`Shift+Enter` 换行；IME 合成期间 Enter 保留给输入法。

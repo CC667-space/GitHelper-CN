@@ -1,8 +1,8 @@
 # Phase 11 自动验收证据
 
-> 日期：2026-07-28
+> 日期：2026-07-30
 >
-> 状态：自动验收及前九轮人工问题补丁已通过；真实 Chrome 的 S1–S5 批量体验复核仍待用户完成。
+> 状态：自动验收、前九轮人工问题补丁、首轮 UI 优化及标签页切换关闭补丁已通过；真实 Chrome 的 S1–S5 批量体验复核仍待用户完成。
 
 ## 自动门禁
 
@@ -14,7 +14,7 @@
 | Production build         | `pnpm build` 通过，406 modules transformed                                                                                                                 |
 | Build safety             | `pnpm scan:build` 通过；无 eval/new Function/远程运行时脚本                                                                                                |
 | Playwright extension E2E | 通过；Chrome for Testing 149，隔离临时 profile，Provider 请求 0                                                                                            |
-| Package                  | `artifacts\GitHelper-CN-v0.1.0.zip`，13 entries，根目录 `manifest.json` 已校验；SHA-256 `a3528ad3609526a1581a1caa72fd3c209e803c5c6c957d1f90618ff411d378bd` |
+| Package                  | `artifacts\GitHelper-CN-v0.1.0.zip`，13 entries，根目录 `manifest.json` 已校验；SHA-256 `c9a033dbe3456a58e883e3b490690621c3eddd1f206505496ca9fd08ddef87e1` |
 
 Phase 9 的三仓库匿名 live test 默认不进入常规 `pnpm test`，但已在 Phase 9 独立真实运行通过，证据见 `scripts/phase9-live-evidence.md`。
 
@@ -32,6 +32,7 @@ pnpm test:e2e
 {
   "status": "passed",
   "nativeSidePanelOpenResolved": true,
+  "nativeSidePanelClosedOnTabSwitch": true,
   "nativePanelExposedToPlaywright": false,
   "automatedPanelSurface": "same-extension-panel-document",
   "s1RepositoryAnalysis": {
@@ -68,7 +69,7 @@ pnpm test:e2e
 }
 ```
 
-边界说明：Options 页真实用户点击调用 `chrome.sidePanel.open()` 成功；当前 Chrome for Testing 不把原生 Side Panel target 暴露为 Playwright `Page`。自动 DOM 交互因此使用同一扩展进程、同一生产 bundle 的 Panel 文档；Background、Content、匿名 API、storage 与消息链均为真实代码。原生 Side Panel 的打开与页面内交互最终由本阶段唯一人工批量复核确认。
+边界说明：Options 页真实用户点击调用 `chrome.sidePanel.open()` 成功；切换标签页后，Chrome 149 的真实 `sidePanel.onClosed` 事件确认原生 Panel 已关闭。当前 Chrome for Testing 不把原生 Side Panel target 暴露为 Playwright `Page`，因此自动 DOM 交互仍使用同一扩展进程、同一生产 bundle 的 Panel 文档；Background、Content、匿名 API、storage 与消息链均为真实代码。原生 Side Panel 内的最终视觉和操作体验仍由本阶段唯一人工批量复核确认。
 
 ## S1–S5 证据映射
 

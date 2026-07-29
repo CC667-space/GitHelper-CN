@@ -229,6 +229,18 @@ chrome.action.onClicked.addListener((tab) => {
   void openSidePanelForTab(tab).catch(() => undefined);
 });
 
+chrome.tabs.onActivated.addListener(({ windowId }) => {
+  const close = (
+    chrome.sidePanel as typeof chrome.sidePanel & {
+      close?: (options: { windowId: number }) => Promise<void>;
+    }
+  ).close;
+  if (!close) {
+    return;
+  }
+  void close.call(chrome.sidePanel, { windowId }).catch(() => undefined);
+});
+
 chrome.commands.onCommand.addListener((command) => {
   if (command !== 'open-side-panel') {
     return;

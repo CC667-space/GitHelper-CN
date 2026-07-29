@@ -387,6 +387,18 @@ try {
   const optionsPage = await context.newPage();
   optionsPage.on('pageerror', (error) => pageErrors.push(`Options: ${error.message}`));
   await optionsPage.goto(`chrome-extension://${extensionId}/src/options/index.html`);
+  const sidePanelCloseEvidenceKey = 'phase11:side-panel-close-evidence';
+  await optionsPage.evaluate(async (key) => {
+    await chrome.storage.local.remove(key);
+    chrome.sidePanel.onClosed.addListener((info) => {
+      void chrome.storage.local.set({
+        [key]: {
+          closedAt: new Date().toISOString(),
+          windowId: info.windowId,
+        },
+      });
+    });
+  }, sidePanelCloseEvidenceKey);
   await optionsPage.locator('#phase0-open-side-panel').click();
   await optionsPage
     .getByTestId('phase0-side-panel-status')
@@ -400,6 +412,11 @@ try {
   }
   panel.on('pageerror', (error) => pageErrors.push(`Panel: ${error.message}`));
   await githubPage.bringToFront();
+  await optionsPage.waitForFunction(
+    async (key) => Boolean((await chrome.storage.local.get(key))[key]),
+    sidePanelCloseEvidenceKey,
+    { timeout: 10_000 },
+  );
   await panel.getByTestId('side-panel').waitFor({ timeout: 10_000 });
   await panel.locator('[title="Background 已连接"]').waitFor({ timeout: 10_000 });
 
@@ -547,6 +564,7 @@ try {
       chromeVersion: await githubPage.evaluate(() => navigator.userAgent),
       extensionId,
       nativeSidePanelOpenResolved: true,
+      nativeSidePanelClosedOnTabSwitch: true,
       nativePanelExposedToPlaywright,
       automatedPanelSurface: nativePanelExposedToPlaywright
         ? 'native-side-panel'

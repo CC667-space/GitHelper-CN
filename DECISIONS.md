@@ -490,3 +490,13 @@
 - **证据**：Phase 4–9 定向 UI 回归 20/20；全量常规测试 221 项通过（另 1 项 live test 默认跳过）；新增断言确认删除、确认和取消均使用统一 SVG，回复操作栏不含绝对定位。457px 隔离 Chrome 视觉复核确认标题/状态不重叠、折叠和问答操作清晰；完整 E2E、typecheck、lint、build 与构建安全扫描通过。
 - **范围**：Phase 11 Panel UI 优化；不新增或删减功能，不改变 Chrome 权限、Host、Provider 请求、GitHub API、持久数据或 MVP 边界。
 - 状态：代码与隔离 Chrome 已验证，待真实 Chrome 长期使用复核 ｜ 2026-07-29
+
+## D-062 标签页切换只关闭当前全局 Side Panel，不改变可靠打开路径
+- **决策**：
+  - 保留扩展 action、快捷键和 Options 探针在用户手势中直接调用 `chrome.sidePanel.open()` 的既有路径；不得在 `open()` 前等待 `sidePanel.setOptions()`。
+  - Background 监听 `tabs.onActivated`；Chrome 141+ 存在 `sidePanel.close()` 时，按事件提供的 `windowId` 关闭本扩展当前窗口的全局 Side Panel。API 不存在时直接返回，因此不提高 `minimum_chrome_version`，也不新增 `tabs` 权限。
+  - 本轮只完成“切换标签页后自动关闭”。返回原标签页自动展开、多 GitHub 标签页专属 Panel 切换及多实例 Session 刷新按用户给定的选做降级规则全部跳过。
+- **理由**：Chrome 的 tab-specific Panel 能原生恢复原标签页状态，但首次点击时若先 `await setOptions()` 再 `open()`，会因 user gesture 丢失而打不开；预先为所有 GitHub tab 启用又不能区分“用户打开过”和“仅切换到”。使用 Chrome 141+ 的原生 `close()` 可以在不破坏现有单击打开、不扩大权限和不重写 Session 语义的前提下可靠完成必做项。
+- **证据**：聚焦红测先确认当前代码没有标签激活关闭监听，修复后断言 action 仍直接 `open({tabId})`、未调用 `setOptions()`，并在 `tabs.onActivated` 后调用 `close({windowId})`。Chrome for Testing 149 隔离 E2E 真实打开原生 Side Panel，切换标签页后收到 `sidePanel.onClosed`，输出 `nativeSidePanelClosedOnTabSwitch: true`；全量 221 项常规测试通过（另 1 项 live test 默认跳过），typecheck、lint、build 与构建安全扫描通过。
+- **范围**：Phase 11 小型操作逻辑补丁；不改变 Panel 内容、Provider/GitHub 请求、会话、权限、Host、存储、MVP 范围或 Chrome 114 的既有功能。
+- 状态：任务 1 已由隔离 Chrome 149 验证；任务 2–4 按选做降级规则跳过 ｜ 2026-07-30

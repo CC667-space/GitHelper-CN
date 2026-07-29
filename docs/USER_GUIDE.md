@@ -64,6 +64,8 @@ pnpm package:extension
 - 快捷键 `Alt+Shift+G`；
 - Chrome 更多选项中的“打开 GitHelper-CN Side Panel”。
 
+在 Chrome 141 或更高版本中，切换到其他标签页会自动关闭当前 GitHelper-CN Panel。返回原标签页后不会自动重开；需要时再次点击扩展图标或使用快捷键。此行为不会新增 `tabs` 权限。
+
 Panel 顶部圆点：
 
 - 绿色：Background 已连接，可以发送；

@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 11 — 测试、打包与 MVP 验收：前九轮人工复核问题及首轮 Panel UI 优化均已完成并通过自动验收，等待 S1–S5 复核。**
+**Phase 11 — 测试、打包与 MVP 验收：前九轮人工复核问题、首轮 Panel UI 优化及标签页切换关闭补丁均已完成并通过自动验收，等待 S1–S5 复核。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -223,10 +223,16 @@
   - 记录 D-061；Phase 4–9 定向 UI 回归 20/20，全量常规测试 221 项通过（另 1 项 live test 默认跳过）；typecheck、lint、build、构建安全扫描和完整隔离 Chrome E2E 通过
   - 457px 隔离 Chrome 视觉复核确认顶部操作、分析折叠、搜索结果、会话与问答布局无重叠；临时截图已删除
   - 最新本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `ad8f9efdcfc060d09de0a26798a552db7a0a2b3b1e2b5b38adce81f4f31eeb55`
+- [x] **Phase 11 — Side Panel 标签页切换关闭补丁（2026-07-30）完成**：
+  - 保留 action/快捷键直接 `sidePanel.open()` 的可靠 user gesture 路径；Chrome 141+ 在 `tabs.onActivated` 后按 `windowId` 调用 feature-detected `sidePanel.close()`，未新增 `tabs` 权限、Host 或最低版本要求
+  - 任务 1“切换标签页后自动关闭”已完成；任务 2–4 因 tab-specific 首次打开的 user gesture 限制及多实例 Session 语义无法可靠验证，按用户给定的选做降级规则跳过
+  - 记录 D-062；聚焦红测转绿，全量常规测试 221 项通过（另 1 项 live test 默认跳过）；typecheck、lint、build、构建安全扫描通过
+  - Chrome for Testing 149 隔离 E2E 真实打开原生 Panel，切换标签页后收到 `sidePanel.onClosed`，证据为 `nativeSidePanelClosedOnTabSwitch: true`
+  - 最新本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `c9a033dbe3456a58e883e3b490690621c3eddd1f206505496ca9fd08ddef87e1`
 
 ## 下一任务
 **Phase 11 强制确认节点 ② — S1–S5 批量体验复核**（见 `docs/USER_GUIDE.md` 第 9 节）。
-用户在真实 Chrome 重新加载最新 `dist/` 后，复核 S1–S5、前九轮人工问题及本轮 Panel UI；确认全部通过后，执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
+用户在真实 Chrome 重新加载最新 `dist/` 后，复核 S1–S5、前九轮人工问题、本轮 Panel UI 及“切换标签页后自动关闭”；确认全部通过后，执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
 
 ## 已登记的后续优化
 - [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
@@ -246,7 +252,7 @@
 | 8 NL 搜索（MVP 必达） | ✅ 已完成 |
 | 9 一键仓库分析 | ✅ 已完成 |
 | 10 安全加固 + 红队测试 | ✅ 已完成 |
-| 11 测试 + 打包 + MVP 验收 | ⏸ 前九轮问题补丁与首轮 UI 优化自动验收通过，待人工复核 |
+| 11 测试 + 打包 + MVP 验收 | ⏸ 前九轮问题补丁、首轮 UI 优化与标签页关闭补丁自动验收通过，待人工复核 |
 
 ## 待处理的强制确认节点
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
@@ -257,7 +263,7 @@
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-仅等待 Phase 11 规定的真实 Chrome S1–S5、前九轮问题补丁与本轮 UI 优化复核；无其他实现、安全、权限或 Provider 阻塞。
+仅等待 Phase 11 规定的真实 Chrome S1–S5、前九轮问题补丁、本轮 UI 优化与标签页关闭补丁复核；无其他实现、安全、权限或 Provider 阻塞。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -300,3 +306,4 @@
 - 2026-07-28：Phase 11 第八轮人工复核补丁完成；中文搜索解除对当前页面解析完成的无关依赖，同时保留私有页面零出站；增加无上下文/私有上下文双向集成测试与真实 Panel 搜索 E2E（D-059），215 项常规测试及完整构建门禁通过，等待用户复核。Panel UI 优化已登记为后续独立任务。
 - 2026-07-28：Phase 11 第九轮人工复核补丁完成；用户授权中文搜索采用“单次文本 Provider 解析受限意图 + 本地安全编译 + 失败本地降级”混合方案（D-060），截图原句、费用透明提示、无页面上下文/私有页面边界及完整 E2E 通过；221 项常规测试及全套门禁通过，等待真实 Provider 复核。
 - 2026-07-29：Phase 11 首轮 Panel UI 优化完成；按钮、输入、卡片、状态与折叠视觉统一，字符/emoji 操作图标替换为 SVG，回复删除迁入独立操作栏消除正文重叠（D-061）；221 项常规测试、457px 隔离 Chrome 视觉复核及完整门禁通过，等待长期真实使用反馈。
+- 2026-07-30：Phase 11 Side Panel 标签页切换关闭补丁完成；Chrome 141+ 使用 feature-detected `sidePanel.close({windowId})`，保留 direct-open user gesture 路径且不新增权限（D-062）；任务 1 已由 Chrome 149 原生 `onClosed` E2E 证明，任务 2–4 按选做降级规则跳过。
