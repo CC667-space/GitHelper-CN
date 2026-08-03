@@ -110,6 +110,7 @@ interface Envelope<T> {
 - Chrome 141+ 切换标签页时，Background 监听无需 `tabs` 权限的 `tabs.onActivated`，并以当前 `windowId` 调用 feature-detected `sidePanel.close()` 关闭本扩展的全局 Panel；较旧 Chrome 保留原行为。打开入口不得在 `open()` 前等待 `setOptions()`，否则会丢失 user gesture。返回原标签页自动重开、多 GitHub 标签页专属实例和跨实例 Session 刷新均未在本轮实现（D-062）。
 - React effect 每次建立的 Panel 长连接具有独立有效期；清理后的旧连接即使延迟触发 `onDisconnect`，也不能改写当前连接状态（D-040）。
 - Background port 断开后 Panel 以 250ms 起步、最高 5s 的指数退避自动重连；主动卸载停止重连，不用心跳强行常驻 MV3 Service Worker（D-041）。
+- Background 为每个 Panel Port 建立独立出站门控；`onDisconnect` 先使门控失效并取消初始化 hydration，所有异步状态、流事件和响应都只能经该门控发送。Chrome 内部已断开但事件尚未回调的同步竞态只吞掉明确的 disconnected-port 错误，其他发送异常继续暴露（D-064）。
 - Panel 输入语义：`Enter` 发送、`Shift+Enter` 换行；IME 合成期间 Enter 保留给输入法。
 - 助手输出经安全 Markdown/GFM 组件渲染；原始 HTML 跳过、远程图片阻断、链接不可点击，避免模型文本触发代码、隐式网络或绕过导航策略（D-042）。
 

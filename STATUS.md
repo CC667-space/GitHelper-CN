@@ -242,10 +242,17 @@
   - 自动门禁：Vitest 51 files / 249 tests 全过（另 1 个 Phase 9 live test 默认跳过）；typecheck、lint、build（413 modules）、构建安全扫描与隔离 Chrome E2E 全过
   - E2E 既有 S1/S3/SPA/Session/S5 与标签页自动关闭均通过；Provider 请求 0、页面异常 0；构建 manifest 精确包含 5 个可选 Host 且无 `<all_urls>`
   - 最新本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `943a676be896979dfbf1caccb5cb375428363458cbacb41684620766feefb6e4`
+- [x] **Phase 11 — Side Panel 断开 Port 异常补丁（2026-08-03）完成**：
+  - 红测稳定复现 Service Worker 在 Panel 断开后仍发送异步 `PROVIDER_STATE`，对应 Chrome 的 `Attempting to use a disconnected port object` 未处理异常
+  - 所有 Background→Panel 状态、流事件与响应统一经过 Port 生命周期门控；`onDisconnect` 先禁用发送并取消页面 hydration，同时覆盖 Chrome 已内部断开但回调尚未到达的同步竞态
+  - 仅吸收明确的 disconnected-port 错误，消息不可序列化等其他编程错误仍继续抛出；记录 D-064
+  - 自动门禁：定向回归 4/4；Vitest 53 files / 253 tests 全过（另 1 个 Phase 9 live test 默认跳过）；typecheck、lint、变更文件格式、build（414 modules）与构建安全扫描通过
+  - 隔离 Chrome 149 E2E 通过，原生 Panel 打开及标签切换关闭正常，Provider 请求 0、页面异常 0
+  - 最新本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `542add1c74f9b24ae077e70e77e5c0756976a1e04fd96fc6ceaf0b355c46f8ce`
 
 ## 下一任务
-**Phase 11 Provider 单家真实复测 → 强制确认节点 ② S1–S5 批量体验复核**。
-用户在真实 Chrome 重新加载最新 `dist/`，确认 Options 显示八家 Provider，并使用已保存 Key 点击 DeepSeek（或任一既有可用家）的“仅复测该 Provider”。无需重填 Key，也无需配置新增五家。复测通过后继续 `docs/USER_GUIDE.md` 第 9 节 S1–S5；全部通过后执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
+**真实 Chrome 复核 D-064 → Phase 11 Provider 单家真实复测 → 强制确认节点 ② S1–S5 批量体验复核**。
+用户在真实 Chrome 重新加载最新 `dist/`，打开后关闭 Panel 或切换标签页，确认扩展错误页不再新增 disconnected-port 异常；随后确认 Options 显示八家 Provider，并使用已保存 Key 点击 DeepSeek（或任一既有可用家）的“仅复测该 Provider”。无需重填 Key，也无需配置新增五家。复测通过后继续 `docs/USER_GUIDE.md` 第 9 节 S1–S5；全部通过后执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
 
 ## 已登记的后续优化
 - [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
@@ -265,7 +272,7 @@
 | 8 NL 搜索（MVP 必达） | ✅ 已完成 |
 | 9 一键仓库分析 | ✅ 已完成 |
 | 10 安全加固 + 红队测试 | ✅ 已完成 |
-| 11 测试 + 打包 + MVP 验收 | ⏸ Provider 配置体系及既有功能自动验收通过，待单 Provider 真实复测与 S1–S5 人工复核 |
+| 11 测试 + 打包 + MVP 验收 | ⏸ Port 生命周期补丁及既有功能自动验收通过，待真实 Chrome 错误页复核、单 Provider 真实复测与 S1–S5 人工复核 |
 
 ## 待处理的强制确认节点
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
@@ -274,11 +281,12 @@
 - ✅ DeepSeek V4 非思考修复后的单 Provider 真实复测（只调用 DeepSeek，文本已验证）
 - ✅ 新增五家精确可选 Host 权限的基线变更（用户已授权，自动测试与构建 manifest 已验证）
 - ⏸ 最新构建使用既有已保存 Key 的单 Provider 真实复测（无需重填或读取 Key）
+- ⏸ D-064 真实 Chrome 错误页复核（重载最新 `dist/` 后关闭 Panel 或切换标签页，确认不再新增 disconnected-port 异常）
 - ⏸ Phase 11：MVP 批量体验复核（必需）
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-仅等待真实 Chrome 重载后的单 Provider 复测，再继续 Phase 11 S1–S5。Chrome 自动化安全策略不允许访问 `chrome://extensions`，因此此步不能由执行 Agent 代点；无其他实现、安全、权限或 Provider 阻塞。
+仅等待真实 Chrome 重载后的 D-064 错误页复核与单 Provider 复测，再继续 Phase 11 S1–S5。Chrome 自动化安全策略不允许访问 `chrome://extensions`，因此错误列表复核不能由执行 Agent 代点；无其他实现、安全、权限或 Provider 阻塞。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -323,3 +331,4 @@
 - 2026-07-29：Phase 11 首轮 Panel UI 优化完成；按钮、输入、卡片、状态与折叠视觉统一，字符/emoji 操作图标替换为 SVG，回复删除迁入独立操作栏消除正文重叠（D-061）；221 项常规测试、457px 隔离 Chrome 视觉复核及完整门禁通过，等待长期真实使用反馈。
 - 2026-07-30：Phase 11 Side Panel 标签页切换关闭补丁完成；Chrome 141+ 使用 feature-detected `sidePanel.close({windowId})`，保留 direct-open user gesture 路径且不新增权限（D-062）；任务 1 已由 Chrome 149 原生 `onClosed` E2E 证明，任务 2–4 按选做降级规则跳过。
 - 2026-08-03：经用户明确授权完成 v1.3 Provider 定向修订（D-063）：八家固定目录、五家逐家精确可选 Host 权限、无密钥设置 JSON、旧配置迁移及 OpenAI 当前 token 参数映射落地；249 项常规测试及完整静态/构建/安全/E2E 门禁通过，待真实 Chrome 重载后使用既有 Key 做一次单 Provider 复测。
+- 2026-08-03：Phase 11 Side Panel 断开 Port 异常补丁完成；异步出站统一接入连接生命周期门控并覆盖 `onDisconnect` 前竞态（D-064），253 项常规测试及完整静态/构建/安全/E2E 门禁通过，待真实 Chrome 扩展错误页复核。

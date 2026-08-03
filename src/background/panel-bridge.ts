@@ -60,6 +60,7 @@ import type { RepositoryAnalysisCard } from '../lib/repository-analysis';
 import { RepositoryAnalysisExecutor } from './repository-analysis';
 import { GitHubApiClient } from './github-api';
 import { activePanelSessionStore } from './active-session-store';
+import { createPortMessenger } from './port-messenger';
 
 interface PreparedPanelSession {
   sessionId: string;
@@ -637,6 +638,8 @@ export function registerPanelPortBridge(
       port.disconnect();
       return;
     }
+    const messenger = createPortMessenger(port);
+    const hydrationController = new AbortController();
     const sessions = sessionStore();
     const activeSession = activePanelSessionStore();
     const preferences = preferencesStore();
@@ -756,24 +759,26 @@ export function registerPanelPortBridge(
       },
       abort: (requestId) => runtime.abort(requestId),
       providerViews: () => runtime.views(),
-      emit: (event) => port.postMessage(event),
+      emit: (event) => {
+        messenger.post(event);
+      },
       emitSessionState: (state) =>
-        port.postMessage(createEnvelope('SESSION_STATE', panelSessionStateSchema.parse(state))),
+        messenger.post(createEnvelope('SESSION_STATE', panelSessionStateSchema.parse(state))),
       emitPickState: (state) =>
-        port.postMessage(createEnvelope('PICK_STATE', panelPickStateSchema.parse(state))),
+        messenger.post(createEnvelope('PICK_STATE', panelPickStateSchema.parse(state))),
       emitRegionState: (state) =>
-        port.postMessage(createEnvelope('REGION_STATE', panelRegionStateSchema.parse(state))),
+        messenger.post(createEnvelope('REGION_STATE', panelRegionStateSchema.parse(state))),
       emitSearchState: (state) =>
-        port.postMessage(createEnvelope('SEARCH_STATE', panelSearchStateSchema.parse(state))),
+        messenger.post(createEnvelope('SEARCH_STATE', panelSearchStateSchema.parse(state))),
       emitRepositoryAnalysisState: (state) =>
-        port.postMessage(
+        messenger.post(
           createEnvelope(
             'REPOSITORY_ANALYSIS_STATE',
             panelRepositoryAnalysisStateSchema.parse(state),
           ),
         ),
     });
-    const hydration = requestActivePageInfo(new AbortController().signal)
+    const hydration = requestActivePageInfo(hydrationController.signal)
       .then(async (page) => {
         const activeSessionId = await activeSession.read();
         const active = activeSessionId ? await sessions.get(activeSessionId) : undefined;
@@ -782,17 +787,19 @@ export function registerPanelPortBridge(
         }
         const session =
           active ?? (page.pageContext ? await sessions.findForPage(page.pageContext) : undefined);
-        port.postMessage(createEnvelope('SESSION_STATE', await panelState(session, 'hydrate')));
+        messenger.post(createEnvelope('SESSION_STATE', await panelState(session, 'hydrate')));
       })
       .catch(() => undefined);
     port.onDisconnect.addListener(() => {
+      messenger.markDisconnected();
+      hydrationController.abort(new DOMException('Panel Port 已断开', 'AbortError'));
       void cancelActivePagePick().catch(() => undefined);
       void cancelActivePageRegion().catch(() => undefined);
     });
     void runtime
       .views()
-      .then((providers) => port.postMessage(createEnvelope('PROVIDER_STATE', { providers })))
-      .catch((error: unknown) => port.postMessage(errorStreamEvent(error)));
+      .then((providers) => messenger.post(createEnvelope('PROVIDER_STATE', { providers })))
+      .catch((error: unknown) => messenger.post(errorStreamEvent(error)));
     port.onMessage.addListener((message) => {
       const requestId =
         typeof (message as { id?: unknown } | null)?.id === 'string' &&
@@ -801,8 +808,8 @@ export function registerPanelPortBridge(
           : undefined;
       void hydration
         .then(() => bridge.dispatch(message, port.sender ?? {}))
-        .then((response) => port.postMessage(response))
-        .catch((error: unknown) => port.postMessage(errorStreamEvent(error, requestId)));
+        .then((response) => messenger.post(response))
+        .catch((error: unknown) => messenger.post(errorStreamEvent(error, requestId)));
     });
   });
 }

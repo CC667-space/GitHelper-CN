@@ -48,6 +48,7 @@
 - Panel 消息流渲染、Provider 下拉切换（不可用 Provider 置灰）、确认弹窗（**断言无"始终允许"选项**）
 - 扩展 action 单击直接调用 `sidePanel.open`；React StrictMode 重挂载时旧连接的延迟断开不会覆盖新连接状态；Panel `Enter` 发送、`Shift+Enter` 换行且 IME 合成 Enter 不误发（D-040）
 - Background port 在首轮完成后断开时，Panel 自动重连并可发送第二轮；主动关闭 Panel 后不再重连（D-041）
+- Panel 在 Provider 状态、会话 hydration 或请求结果返回前断开时，Background 丢弃旧 Port 的迟到消息且不得产生未处理的 disconnected-port 异常；非断开类发送错误不得被吞掉（D-064）
 - 助手 Markdown/GFM 生成语义化标题/列表/强调/代码/表格；fenced code 与行内代码样式不冲突；原始 HTML、远程图片与可点击外链不会进入 DOM（D-042/D-052）
 - Options 表单读写、Key 录入与掩码（**可实现表述，D-028**）：录入用 password input；**保存成功后输入框与受控状态被清空**（断言 value === ''）；**已保存 Key 不回显明文**——保存后重新打开 Options，DOM/组件状态中只有掩码（尾 4 位），无完整 Key 字符串；Zustand store 全量序列化后不含已存 Key 明文
 - Options 显示八家固定 Provider；新增五家保存时逐家授权；设置 JSON 导入/导出不含 Key、URL 或 Host，不能新增目录外 Provider

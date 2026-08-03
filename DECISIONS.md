@@ -512,3 +512,13 @@
 - **证据**：八适配器契约、OpenAI 当前 token 参数、目录唯一性、旧配置迁移、JSON 白名单与错误不回显、权限申请/拒绝/释放、Key 写入顺序、请求前权限断言、网络 allowlist、凭据清除、Options UI 和 manifest 精确 origin 均有自动测试。全量常规测试 249 项通过（另 1 项 live test 默认跳过），typecheck、lint、build、构建安全扫描与隔离 Chrome E2E 全过；E2E Provider 请求 0、页面异常 0。
 - **范围**：Phase 11 Provider 配置体系优化；不改变既有默认路由、对话/搜索/分析功能、Provider 调用次数、GitHub 权限/写操作、凭据存储方式或 MVP 可用性门槛；继续禁止任意 Base URL 和凭据导入导出。
 - 状态：代码与无凭据自动验收通过；因浏览器自动化安全策略不能访问 `chrome://extensions`，待用户重载扩展后用已保存 Key 做一次单 Provider 复测 ｜ 2026-08-03
+
+## D-064 Background 对每个 Panel Port 实施出站生命周期门控
+- **决策**：
+  - 每个通过来源校验的 Panel Port 建立独立 `PortMessenger`；Background→Panel 的 Provider 状态、Session/Pick/Region/Search/分析状态、流事件和请求响应全部经同一门控发送，不允许异步分支直接调用 `port.postMessage`。
+  - `onDisconnect` 首先将门控标记为断开并取消该连接的页面 hydration；其后到达的旧异步结果直接丢弃，不尝试向失效 Port 发送。
+  - Chrome 可能在 `onDisconnect` 回调调度前已使 Port 内部失效，因此门控同时捕获同步 `postMessage` 抛出的明确 disconnected-port 错误并永久关闭自身；其他错误不得吞掉。
+- **理由**：Provider 状态初始化、Session hydration 和消息分发都是异步的。Panel 因关闭、标签切换或扩展重载而断开时，这些 Promise 仍可能完成；直接发送会在 Service Worker 形成 `Uncaught (in promise) Error: Attempting to use a disconnected port object`。仅依赖 `onDisconnect` 标志还不能覆盖内部断开与事件回调之间的窄竞态。
+- **证据**：集成红测稳定复现断开后迟到的 `PROVIDER_STATE`；修复后该用例与显式断开、事件前竞态、非断开错误不吞掉共 4 项回归通过。全量 Vitest 253 项通过（另 1 项 live test 默认跳过），typecheck、lint、变更文件格式、build、安全扫描和隔离 Chrome 149 E2E 全过；E2E 页面异常为 0。
+- **范围**：Phase 11 Service Worker 稳定性补丁；不改变重连策略、请求内容、Session 语义、Provider/GitHub 调用、权限、Host、持久数据或 MVP 范围。
+- 状态：代码与隔离 Chrome 已验证，待真实 Chrome 扩展错误页复核 ｜ 2026-08-03
