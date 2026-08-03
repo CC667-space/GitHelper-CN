@@ -500,3 +500,15 @@
 - **证据**：聚焦红测先确认当前代码没有标签激活关闭监听，修复后断言 action 仍直接 `open({tabId})`、未调用 `setOptions()`，并在 `tabs.onActivated` 后调用 `close({windowId})`。Chrome for Testing 149 隔离 E2E 真实打开原生 Side Panel，切换标签页后收到 `sidePanel.onClosed`，输出 `nativeSidePanelClosedOnTabSwitch: true`；全量 221 项常规测试通过（另 1 项 live test 默认跳过），typecheck、lint、build 与构建安全扫描通过。
 - **范围**：Phase 11 小型操作逻辑补丁；不改变 Panel 内容、Provider/GitHub 请求、会话、权限、Host、存储、MVP 范围或 Chrome 114 的既有功能。
 - 状态：任务 1 已由隔离 Chrome 149 验证；任务 2–4 按选做降级规则跳过 ｜ 2026-07-30
+
+## D-063 八家固定 Provider Catalog、逐家 Host 授权与无密钥设置 JSON
+- **决策**：
+  - 经项目负责人 2026-08-03 明确授权，固定 Provider 目录由 DeepSeek / UUAPI / OpenRouter 扩展为 DeepSeek / UUAPI / OpenRouter / OpenAI / Anthropic / Google Gemini / 阿里云百炼 Qwen / SiliconFlow。所有 endpoint 由 `provider-catalog` 固定，用户只能填写 Key 和 model，不能输入 Base URL、Host 或 endpoint。
+  - 为兼容既有安装，原三家继续使用静态 Host 权限；新增五家只声明各自精确 `optional_host_permissions`。Options 保存 Key 前请求该家 origin，拒绝时零写入；Background 在读取 Key 前再次断言权限；删除 Key 后释放该家可选权限。
+  - Provider 设置 JSON 只迁移 `schemaVersion` 与八家 `textModel` / `visionModel` 绑定。strict Schema 拒绝 Key、token、Authorization、URL、Host、endpoint、目录外 Provider 和未知字段，导出由白名单重新构造，错误不回显原输入。
+  - Anthropic 采用官方 OpenAI SDK 兼容入口并在 UI 披露兼容层限制；Gemini 采用官方 OpenAI 兼容入口；Qwen 采用官方仍支持的共享 `dashscope.aliyuncs.com/compatible-mode/v1` 端点，以维持“只填 Key”体验；SiliconFlow 按中转/聚合端点披露。默认 model 可编辑，最终能力只认真实探针，不把目录默认值当作长期事实。
+  - OpenAI 继续使用 Chat Completions 以复用公共协议，但专属适配器把内部 `maxTokens` 映射为当前参数 `max_completion_tokens`，不沿用公共兼容层的已弃用 `max_tokens`。
+- **理由**：统一 Catalog 将 Provider 身份、endpoint、权限、默认 model 与披露信息收敛到一个接缝，避免协议、Options、消息 Schema 和网络白名单各自维护分叉列表。逐家权限使未使用的新 Provider 不获得网络访问；无密钥 JSON 满足可迁移配置需求，同时不建立第二条凭据或任意 URL 通道。
+- **证据**：八适配器契约、OpenAI 当前 token 参数、目录唯一性、旧配置迁移、JSON 白名单与错误不回显、权限申请/拒绝/释放、Key 写入顺序、请求前权限断言、网络 allowlist、凭据清除、Options UI 和 manifest 精确 origin 均有自动测试。全量常规测试 249 项通过（另 1 项 live test 默认跳过），typecheck、lint、build、构建安全扫描与隔离 Chrome E2E 全过；E2E Provider 请求 0、页面异常 0。
+- **范围**：Phase 11 Provider 配置体系优化；不改变既有默认路由、对话/搜索/分析功能、Provider 调用次数、GitHub 权限/写操作、凭据存储方式或 MVP 可用性门槛；继续禁止任意 Base URL 和凭据导入导出。
+- 状态：代码与无凭据自动验收通过；因浏览器自动化安全策略不能访问 `chrome://extensions`，待用户重载扩展后用已保存 Key 做一次单 Provider 复测 ｜ 2026-08-03

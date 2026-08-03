@@ -17,7 +17,7 @@ interface ManifestLike {
 }
 
 describe('Phase 0 manifest', () => {
-  it('声明 Chrome 114 与冻结的最小权限和五个 Host', async () => {
+  it('保留既有最小权限，并把新增 Provider 声明为逐家按需 Host', async () => {
     expect(typeof manifest).not.toBe('function');
     const resolved = await (manifest as ManifestLike | Promise<ManifestLike>);
     expect(resolved.minimum_chrome_version).toBe('114');
@@ -32,7 +32,13 @@ describe('Phase 0 manifest', () => {
       'https://openrouter.ai/*',
     ]);
     expect(resolved.optional_permissions).toBeUndefined();
-    expect(resolved.optional_host_permissions).toBeUndefined();
+    expect(resolved.optional_host_permissions).toEqual([
+      'https://api.openai.com/*',
+      'https://api.anthropic.com/*',
+      'https://generativelanguage.googleapis.com/*',
+      'https://dashscope.aliyuncs.com/*',
+      'https://api.siliconflow.cn/*',
+    ]);
     expect(resolved.externally_connectable).toBeUndefined();
     expect(resolved.web_accessible_resources).toBeUndefined();
     expect(resolved.content_scripts).toEqual([

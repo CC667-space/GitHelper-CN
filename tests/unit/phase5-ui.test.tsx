@@ -378,6 +378,8 @@ describe('Phase 5 UI', () => {
       saveKey: vi.fn(),
       deleteKey: vi.fn(),
       saveModels: vi.fn(),
+      importProviderSettings: vi.fn(),
+      exportProviderSettings: vi.fn(async () => '{"schemaVersion":1,"providers":{}}'),
       runProbes: vi.fn(),
       loadPreferences: vi.fn(async () => defaultUserPreferences()),
       savePreferences,

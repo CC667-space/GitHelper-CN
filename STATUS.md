@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 11 — 测试、打包与 MVP 验收：前九轮人工复核问题、首轮 Panel UI 优化及标签页切换关闭补丁均已完成并通过自动验收，等待 S1–S5 复核。**
+**Phase 11 — 测试、打包与 MVP 验收：八家固定 Provider 配置体系已完成自动验收，等待真实 Chrome 单 Provider 复测，随后继续 S1–S5 复核。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -31,6 +31,11 @@
   - 数据清除三分：会话偏好 / 单 Key / 全部（D-033）
   - manifest 增加 `minimum_chrome_version: "114"`（D-035）
   - DeepSeek 模型策略：别名 2026-07-24 15:59 UTC 停用，推荐 `deepseek-v4-flash`，保留 `deepseek-v4-pro`，模型名非冻结常量（D-034）
+- [x] **v1.3 Provider 定向修订（2026-08-03，D-063）**：
+  - 固定目录由 DeepSeek / UUAPI / OpenRouter 扩展为八家，新增 OpenAI / Anthropic / Gemini / Qwen / SiliconFlow；任意 Base URL 与自定义 Host 仍禁止
+  - 原三家保留静态 Host 权限；新增五家只在保存对应 Key 时请求精确可选 Host，拒绝则 Key 零写入，删除 Key 后释放权限
+  - Options 增加只含 model 绑定的设置 JSON；strict Schema 与白名单导出禁止 Key、token、Authorization、URL、Host 和 endpoint
+  - 旧三家配置自动合并新目录，不读取、不迁移、不回显既有 Key；默认路由和现有功能不变
 - [x] **Phase 0 — 基线检查、环境与技术探针（2026-07-24）**：
   - 只读基线检查通过：唯一根目录正确，8 份规划文件各一份，`references/Claude_Prompt.md` 就位
   - 修正“下一任务”中的 `EXECUTION_PLAN v1.1` → `v1.2`，纳入初始基线提交 `96120a6`
@@ -229,10 +234,18 @@
   - 记录 D-062；聚焦红测转绿，全量常规测试 221 项通过（另 1 项 live test 默认跳过）；typecheck、lint、build、构建安全扫描通过
   - Chrome for Testing 149 隔离 E2E 真实打开原生 Panel，切换标签页后收到 `sidePanel.onClosed`，证据为 `nativeSidePanelClosedOnTabSwitch: true`
   - 最新本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `c9a033dbe3456a58e883e3b490690621c3eddd1f206505496ca9fd08ddef87e1`
+- [x] **Phase 11 — Provider 配置体系优化（2026-08-03）自动部分完成**：
+  - 统一 `provider-catalog` 成为 Provider ID、固定 endpoint、精确 Host 权限、默认 model 与披露元数据的单一来源；八个独立适配器均接入 Runtime、消息 Schema、网络 allowlist、清除与 Options
+  - OpenAI 专属适配器按当前 Chat Completions 规范发送 `max_completion_tokens`，避免继承公共兼容层的已弃用 `max_tokens`
+  - 新增 Provider 保存 Key 前逐家申请 Host 权限，Background 在读取 Key 前再次断言；权限拒绝零写入，删除 Key 后释放权限
+  - 设置 JSON 仅导入/导出 model 绑定，旧三家配置无损迁移；UI 明示不能包含 Key/URL，不能创建自定义 Provider
+  - 自动门禁：Vitest 51 files / 249 tests 全过（另 1 个 Phase 9 live test 默认跳过）；typecheck、lint、build（413 modules）、构建安全扫描与隔离 Chrome E2E 全过
+  - E2E 既有 S1/S3/SPA/Session/S5 与标签页自动关闭均通过；Provider 请求 0、页面异常 0；构建 manifest 精确包含 5 个可选 Host 且无 `<all_urls>`
+  - 最新本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `943a676be896979dfbf1caccb5cb375428363458cbacb41684620766feefb6e4`
 
 ## 下一任务
-**Phase 11 强制确认节点 ② — S1–S5 批量体验复核**（见 `docs/USER_GUIDE.md` 第 9 节）。
-用户在真实 Chrome 重新加载最新 `dist/` 后，复核 S1–S5、前九轮人工问题、本轮 Panel UI 及“切换标签页后自动关闭”；确认全部通过后，执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
+**Phase 11 Provider 单家真实复测 → 强制确认节点 ② S1–S5 批量体验复核**。
+用户在真实 Chrome 重新加载最新 `dist/`，确认 Options 显示八家 Provider，并使用已保存 Key 点击 DeepSeek（或任一既有可用家）的“仅复测该 Provider”。无需重填 Key，也无需配置新增五家。复测通过后继续 `docs/USER_GUIDE.md` 第 9 节 S1–S5；全部通过后执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
 
 ## 已登记的后续优化
 - [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
@@ -252,18 +265,20 @@
 | 8 NL 搜索（MVP 必达） | ✅ 已完成 |
 | 9 一键仓库分析 | ✅ 已完成 |
 | 10 安全加固 + 红队测试 | ✅ 已完成 |
-| 11 测试 + 打包 + MVP 验收 | ⏸ 前九轮问题补丁、首轮 UI 优化与标签页关闭补丁自动验收通过，待人工复核 |
+| 11 测试 + 打包 + MVP 验收 | ⏸ Provider 配置体系及既有功能自动验收通过，待单 Provider 真实复测与 S1–S5 人工复核 |
 
 ## 待处理的强制确认节点
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
 - ✅ 所有视觉 Provider 首轮失败后的第二轮复探针成本确认（已授权并执行）
 - ✅ 第二轮视觉仍失败后的第三轮 `openrouter/free` fallback 真实确认（已授权、执行并通过）
 - ✅ DeepSeek V4 非思考修复后的单 Provider 真实复测（只调用 DeepSeek，文本已验证）
+- ✅ 新增五家精确可选 Host 权限的基线变更（用户已授权，自动测试与构建 manifest 已验证）
+- ⏸ 最新构建使用既有已保存 Key 的单 Provider 真实复测（无需重填或读取 Key）
 - ⏸ Phase 11：MVP 批量体验复核（必需）
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-仅等待 Phase 11 规定的真实 Chrome S1–S5、前九轮问题补丁、本轮 UI 优化与标签页关闭补丁复核；无其他实现、安全、权限或 Provider 阻塞。
+仅等待真实 Chrome 重载后的单 Provider 复测，再继续 Phase 11 S1–S5。Chrome 自动化安全策略不允许访问 `chrome://extensions`，因此此步不能由执行 Agent 代点；无其他实现、安全、权限或 Provider 阻塞。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -307,3 +322,4 @@
 - 2026-07-28：Phase 11 第九轮人工复核补丁完成；用户授权中文搜索采用“单次文本 Provider 解析受限意图 + 本地安全编译 + 失败本地降级”混合方案（D-060），截图原句、费用透明提示、无页面上下文/私有页面边界及完整 E2E 通过；221 项常规测试及全套门禁通过，等待真实 Provider 复核。
 - 2026-07-29：Phase 11 首轮 Panel UI 优化完成；按钮、输入、卡片、状态与折叠视觉统一，字符/emoji 操作图标替换为 SVG，回复删除迁入独立操作栏消除正文重叠（D-061）；221 项常规测试、457px 隔离 Chrome 视觉复核及完整门禁通过，等待长期真实使用反馈。
 - 2026-07-30：Phase 11 Side Panel 标签页切换关闭补丁完成；Chrome 141+ 使用 feature-detected `sidePanel.close({windowId})`，保留 direct-open user gesture 路径且不新增权限（D-062）；任务 1 已由 Chrome 149 原生 `onClosed` E2E 证明，任务 2–4 按选做降级规则跳过。
+- 2026-08-03：经用户明确授权完成 v1.3 Provider 定向修订（D-063）：八家固定目录、五家逐家精确可选 Host 权限、无密钥设置 JSON、旧配置迁移及 OpenAI 当前 token 参数映射落地；249 项常规测试及完整静态/构建/安全/E2E 门禁通过，待真实 Chrome 重载后使用既有 Key 做一次单 Provider 复测。

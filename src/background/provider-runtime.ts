@@ -15,7 +15,12 @@ import { assertPublicContext } from './outbound-policy';
 import { ProviderManager, type CapabilityProbeSummary } from './provider-manager';
 import type { Provider, ProviderChatRequest } from './providers/base';
 import { DeepSeekProvider } from './providers/deepseek';
+import { AnthropicProvider } from './providers/anthropic';
+import { GeminiProvider } from './providers/gemini';
 import { OpenRouterProvider } from './providers/openrouter';
+import { OpenAIProvider } from './providers/openai';
+import { QwenProvider } from './providers/qwen';
+import { SiliconFlowProvider } from './providers/siliconflow';
 import { createProviderTransport } from './providers/transport';
 import { UuapiProvider } from './providers/uuapi';
 import type { ProviderRuntimeView } from '../lib/bridge-protocol';
@@ -249,6 +254,11 @@ export class ProviderRuntime {
         ['deepseek', new DeepSeekProvider(transport)],
         ['uuapi', new UuapiProvider(transport)],
         ['openrouter', new OpenRouterProvider(transport)],
+        ['openai', new OpenAIProvider(transport)],
+        ['anthropic', new AnthropicProvider(transport)],
+        ['gemini', new GeminiProvider(transport)],
+        ['qwen', new QwenProvider(transport)],
+        ['siliconflow', new SiliconFlowProvider(transport)],
       ]);
     this.manager = new ProviderManager(this.providers);
     this.ready = this.loadProbeState();
@@ -522,7 +532,8 @@ export class ProviderRuntime {
           textModel: setting.textModel,
           visionModel: setting.visionModel,
           fallbackVisionModel: catalog.defaultVisionModel,
-          sampleImageDataUrl: catalog.id === 'deepseek' ? undefined : SAMPLE_RED_PIXEL,
+          sampleImageDataUrl:
+            provider.capabilities.imageInputFormat === 'none' ? undefined : SAMPLE_RED_PIXEL,
         });
         reports.push(report);
         stored.results[catalog.id] = report.summary;

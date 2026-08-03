@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { DeepSeekProvider } from '../../src/background/providers/deepseek';
+import { AnthropicProvider } from '../../src/background/providers/anthropic';
+import { GeminiProvider } from '../../src/background/providers/gemini';
+import { OpenAIProvider } from '../../src/background/providers/openai';
 import { OpenRouterProvider } from '../../src/background/providers/openrouter';
+import { QwenProvider } from '../../src/background/providers/qwen';
+import { SiliconFlowProvider } from '../../src/background/providers/siliconflow';
 import type {
   Provider,
   ProviderChatRequest,
@@ -27,6 +32,36 @@ const factories = [
     endpoint: 'https://openrouter.ai/api/v1/chat/completions',
     model: '~openai/gpt-latest',
     create: (transport: ProviderTransport): Provider => new OpenRouterProvider(transport),
+  },
+  {
+    id: 'openai',
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    model: 'gpt-5-mini',
+    create: (transport: ProviderTransport): Provider => new OpenAIProvider(transport),
+  },
+  {
+    id: 'anthropic',
+    endpoint: 'https://api.anthropic.com/v1/chat/completions',
+    model: 'claude-sonnet-4-6',
+    create: (transport: ProviderTransport): Provider => new AnthropicProvider(transport),
+  },
+  {
+    id: 'gemini',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    model: 'gemini-3.6-flash',
+    create: (transport: ProviderTransport): Provider => new GeminiProvider(transport),
+  },
+  {
+    id: 'qwen',
+    endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+    model: 'qwen-plus',
+    create: (transport: ProviderTransport): Provider => new QwenProvider(transport),
+  },
+  {
+    id: 'siliconflow',
+    endpoint: 'https://api.siliconflow.cn/v1/chat/completions',
+    model: 'Pro/zai-org/GLM-4.7',
+    create: (transport: ProviderTransport): Provider => new SiliconFlowProvider(transport),
   },
 ] as const;
 
@@ -130,6 +165,32 @@ describe.each(factories)('$id adapter', ({ id, endpoint, model, create }) => {
 });
 
 describe('Provider-specific behavior', () => {
+  it('OpenAI 使用当前 Chat Completions 的 max_completion_tokens 参数', async () => {
+    const transport: ProviderTransport = {
+      request: vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              model: 'gpt-5-mini',
+              choices: [{ message: { content: 'OK' }, finish_reason: 'stop' }],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+      ),
+    };
+    const provider = new OpenAIProvider(transport);
+
+    await provider.chat({
+      ...request('openai:token-budget', 'gpt-5-mini'),
+      maxTokens: 64,
+    });
+
+    const [, , init] = vi.mocked(transport.request).mock.calls[0]!;
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+    expect(body.max_completion_tokens).toBe(64);
+    expect(body).not.toHaveProperty('max_tokens');
+  });
+
   it('DeepSeek V4 显式关闭默认思考模式以避免简单文本请求浪费输出预算', async () => {
     const transport: ProviderTransport = {
       request: vi.fn(

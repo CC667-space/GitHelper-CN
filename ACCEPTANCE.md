@@ -4,6 +4,7 @@
 > Agent 完成阶段后自测通过即记 STATUS 并继续，不等人工。
 > v1.1（2026-07-24）：新增 Phase 0 探针/1.5 安全地基验收；安全表述客观化（P1-2）；移除 Token/私有仓库开关项；C-2 明确核心功能阻塞最终 MVP。
 > v1.2（2026-07-24）：修正凭据"明文不出现于 DOM/状态"为可实现表述（D-028）；Phase 4 可用性判定（D-031）；限流分桶用例（D-032）；Scheme 拒绝用例（D-013R）；三种数据清除用例（D-033）。
+> v1.3（2026-08-03）：八家固定适配器、五个精确可选 Host 权限及无密钥设置 JSON 验收（D-063）。
 
 ---
 
@@ -26,7 +27,9 @@
 ### 1. 单元测试（Vitest）
 - parsers：各页面类型对 fixtures 的识别与字段提取
 - sanitizer：各类凭据正/反/边界/组合用例
-- provider：mock HTTP，断言请求组装、apiHost 固定预设、model、错误映射（**三个适配器全部有 mock 测试，D-031**）
+- provider：mock HTTP，断言请求组装、apiHost 固定预设、model、错误映射（**八个适配器全部有 mock 测试，D-031/D-063**）
+- provider-host-access：新增五家仅请求各自精确 origin；拒绝授权时 Key 零写入；Background 在 Key 读取前断言权限；删除 Key 后释放权限
+- provider-settings：旧三家配置迁移后合并八家默认值；JSON 只接受 model 绑定，拒绝 Key/token/Authorization/URL/Host/endpoint 与未知字段，错误不回显输入
 - provider-manager：默认路由、手动覆盖优先、Capability 护栏（vision 阻断）、探针失败 Provider 被禁用标记
 - credential-store：Options 上下文只 write/delete、Background 只 read/inject（读写路径唯一）；普通 storage 接口读不到凭据；**构建期 import 边界：`src/content/**` 引用 credential-store 触发 lint 报错（D-028）**
 - tools registry：zod 校验通过/拒绝、白名单外拒绝、**openGitHubPage 仅接受 `https://github.com/*`、非 https Scheme（javascript/data/file/chrome/chrome-extension/blob）全部拒绝（D-013R）**
@@ -47,6 +50,7 @@
 - Background port 在首轮完成后断开时，Panel 自动重连并可发送第二轮；主动关闭 Panel 后不再重连（D-041）
 - 助手 Markdown/GFM 生成语义化标题/列表/强调/代码/表格；fenced code 与行内代码样式不冲突；原始 HTML、远程图片与可点击外链不会进入 DOM（D-042/D-052）
 - Options 表单读写、Key 录入与掩码（**可实现表述，D-028**）：录入用 password input；**保存成功后输入框与受控状态被清空**（断言 value === ''）；**已保存 Key 不回显明文**——保存后重新打开 Options，DOM/组件状态中只有掩码（尾 4 位），无完整 Key 字符串；Zustand store 全量序列化后不含已存 Key 明文
+- Options 显示八家固定 Provider；新增五家保存时逐家授权；设置 JSON 导入/导出不含 Key、URL 或 Host，不能新增目录外 Provider
 - Options 偏好表单与容量用量可读；三种数据清除入口分别可用且全清有显式二次确认（D-033）、数据流向披露展示
 - Panel 收到 `SESSION_STATE` 后恢复活动会话；页面变化/Background 重连的 hydrate 不覆盖当前对话；最近会话可选择且可强制新建；恢复投影过长时明确提示早期内容未展开
 - 分析区与问答区可独立收起/展开；收起不丢失当前状态
@@ -113,7 +117,7 @@
 | 1.5 | 安全地基用例全过：凭据隔离、Host 白名单 fetch、消息来源+Schema 校验、日志脱敏、私有阻断骨架、CSP 扫描、Abort/超时/载荷限制 |
 | 2 | Panel 打开、三端消息往返集成测试通过、非法消息被拒 |
 | 3 | fixtures 页面识别/解析正确、SPA 去抖刷新且不重复初始化、私有页面阻断、失败不抛异常 |
-| 4 | 三适配器 mock 测试全过、能力探针报告产出、手动切换生效、Capability 护栏生效、凭据隔离通过、录入后输入框清空+无明文回显；action 可直接打开 Panel、连接状态稳定且断线可恢复、Enter/Shift+Enter 语义通过；真实端点：≥1 文本 + ≥1 视觉 Provider 可用即达标（单家失败记录+禁用不阻塞，全路线失败才暂停，D-031）｜ **人工：真实 Key 填入 + 真实端点探针 + 手测对话** |
+| 4 | 八适配器 mock 测试全过、五个新增精确可选 Host 权限与无密钥 JSON 边界通过、能力探针报告产出、手动切换生效、Capability 护栏生效、凭据隔离通过、录入后输入框清空+无明文回显；action 可直接打开 Panel、连接状态稳定且断线可恢复、Enter/Shift+Enter 语义通过；真实端点：≥1 文本 + ≥1 视觉 Provider 可用即达标（单家失败记录+禁用不阻塞，全路线失败才暂停，D-031/D-063）｜ **人工：真实 Key 填入 + 真实端点探针 + 手测对话** |
 | 5 | 会话恢复、过期+容量淘汰、偏好读写（operationPolicy 收紧类型）、三种清除各自"目标无残留、非目标完好"（D-033） |
 | 6 | pick 进出、选中结构正确、基于元素回答 |
 | 7 | 框选结构提取、充分不截图/不足时 SW 截图裁剪对齐、visionEnabled 开关、截图不持久保存 |

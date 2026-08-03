@@ -26,6 +26,7 @@ export function OptionsApp({
   const [preferences, setPreferences] = useState<UserPreferences>(defaultUserPreferences);
   const [storageUsage, setStorageUsage] = useState<StorageUsage>();
   const [confirmingClearAll, setConfirmingClearAll] = useState(false);
+  const [providerSettingsJson, setProviderSettingsJson] = useState('');
   const [status, setStatus] = useState('正在读取本地 Provider 状态…');
 
   async function refreshProviders(): Promise<void> {
@@ -86,6 +87,17 @@ export function OptionsApp({
     });
     setStatus(`${providerId} 模型配置已保存`);
     await refreshProviders();
+  }
+
+  async function exportProviderSettings(): Promise<void> {
+    setProviderSettingsJson(await services.exportProviderSettings());
+    setStatus('已生成不含 API Key 的 Provider 配置 JSON');
+  }
+
+  async function importProviderSettings(): Promise<void> {
+    await services.importProviderSettings(providerSettingsJson);
+    await refreshProviders();
+    setStatus('Provider 配置 JSON 已导入；API Key 保持不变');
   }
 
   async function runProbes(providerId?: ProviderId): Promise<void> {
@@ -222,6 +234,14 @@ export function OptionsApp({
                 value={keys[catalog.id] ?? ''}
               />
               <p className="mt-1 text-xs text-slate-500">已存：{provider?.keyMask ?? '无'}</p>
+              {catalog.hostPermission === 'optional' ? (
+                <p className="mt-1 text-xs text-slate-500">
+                  首次保存时，Chrome 会请求仅访问 {catalog.apiHost} 的权限。
+                </p>
+              ) : null}
+              {catalog.connectionNote ? (
+                <p className="mt-1 text-xs text-slate-500">{catalog.connectionNote}</p>
+              ) : null}
               <div className="mt-2 flex gap-2">
                 <button
                   className="rounded bg-slate-900 px-3 py-2 text-sm text-white"
@@ -317,6 +337,49 @@ export function OptionsApp({
             </article>
           );
         })}
+        <div className="rounded-lg border border-slate-200 p-4">
+          <h3 className="font-medium">Provider 设置 JSON</h3>
+          <p className="mt-1 text-sm text-slate-600">
+            用于迁移内置 Provider 的 model ID。JSON 不得包含 API Key 或自定义端点；Key
+            仍只能在上方密码框中单独保存。
+          </p>
+          <label className="mt-3 block text-sm" htmlFor="provider-settings-json">
+            Provider 设置 JSON
+          </label>
+          <textarea
+            className="mt-1 min-h-40 w-full rounded-md border border-slate-300 p-2 font-mono text-xs"
+            id="provider-settings-json"
+            onChange={(event) => setProviderSettingsJson(event.target.value)}
+            placeholder='{"schemaVersion":1,"providers":{"openai":{"textModel":"gpt-5-mini"}}}'
+            spellCheck={false}
+            value={providerSettingsJson}
+          />
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              className="rounded border border-slate-300 px-3 py-2 text-sm"
+              onClick={() =>
+                void exportProviderSettings().catch((error: unknown) =>
+                  setStatus(error instanceof Error ? error.message : String(error)),
+                )
+              }
+              type="button"
+            >
+              导出配置 JSON
+            </button>
+            <button
+              className="rounded bg-slate-900 px-3 py-2 text-sm text-white disabled:bg-slate-300"
+              disabled={!providerSettingsJson.trim()}
+              onClick={() =>
+                void importProviderSettings().catch((error: unknown) =>
+                  setStatus(error instanceof Error ? error.message : String(error)),
+                )
+              }
+              type="button"
+            >
+              导入配置 JSON
+            </button>
+          </div>
+        </div>
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
           <h3 className="font-medium text-amber-900">真实能力探针</h3>
           <p className="mt-1 text-sm text-amber-800">
@@ -549,9 +612,9 @@ export function OptionsApp({
         <h2 className="font-medium">数据流向披露</h2>
         <dl className="mt-3 grid grid-cols-[7rem_1fr] gap-2 text-sm">
           <dt className="text-slate-500">固定端点</dt>
-          <dd>仅限 DeepSeek / UUAPI / OpenRouter 预设 Host，不允许自定义 Base URL</dd>
+          <dd>仅限内置 Provider 预设 Host，不允许自定义 Base URL；新增 Host 按家单独授权</dd>
           <dt className="text-slate-500">中转服务</dt>
-          <dd>UUAPI、OpenRouter 可能把数据转交其上游模型供应商</dd>
+          <dd>UUAPI、OpenRouter、SiliconFlow 可能把数据交由其平台或上游模型处理</dd>
           <dt className="text-slate-500">发送内容</dt>
           <dd>仅在用户明确提交后，发送最小必要上下文</dd>
           <dt className="text-slate-500">第三方处理</dt>

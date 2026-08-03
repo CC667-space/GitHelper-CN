@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PROVIDER_CATALOG, providerIdSchema } from './provider-catalog';
 import { hasSufficientStructuredRegion } from './region';
 import { githubWebUrlSchema, githubSearchResultSchema, searchTargetSchema } from './github-search';
 import { repositoryAnalysisCardSchema } from './repository-analysis';
@@ -72,7 +73,7 @@ export const selectedRegionSchema = z
 export const panelMessageSchema = z
   .object({
     text: z.string().trim().min(1).max(8_000),
-    providerId: z.enum(['deepseek', 'uuapi', 'openrouter']).optional(),
+    providerId: providerIdSchema.optional(),
     sessionId: z.string().min(1).max(128).optional(),
     startNewSession: z.boolean().optional(),
     selectedElement: selectedElementSchema.optional(),
@@ -124,7 +125,7 @@ export const panelSearchRequestSchema = z
   .object({
     naturalLanguage: z.string().trim().min(1).max(500),
     target: searchTargetSchema,
-    providerId: z.enum(['deepseek', 'uuapi', 'openrouter']).optional(),
+    providerId: providerIdSchema.optional(),
   })
   .strict();
 export const panelOpenGitHubPageSchema = z
@@ -135,7 +136,7 @@ export const panelOpenGitHubPageSchema = z
 
 export const panelAnalyzeRepositoryRequestSchema = z
   .object({
-    providerId: z.enum(['deepseek', 'uuapi', 'openrouter']).optional(),
+    providerId: providerIdSchema.optional(),
   })
   .strict();
 
@@ -295,7 +296,7 @@ export const providerCapabilitiesSchema = z
 
 export const providerRuntimeViewSchema = z
   .object({
-    id: z.enum(['deepseek', 'uuapi', 'openrouter']),
+    id: providerIdSchema,
     label: z.string().min(1).max(100),
     apiHost: z.url(),
     textModel: z.string().max(300),
@@ -311,7 +312,7 @@ export const providerRuntimeViewSchema = z
 
 export const providerStateSchema = z
   .object({
-    providers: z.array(providerRuntimeViewSchema).length(3),
+    providers: z.array(providerRuntimeViewSchema).max(PROVIDER_CATALOG.length),
   })
   .strict();
 
@@ -353,7 +354,7 @@ export const optionsProviderStateRequestSchema = z.object({}).strict();
 export const optionsResetLocalStateRequestSchema = z.object({}).strict();
 export const optionsRunProbesRequestSchema = z
   .object({
-    providerId: z.enum(['deepseek', 'uuapi', 'openrouter']).optional(),
+    providerId: providerIdSchema.optional(),
   })
   .strict();
 

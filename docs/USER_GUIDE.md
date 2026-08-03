@@ -40,7 +40,7 @@ pnpm package:extension
 1. 在 `chrome://extensions/` 找到 GitHelper-CN。
 2. 打开“扩展程序选项”。
 3. 在对应 Provider 卡片中填写 API Key 和模型。
-4. 点击保存。保存成功后输入框会立即清空，页面只显示末 4 位掩码。
+4. 点击保存。OpenAI、Anthropic、Gemini、Qwen、SiliconFlow 首次保存时，Chrome 只请求该 Provider 的精确 API Host 权限；拒绝授权则不会保存 Key。保存成功后输入框会立即清空，页面只显示末 4 位掩码。
 5. 点击“仅复测该 Provider”，或使用页面底部“运行真实能力探针”验证全部已配置 Provider。
 
 固定端点：
@@ -48,13 +48,24 @@ pnpm package:extension
 - DeepSeek：`https://api.deepseek.com/chat/completions`
 - UUAPI：`https://uuapi.net/v1/chat/completions`
 - OpenRouter：`https://openrouter.ai/api/v1/chat/completions`
+- OpenAI：`https://api.openai.com/v1/chat/completions`
+- Anthropic：`https://api.anthropic.com/v1/chat/completions`（OpenAI SDK 兼容入口）
+- Google Gemini：`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`
+- 阿里云百炼 Qwen：`https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`（共享旧端点，避免额外 workspace 配置）
+- SiliconFlow：`https://api.siliconflow.cn/v1/chat/completions`
 
 默认建议：
 
 - 文本：DeepSeek `deepseek-v4-flash`
-- 视觉：使用已通过真实探针的 OpenRouter/UUAPI 视觉模型
+- 视觉：使用任何已配置并通过真实探针的视觉 Provider/model；加入目录不等于能力已验证
 
-不要把 Key 发到聊天、Issue、日志或截图中。建议使用专用、可撤销、设有额度上限的 Key。UUAPI 与 OpenRouter 是中转/聚合端点，可能把请求转交其上游模型供应商。
+Options 下方的“Provider 设置 JSON”只用于迁移 model 绑定：
+
+1. 点击“导出设置 JSON”，得到不含 Key、URL、Host 的文本；
+2. 可在另一安装中粘贴后点击“导入设置 JSON”；
+3. Key 仍须在对应 Provider 的 password 输入框中单独填写，JSON 不能新增自定义 Provider 或 endpoint。
+
+不要把 Key 发到聊天、Issue、日志、截图或设置 JSON 中。建议使用专用、可撤销、设有额度上限的 Key。UUAPI、OpenRouter 与 SiliconFlow 是中转/聚合端点，可能把请求转交其上游模型供应商。
 
 ## 4. 打开 Side Panel
 
@@ -150,7 +161,7 @@ Options 提供三种相互独立的操作：
 ## 7. 安全与范围边界
 
 - 仅支持公开 GitHub 页面；检测到私有仓库、无权限或未找到页面时零出站。
-- 只申请 `sidePanel`、`storage`、`activeTab` 和五个固定 Host；不申请 `<all_urls>`、`tabs` 或 `scripting`。
+- 只申请 `sidePanel`、`storage`、`activeTab`、GitHub 与原三家 Provider 固定 Host；新增五家只在保存对应 Key 时申请该家的精确可选 Host。绝不申请 `<all_urls>`、`tabs` 或 `scripting`。
 - v1 不做评论、Star、Fork、Issue/PR 创建等 GitHub 写操作。
 - 页面文字全部按不可信数据处理，不能改写 System Prompt。
 - 外部链接必须逐次确认；非 HTTPS、伪 GitHub Host 和 URL 内嵌凭据会被拒绝。

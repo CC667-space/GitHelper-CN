@@ -1,3 +1,7 @@
+import type { ProviderId } from './provider-catalog';
+
+export type { ProviderId } from './provider-catalog';
+
 export type PageType = 'repo' | 'issue' | 'pr' | 'releases' | 'blob' | 'search' | 'code' | 'other';
 
 export interface PageContext {
@@ -88,8 +92,6 @@ export interface UserPreferences {
   operationPolicy: OperationPolicy;
   visionEnabled: boolean;
 }
-
-export type ProviderId = 'deepseek' | 'uuapi' | 'openrouter';
 
 export interface ProviderCredential {
   providerId: ProviderId;

@@ -14,8 +14,10 @@ import {
 } from '../lib/storage';
 import type { ProviderId, UserPreferences } from '../lib/types';
 import { deleteCredential, writeCredential } from '../background/credential-store';
+import { providerHostAccess } from '../background/provider-host-access';
 import { preferencesStore } from '../background/prefs-store';
 import { clearAllLocalData, clearSessionsAndPreferences } from './local-data';
+import { createProviderCredentialActions } from './provider-credential-actions';
 
 export interface StorageUsage {
   bytes: number;
@@ -28,6 +30,8 @@ export interface OptionsServices {
   saveKey(providerId: ProviderId, apiKey: string): Promise<void>;
   deleteKey(providerId: ProviderId): Promise<void>;
   saveModels(providerId: ProviderId, setting: ProviderSetting): Promise<void>;
+  importProviderSettings(source: string): Promise<void>;
+  exportProviderSettings(): Promise<string>;
   runProbes(providerId?: ProviderId): Promise<unknown>;
   loadPreferences(): Promise<UserPreferences>;
   savePreferences(preferences: UserPreferences): Promise<UserPreferences>;
@@ -61,9 +65,21 @@ async function loadProviders(): Promise<ProviderRuntimeView[]> {
 
 export const defaultOptionsServices: OptionsServices = {
   loadProviders,
-  saveKey: writeCredential,
-  deleteKey: deleteCredential,
+  saveKey: (providerId, apiKey) =>
+    createProviderCredentialActions(
+      { write: writeCredential, delete: deleteCredential },
+      providerHostAccess(),
+    ).save(providerId, apiKey),
+  deleteKey: (providerId) =>
+    createProviderCredentialActions(
+      { write: writeCredential, delete: deleteCredential },
+      providerHostAccess(),
+    ).delete(providerId),
   saveModels: (providerId, setting) => providerSettingsStore().writeProvider(providerId, setting),
+  importProviderSettings: async (source) => {
+    await providerSettingsStore().importJson(source);
+  },
+  exportProviderSettings: () => providerSettingsStore().exportJson(),
   runProbes: async (providerId) =>
     await runtimeRequest(
       'OPTIONS_RUN_PROVIDER_PROBES',

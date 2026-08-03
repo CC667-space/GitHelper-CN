@@ -4,6 +4,7 @@
 > 每完成一个阶段更新 `STATUS.md` 并创建阶段 Commit（见"Git 治理"）。验收标准细节见 `ACCEPTANCE.md`。
 > v1.1（2026-07-24）：新增 Phase 1.5 安全地基、Phase 0 技术探针扩充、Git 治理、移除 Token/私有仓库相关内容。
 > v1.2（2026-07-24）：探针 B 改为实测定稿坐标换算（D-029）；Phase 4 单 Provider 失败不阻塞（D-031）；限流分桶（D-032）；数据清除三分（D-033）；DeepSeek 模型策略（D-034）；minimum_chrome_version 114（D-035）。
+> v1.3（2026-08-03）：固定 Provider 扩展为八家；新增五家采用逐家精确可选 Host 权限；设置 JSON 只绑定 model（D-063）。
 
 ---
 
@@ -132,23 +133,23 @@ Phase 11 (测试/打包/MVP 验收)  ← 汇聚，含唯一批量体验复核
 - **自动进入 Phase 4**。
 
 ## Phase 4 — Provider 抽象 + 能力探针 + 文本对话 + 手动切换（关键路径）
-- **目标**：三 Provider 适配器全部完成（代码+Mock 测试）、能力经探针验证、可手动切换、文本对话流式闭环。
+- **目标**：八个固定 Provider 适配器全部完成（代码+Mock 测试）、能力经探针验证、可手动切换、文本对话流式闭环。
 - **任务**：
-  1. `providers/base` 公共协议骨架（chat/chatStream/abort/capabilities，OpenAI 兼容组装）+ deepseek/uuapi/openrouter **独立适配器**（可覆写请求头/模型映射/流式解析/工具调用格式/错误格式，D-007R/D-030；**固定 apiHost 预设，无自定义 Base URL**；model 可配置）。
+  1. `providers/base` 公共协议骨架（chat/chatStream/abort/capabilities，OpenAI 兼容组装）+ DeepSeek / UUAPI / OpenRouter / OpenAI / Anthropic / Gemini / Qwen / SiliconFlow **独立适配器**（D-007R/D-030/D-063；**固定 apiHost 预设，无自定义 Base URL**；model 可配置）。原三家沿用静态 Host，新增五家保存 Key 时逐家申请精确可选 Host 权限。
   2. **DeepSeek 模型策略（D-034）**：不使用 `deepseek-chat`/`deepseek-reasoner` 别名（2026-07-24 15:59 UTC 已停用）；推荐预填 `deepseek-v4-flash`，下拉保留 `deepseek-v4-pro`；模型名非冻结常量，实际可用性经配置/模型列表接口/探针确认；推荐模型不可用 → 提示改选，不阻塞。
   3. 每 Provider 声明 `ProviderCapabilities`；实现**能力探针**（D-021）：文本、流式、取消、图片输入、工具调用、结构化输出、错误/限流响应格式。探针结果写入 `capabilities.probedAt`，未验证能力不得使用。
   4. `provider-manager`：默认路由 + **手动覆盖优先** + Capability 护栏（needsVision 而 supportsVision=false → 阻止并提示）+ 不可用 Provider 禁用标记。
   5. `context-builder` 最小上下文（接 sanitizer）。
   6. Panel 顶部 **Provider 手动切换下拉**（文本/视觉分列，显示当前 model 与 Host，不可用 Provider 置灰）。
-  7. Options：各 Provider Key 录入（password input，保存后立即清空；经 credential-store，UI 只见掩码、无明文回显）、model 选择、**数据流向披露**（当前 Provider/Host/模型/数据去向/是否中转/换端点风险）。
+  7. Options：各 Provider Key 录入（password input，保存后立即清空；经 credential-store，UI 只见掩码、无明文回显）、model 选择、**数据流向披露**（当前 Provider/Host/模型/数据去向/是否中转/兼容层说明）；可导入/导出仅含 model 绑定的设置 JSON，严禁 Key 与 URL/Host/endpoint。
   8. 流式渲染 + Abort + 错误处理（鉴权/额度/限流可读提示 + 建议切换）。
 - **产物**：文本对话可用 + 探针报告 + 单测（provider mock、路由、护栏、凭据隔离）。
-- **验收**：三适配器 mock 全部跑通请求组装/流式/取消路径；手动切换生效；Capability 护栏生效；凭据隔离测试通过（消息载荷/UI 状态/日志无已存明文 Key）。
+- **验收**：八适配器 mock 全部跑通请求组装/流式/取消路径；新增五家权限申请/拒绝/释放与设置 JSON 白名单测试通过；手动切换生效；Capability 护栏生效；凭据隔离测试通过（消息载荷/UI 状态/日志无已存明文 Key）。
 - **可用性判定与失败处理（D-031）**：
   - 真实端点只强制**至少一个文本 Provider + 一个视觉 Provider 可用**；
   - 单个外部 Provider 真实探针失败 → 记录原因 + UI 禁用该 Provider → **继续，不阻塞**；
   - **所有**文本路线或**所有**视觉路线均失败 → 暂停找用户（外部依赖阻塞）。
-- **强制确认节点 ①**：**首次填入真实 DeepSeek/UUAPI/OpenRouter Key** → 暂停，交用户填入；随后对真实端点跑一轮能力探针 + 手测一次真实对话。
+- **强制确认节点 ①**：**首次填入任一真实 Provider Key** → 暂停，交用户填入；随后对真实端点跑一轮能力探针 + 手测一次真实对话。已有 Key 不因目录扩展而重新填写；新增 Provider 只有用户实际选择使用时才需 Key。
 - 确认后**自动进入 Phase 5**。
 
 ## Phase 5 — Session 与本地偏好

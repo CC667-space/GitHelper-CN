@@ -57,6 +57,8 @@ const phase5ServiceDefaults = {
   })),
   clearSessionsAndPreferences: vi.fn(),
   clearAllLocalData: vi.fn(),
+  importProviderSettings: vi.fn(),
+  exportProviderSettings: vi.fn(async () => '{"schemaVersion":1,"providers":{}}'),
 } satisfies Pick<
   OptionsServices,
   | 'loadPreferences'
@@ -64,6 +66,8 @@ const phase5ServiceDefaults = {
   | 'getStorageUsage'
   | 'clearSessionsAndPreferences'
   | 'clearAllLocalData'
+  | 'importProviderSettings'
+  | 'exportProviderSettings'
 >;
 
 afterEach(() => {
@@ -128,6 +132,32 @@ describe('Phase 4 trusted UI', () => {
     expect(reopened.value).toBe('');
     expect(document.body.textContent).not.toContain(secret);
     expect(await screen.findByText('已存：••••7890')).toBeTruthy();
+  });
+
+  it('Options 提供不含 Key 和自定义端点的 Provider JSON 导入导出入口', async () => {
+    const exported = '{"schemaVersion":1,"providers":{"openai":{"textModel":"gpt-5-mini"}}}';
+    const importProviderSettings = vi.fn(async () => undefined);
+    const services: OptionsServices = {
+      ...phase5ServiceDefaults,
+      importProviderSettings,
+      exportProviderSettings: vi.fn(async () => exported),
+      loadProviders: vi.fn(async () => []),
+      saveKey: vi.fn(),
+      deleteKey: vi.fn(),
+      saveModels: vi.fn(),
+      runProbes: vi.fn(),
+    };
+    const user = userEvent.setup();
+    render(<OptionsApp services={services} />);
+
+    expect(await screen.findByRole('heading', { name: 'OpenAI' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: '导出配置 JSON' }));
+    const textarea = screen.getByLabelText('Provider 设置 JSON') as HTMLTextAreaElement;
+    expect(textarea.value).toBe(exported);
+
+    await user.click(screen.getByRole('button', { name: '导入配置 JSON' }));
+    await waitFor(() => expect(importProviderSettings).toHaveBeenCalledWith(exported));
+    expect(document.body.textContent).toContain('JSON 不得包含 API Key 或自定义端点');
   });
 
   it('Options 点击真实探针后在按钮区域立即显示运行状态并阻止重复提交', async () => {

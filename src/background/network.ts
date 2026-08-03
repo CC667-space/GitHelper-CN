@@ -1,8 +1,8 @@
-export const PROVIDER_API_ORIGINS = {
-  deepseek: 'https://api.deepseek.com',
-  uuapi: 'https://uuapi.net',
-  openrouter: 'https://openrouter.ai',
-} as const;
+import { PROVIDER_CATALOG, type ProviderId } from '../lib/provider-catalog';
+
+export const PROVIDER_API_ORIGINS = Object.fromEntries(
+  PROVIDER_CATALOG.map((provider) => [provider.id, provider.apiHost]),
+) as Record<ProviderId, string>;
 
 export const ALLOWED_OUTBOUND_ORIGINS = new Set([
   'https://github.com',

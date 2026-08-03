@@ -25,6 +25,13 @@ export default defineManifest({
     'https://uuapi.net/*',
     'https://openrouter.ai/*',
   ],
+  optional_host_permissions: [
+    'https://api.openai.com/*',
+    'https://api.anthropic.com/*',
+    'https://generativelanguage.googleapis.com/*',
+    'https://dashscope.aliyuncs.com/*',
+    'https://api.siliconflow.cn/*',
+  ],
   background: {
     service_worker: 'src/background/service-worker.ts',
     type: 'module',

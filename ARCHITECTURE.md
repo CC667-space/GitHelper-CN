@@ -3,6 +3,7 @@
 > 依附于 `PROJECT_BASELINE.md`。架构级方向变更须确认；内部实现变更记 `DECISIONS.md`。
 > v1.1（2026-07-24）：按修订任务单 P0-1/3/4/6/7、C-1/3、P1-1/3/4 修订。
 > v1.2（2026-07-24）：截图坐标换算改由 Phase 0 探针 B 实测决定（D-029）；工具白名单 openPage 拆分限域（D-013R）；GitHub API 限流按 resource 分桶（D-032）；manifest 增加 `minimum_chrome_version: "114"`（D-035）；数据清除三分（D-033）。
+> v1.3（2026-08-03）：Provider Catalog 统一八家固定预设；新增五家逐家申请精确可选 Host 权限；设置 JSON 只绑定 model（D-063）。
 
 ---
 
@@ -39,9 +40,9 @@
 │                                        │ HTTPS(仅白名单Host)    │
 │                       ┌────────────────┼───────────────┐       │
 │                       ▼                ▼               ▼       │
-│               DeepSeek API      UUAPI(uuapi.net)   OpenRouter  │
-│               (文本默认)         (高质量/视觉)       (兜底)      │
-│                       [固定端点预设, 不可自定义 Base URL]        │
+│        Provider Catalog：八家固定端点预设 + Capability 探针     │
+│      原三家静态 Host；新增五家保存 Key 时逐家申请精确权限        │
+│                     [不可自定义 Base URL / Host]                │
 │                                                                │
 │                     GitHub REST API (匿名, 无 Token)           │
 │                                                                │
@@ -70,7 +71,9 @@
 | `background/context-builder` | bg | 组装最小化上下文 |
 | `background/sanitizer` | bg | 发送前敏感信息检测与遮蔽 |
 | `background/provider-manager` | bg | Provider 实例化、Capability 路由、手动覆盖、视觉护栏、Host 白名单 |
-| `background/providers/*` | bg | DeepSeek / UUAPI / OpenRouter 实现（各自声明 Capabilities） |
+| `lib/provider-catalog` | shared | 八家 Provider ID、固定 endpoint、精确 Host 权限、默认 model 与披露元数据的唯一目录 |
+| `background/provider-host-access` | bg/options | 新增五家 Host 权限状态、逐家请求/释放及请求前断言 |
+| `background/providers/*` | bg | DeepSeek / UUAPI / OpenRouter / OpenAI / Anthropic / Gemini / Qwen / SiliconFlow 独立适配器 |
 | `background/credential-store` | bg | 凭据独立存储访问接口；仅可信上下文可导入（Options 只 write/delete，Background 只 read/inject；Content Script 禁止导入，lint 边界保护，D-028） |
 | `background/capture` | bg | `captureVisibleTab` 截图 + 按 Content 上报的坐标裁剪 |
 | `background/github-api` | bg | 匿名 REST 请求、按 resource 分桶限流（core/search/code_search）、缓存、降级（D-032） |
@@ -119,6 +122,7 @@ interface Envelope<T> {
   → Sanitizer 遮蔽敏感信息
   → ProviderManager 选定 Provider(手动优先→默认路由; Capability 校验:
       需要视觉但该 Provider capabilities.supportsVision=false → 阻止并提示)
+  → ProviderHostAccess 确认精确 Host 权限
   → CredentialStore 取 Key(仅此处) → Provider.chatStream() 直连预设 Host
   → token 流式回传 Panel 渲染(支持 Abort/超时/最大负载)
   → 若模型请求工具调用 → ToolExecutor 校验+执行 → 结果回灌模型
@@ -414,17 +418,14 @@ interface UserPreferences {
 
 // v1.1: 凭据与配置分离(P0-1)
 interface ProviderCredential {    // 仅 credential-store 可读写
-  providerId: 'deepseek'|'uuapi'|'openrouter';
+  providerId: ProviderId;
   apiKey: string;
 }
 
 interface ProviderConfig {        // 不含 Key
-  id: 'deepseek'|'uuapi'|'openrouter';
+  id: ProviderId;                 // 八家固定目录，见 provider-catalog
   label: string;
-  apiHost: string;               // 固定预设(P0-3), 用户不可改:
-                                 // deepseek: https://api.deepseek.com
-                                 // uuapi:    https://uuapi.net
-                                 // openrouter: https://openrouter.ai
+  apiHost: string;               // 固定预设，用户和设置 JSON 均不可改
   textModel: string;             // 可配置，不硬编码
   visionModel?: string;
   capabilities: ProviderCapabilities;
@@ -493,9 +494,14 @@ interface OperationConfirmation {
 | host: `https://api.deepseek.com/*` | 是 | 固定端点(P0-3) | 逐域列举 |
 | host: `https://uuapi.net/*` | 是 | 固定端点 | 逐域列举 |
 | host: `https://openrouter.ai/*` | 是 | 固定端点 | 逐域列举 |
+| optional host: `https://api.openai.com/*` | 否 | 用户选择 OpenAI 时 | 保存该家 Key 前逐家请求 |
+| optional host: `https://api.anthropic.com/*` | 否 | 用户选择 Anthropic 时 | 保存该家 Key 前逐家请求 |
+| optional host: `https://generativelanguage.googleapis.com/*` | 否 | 用户选择 Gemini 时 | 保存该家 Key 前逐家请求 |
+| optional host: `https://dashscope.aliyuncs.com/*` | 否 | 用户选择 Qwen 时 | 保存该家 Key 前逐家请求 |
+| optional host: `https://api.siliconflow.cn/*` | 否 | 用户选择 SiliconFlow 时 | 保存该家 Key 前逐家请求 |
 | `notifications` | 否 | 后期提示 | v1 不申请 |
 
-**与 P0-3 的一致性**：v1 无自定义 Base URL，host 权限静态列举五个域即可闭合；未来若开放自定义端点，须改用 `optional_host_permissions` + 运行时授权 + HTTPS 强制 + 精确域名校验（基线变更）。
+**与 P0-3 / D-063 的一致性**：v1 无自定义 Base URL。GitHub 与原三家 Provider 静态列举；新增五家只声明精确 `optional_host_permissions`，保存该家 Key 时请求、删除时释放。开放目录外端点仍是基线变更。
 
 **最低浏览器版本（v1.2，D-035）**：manifest 声明 `"minimum_chrome_version": "114"`（Side Panel API 自 Chrome 114 起可用；`storage.local.setAccessLevel` 自 Chrome 102 起可用，114 同时覆盖）。
 

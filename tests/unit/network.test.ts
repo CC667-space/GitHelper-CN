@@ -9,9 +9,12 @@ import {
 } from '../../src/background/network';
 
 describe('network outbound policy', () => {
-  it('只允许 HTTPS 五域且拒绝子域、端口、凭据和其他 Scheme', () => {
+  it('只允许 GitHub 与目录内 Provider 的精确 HTTPS Origin', () => {
     expect(assertAllowedOutboundUrl('https://api.deepseek.com/v1/chat/completions').origin).toBe(
       'https://api.deepseek.com',
+    );
+    expect(assertAllowedOutboundUrl('https://api.openai.com/v1/chat/completions').origin).toBe(
+      'https://api.openai.com',
     );
     for (const value of [
       'https://evil.example/v1',

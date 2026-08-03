@@ -43,12 +43,13 @@ describe('credential-store', () => {
     await expect(background.read('deepseek')).resolves.toBeUndefined();
   });
 
-  it('批量删除只移除三个 Provider 凭据', async () => {
+  it('批量删除只移除目录内全部 Provider 凭据', async () => {
     const area = new MemoryCredentialArea();
     const options = createOptionsCredentialStore(area);
     await options.write('deepseek', 'deepseek-test-key');
     await options.write('uuapi', 'uuapi-test-key');
     await options.write('openrouter', 'openrouter-test-key');
+    await options.write('openai', 'openai-test-key');
     area.values['preferences:v1'] = { schemaVersion: 1 };
 
     await options.deleteAll();

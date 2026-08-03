@@ -1,3 +1,4 @@
+import { PROVIDER_IDS } from '../lib/provider-catalog';
 import type { ProviderCredential, ProviderId } from '../lib/types';
 
 const CREDENTIAL_PREFIX = 'credential:provider:';
@@ -49,7 +50,7 @@ export function createOptionsCredentialStore(area: CredentialStorageArea): Optio
       return area.remove(storageKey(providerId));
     },
     deleteAll() {
-      return area.remove([storageKey('deepseek'), storageKey('uuapi'), storageKey('openrouter')]);
+      return area.remove(PROVIDER_IDS.map(storageKey));
     },
   };
 }

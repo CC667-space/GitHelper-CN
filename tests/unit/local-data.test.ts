@@ -96,6 +96,11 @@ describe('D-033 local data clearing', () => {
       'credential:provider:deepseek',
       'credential:provider:uuapi',
       'credential:provider:openrouter',
+      'credential:provider:openai',
+      'credential:provider:anthropic',
+      'credential:provider:gemini',
+      'credential:provider:qwen',
+      'credential:provider:siliconflow',
     ]);
   });
 });
