@@ -318,6 +318,7 @@ describe('Phase 4 trusted UI', () => {
 
     await waitFor(() => expect(connect).toHaveBeenCalledTimes(2));
     await Promise.resolve();
+    await user.click(screen.getByRole('tab', { name: '问答' }));
     await user.type(screen.getByLabelText('输入问题'), '请说明当前页面');
 
     expect(screen.getByTitle('Background 已连接')).toBeTruthy();
@@ -351,6 +352,7 @@ describe('Phase 4 trusted UI', () => {
   });
 
   it('Panel 将助手 Markdown 渲染为可读结构且阻止 HTML、图片与可点击外链', async () => {
+    const user = userEvent.setup();
     let emitEvent: ((event: StreamEvent) => void) | undefined;
     const connect = vi.fn((onEvent, _onProviderState, onConnectionChange) => {
       emitEvent = onEvent;
@@ -390,13 +392,17 @@ describe('Phase 4 trusted UI', () => {
       emitEvent?.({ requestId: 'markdown-1', kind: 'done' });
     });
 
+    await user.click(screen.getByRole('tab', { name: '问答' }));
     const conversation = screen.getByTestId('conversation');
     expect(within(conversation).getByRole('heading', { name: '页面摘要' })).toBeTruthy();
     expect(within(conversation).getByText('Explore').tagName).toBe('STRONG');
     expect(within(conversation).getAllByRole('listitem')).toHaveLength(2);
     const codeBlock = within(conversation).getByText('AI stars:>5000');
     expect(codeBlock.tagName).toBe('CODE');
-    expect(codeBlock.closest('pre')).not.toBeNull();
+    const codeBlockContainer = codeBlock.closest('pre');
+    expect(codeBlockContainer).not.toBeNull();
+    expect(codeBlockContainer?.className).toContain('bg-[#c7d0d9]');
+    expect(codeBlockContainer?.className).toContain('text-[#172238]');
     expect(codeBlock.className).toContain('bg-transparent');
     expect(codeBlock.className).toContain('text-inherit');
     expect(codeBlock.className).not.toContain('bg-slate-100');

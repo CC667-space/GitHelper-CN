@@ -420,6 +420,7 @@ try {
   await panel.getByTestId('side-panel').waitFor({ timeout: 10_000 });
   await panel.locator('[title="Background 已连接"]').waitFor({ timeout: 10_000 });
 
+  await panel.getByRole('tab', { name: '中文搜索' }).click();
   const githubSearch = panel.getByTestId('github-search');
   await githubSearch
     .getByLabel('描述要搜索的仓库或 Issue')
@@ -439,6 +440,7 @@ try {
   );
   assert(githubSearchText.includes('2,600'), 'E2E 搜索结果缺少 Star 数据');
 
+  await panel.getByRole('tab', { name: '仓库分析' }).click();
   await panel.getByRole('button', { name: '一键分析' }).click();
   const analysisCard = panel.getByTestId('repository-analysis-card');
   await analysisCard.waitFor({ timeout: 20_000 });
@@ -507,6 +509,7 @@ try {
     'SPA 导航后 Content Script 出现重复初始化',
   );
 
+  await panel.getByRole('tab', { name: '问答' }).click();
   const sessionSentinel = 'PHASE11_SESSION_RESTORE_SENTINEL';
   const input = panel.getByPlaceholder('问问当前 GitHub 页面……');
   await input.fill(sessionSentinel);
@@ -546,6 +549,7 @@ try {
 
   await panel.reload({ waitUntil: 'domcontentloaded' });
   await panel.locator('[title="Background 已连接"]').waitFor({ timeout: 10_000 });
+  await panel.getByRole('tab', { name: '问答' }).click();
   await panel
     .getByTestId('conversation')
     .getByText(sessionSentinel, { exact: true })

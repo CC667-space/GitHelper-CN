@@ -27,6 +27,15 @@ interface ConversationTurn {
   replies: ConversationMessage[];
 }
 
+type PanelSection = 'context' | 'analysis' | 'search' | 'qa';
+
+const panelSections: Array<{ id: PanelSection; label: string }> = [
+  { id: 'context', label: '页面提问' },
+  { id: 'analysis', label: '仓库分析' },
+  { id: 'search', label: '中文搜索' },
+  { id: 'qa', label: '问答' },
+];
+
 function groupConversation(messages: ConversationMessage[]): ConversationTurn[] {
   const turns: ConversationTurn[] = [];
   for (const message of messages) {
@@ -45,17 +54,17 @@ function groupConversation(messages: ConversationMessage[]): ConversationTurn[] 
 }
 
 const controlClass =
-  'h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400';
+  'h-10 w-full rounded-lg border border-[#d5dce7] bg-white px-2.5 text-sm text-[#172238] shadow-[0_2px_8px_rgba(23,34,56,0.08)] outline-none transition focus:border-[#176b87] focus:ring-2 focus:ring-[#176b87]/15 disabled:cursor-not-allowed disabled:bg-[#eef2f6] disabled:text-[#8b97a8]';
 const secondaryButtonClass =
-  'inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none';
+  'inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-[#d5dce7] bg-white px-2.5 py-2 text-sm font-medium text-[#334155] shadow-[0_2px_8px_rgba(23,34,56,0.08)] transition hover:border-[#aeb9c7] hover:bg-[#f7f9fc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#176b87]/20 disabled:cursor-not-allowed disabled:border-[#e2e7ee] disabled:bg-[#eef2f6] disabled:text-[#8b97a8] disabled:shadow-none';
 const primaryButtonClass =
-  'inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-700 bg-emerald-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:border-emerald-800 hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-300 disabled:shadow-none';
+  'inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-[#176b87] bg-[#176b87] px-2.5 py-2 text-sm font-semibold text-white shadow-[0_2px_8px_rgba(23,34,56,0.12)] transition hover:border-[#12566d] hover:bg-[#12566d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#176b87]/25 disabled:cursor-not-allowed disabled:border-[#b8c2d0] disabled:bg-[#b8c2d0] disabled:shadow-none';
 const iconButtonClass =
-  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 disabled:cursor-not-allowed disabled:text-slate-300';
+  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-transparent text-[#65738a] transition hover:border-[#d5dce7] hover:bg-[#eef2f6] hover:text-[#172238] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#176b87]/20 disabled:cursor-not-allowed disabled:text-[#aab3c0]';
 const disclosureClass =
-  'group rounded-lg border border-slate-200 bg-white shadow-sm open:border-slate-300';
+  'group rounded-lg border border-[#d5dce7] bg-white shadow-[0_2px_8px_rgba(23,34,56,0.06)] open:border-[#aeb9c7]';
 const disclosureSummaryClass =
-  'flex cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2.5 font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-200 [&::-webkit-details-marker]:hidden';
+  'flex cursor-pointer list-none items-center gap-2 rounded-lg px-2.5 py-2.5 font-medium text-[#334155] transition hover:bg-[#f7f9fc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#176b87]/20 [&::-webkit-details-marker]:hidden';
 
 function ChevronIcon({ className = '' }: { className?: string }): React.JSX.Element {
   return (
@@ -135,8 +144,8 @@ export function PanelApp({
 }): React.JSX.Element {
   const connection = useRef<PanelConnection>();
   const questionInput = useRef<HTMLTextAreaElement>(null);
+  const [activeSection, setActiveSection] = useState<PanelSection>('context');
   const [analysisExpanded, setAnalysisExpanded] = useState(true);
-  const [conversationExpanded, setConversationExpanded] = useState(true);
   const [collapsedTurnIds, setCollapsedTurnIds] = useState<Set<string>>(() => new Set());
   const [pendingTurnDeleteId, setPendingTurnDeleteId] = useState<string>();
   const [pendingSessionDeleteId, setPendingSessionDeleteId] = useState<string>();
@@ -224,13 +233,13 @@ export function PanelApp({
   ]);
 
   useEffect(() => {
-    if (!conversationExpanded || !focusComposerRequested) {
+    if (!focusComposerRequested) {
       return;
     }
     questionInput.current?.focus();
     questionInput.current?.scrollIntoView?.({ block: 'nearest' });
     setFocusComposerRequested(false);
-  }, [conversationExpanded, focusComposerRequested]);
+  }, [focusComposerRequested]);
 
   useEffect(() => {
     setCollapsedTurnIds(new Set());
@@ -277,35 +286,35 @@ export function PanelApp({
   }
 
   function focusQuestionInput(): void {
-    setConversationExpanded(true);
+    setActiveSection('qa');
     setFocusComposerRequested(true);
   }
 
   return (
     <main
-      className="flex min-h-screen flex-col bg-slate-100/70 text-slate-900"
+      className="flex min-h-screen flex-col bg-[#f7f9fc] text-sm text-[#172238]"
       data-testid="side-panel"
     >
-      <header className="border-b border-slate-200 bg-white p-4 shadow-sm">
+      <header className="border-b border-[#d5dce7] bg-white p-2.5 shadow-[0_2px_8px_rgba(23,34,56,0.08)]">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-base font-semibold tracking-tight">GitHelper-CN</h1>
-            <p className="mt-0.5 text-[11px] text-slate-500">当前 GitHub 页面的中文助手</p>
+            <p className="mt-0.5 text-[11px] text-[#65738a]">当前 GitHub 页面的中文助手</p>
           </div>
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium ${
-              connected ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+              connected ? 'bg-[#e8f2f5] text-[#176b87]' : 'bg-amber-50 text-amber-700'
             }`}
             title={connected ? 'Background 已连接' : 'Background 未连接'}
           >
             <span
-              className={`h-2 w-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-amber-500'}`}
+              className={`h-2 w-2 rounded-full ${connected ? 'bg-[#176b87]' : 'bg-amber-500'}`}
             />
             {connected ? '已连接' : '连接中'}
           </span>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <label className="block min-w-0 text-xs font-medium text-slate-600">
+        <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+          <label className="block min-w-0 text-xs font-medium text-[#65738a]">
             文本 Provider
             <select
               className={`${controlClass} mt-1`}
@@ -330,7 +339,7 @@ export function PanelApp({
               ))}
             </select>
           </label>
-          <label className="block min-w-0 text-xs font-medium text-slate-600">
+          <label className="block min-w-0 text-xs font-medium text-[#65738a]">
             视觉 Provider
             <select
               className={`${controlClass} mt-1`}
@@ -359,17 +368,52 @@ export function PanelApp({
           </label>
         </div>
         <div
-          className="mt-3 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600"
+          className="mt-2.5 flex items-center gap-2 rounded-lg bg-[#f7f9fc] px-2.5 py-2 text-xs text-[#65738a]"
           title={pageLabel}
         >
           <span
             className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-              pageLabel.startsWith('等待') ? 'bg-amber-400' : 'bg-emerald-500'
+              pageLabel.startsWith('等待') ? 'bg-amber-400' : 'bg-[#176b87]'
             }`}
           />
           <p className="truncate">{pageLabel}</p>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
+      </header>
+
+      <nav
+        aria-label="功能区导航"
+        className="grid grid-cols-4 gap-1 border-b border-[#d5dce7] bg-white p-2.5"
+        role="tablist"
+      >
+        {panelSections.map((section) => (
+          <button
+            aria-controls={`panel-section-${section.id}`}
+            aria-selected={activeSection === section.id}
+            className="min-h-9 rounded-lg px-2 text-xs font-medium text-[#65738a] transition hover:bg-[#eef2f6] hover:text-[#172238] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#176b87]/20 aria-selected:bg-[#176b87] aria-selected:text-white"
+            id={`panel-tab-${section.id}`}
+            key={section.id}
+            onClick={() => setActiveSection(section.id)}
+            role="tab"
+            type="button"
+          >
+            {section.label}
+          </button>
+        ))}
+      </nav>
+
+      <section
+        aria-labelledby="panel-tab-context"
+        className="m-2.5 rounded-lg border border-[#d5dce7] bg-white p-2.5 shadow-[0_2px_8px_rgba(23,34,56,0.08)]"
+        data-testid="page-question"
+        hidden={activeSection !== 'context'}
+        id="panel-section-context"
+        role="tabpanel"
+      >
+        <div>
+          <h2 className="text-sm font-semibold">页面提问</h2>
+          <p className="mt-0.5 text-xs text-[#65738a]">选择页面元素或区域后再输入问题</p>
+        </div>
+        <div className="mt-2.5 grid grid-cols-2 gap-2.5">
           {pickStatus === 'active' ? (
             <button
               className={`${secondaryButtonClass} border-amber-300 bg-amber-50 text-amber-900`}
@@ -413,7 +457,7 @@ export function PanelApp({
             <p className="col-span-2 text-xs text-amber-700">{regionStatusMessage}</p>
           ) : null}
           {selectedElement ? (
-            <div className="col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+            <div className="col-span-2 rounded-lg border border-[#d5dce7] bg-[#f7f9fc] p-2.5 text-xs text-[#334155]">
               <div className="flex items-start justify-between gap-2">
                 <p className="min-w-0">
                   已选择 &lt;{selectedElement.tag}&gt;：
@@ -422,7 +466,7 @@ export function PanelApp({
                   </span>
                 </p>
                 <button
-                  className="shrink-0 font-medium text-slate-500 hover:text-rose-700"
+                  className="shrink-0 font-medium text-[#65738a] hover:text-rose-700"
                   onClick={clearSelectedElement}
                   type="button"
                 >
@@ -439,7 +483,7 @@ export function PanelApp({
             </div>
           ) : null}
           {selectedRegion ? (
-            <div className="col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+            <div className="col-span-2 rounded-lg border border-[#d5dce7] bg-[#f7f9fc] p-2.5 text-xs text-[#334155]">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p>
@@ -453,7 +497,7 @@ export function PanelApp({
                   </p>
                 </div>
                 <button
-                  className="shrink-0 font-medium text-slate-500 hover:text-rose-700"
+                  className="shrink-0 font-medium text-[#65738a] hover:text-rose-700"
                   onClick={clearSelectedRegion}
                   type="button"
                 >
@@ -470,16 +514,20 @@ export function PanelApp({
             </div>
           ) : null}
         </div>
-      </header>
+      </section>
 
       <section
-        className="m-3 mb-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+        aria-labelledby="panel-tab-analysis"
+        className="m-2.5 rounded-lg border border-[#d5dce7] bg-white p-2.5 shadow-[0_2px_8px_rgba(23,34,56,0.08)]"
         data-testid="repository-analysis"
+        hidden={activeSection !== 'analysis'}
+        id="panel-section-analysis"
+        role="tabpanel"
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold">当前仓库分析</h2>
-            <p className="mt-0.5 text-xs text-slate-500">快速理解项目用途、细节和原始依据</p>
+            <p className="mt-0.5 text-xs text-[#65738a]">快速理解项目用途、细节和原始依据</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -507,7 +555,7 @@ export function PanelApp({
         </div>
         {analysisExpanded ? (
           <>
-            <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500">
+            <p className="mt-2.5 rounded-lg bg-[#f7f9fc] px-2.5 py-2 text-xs leading-5 text-[#65738a]">
               会读取根目录与最多 3
               个关键文件的有限片段，不下载完整仓库或读取锁文件；解释会调用所选文本
               Provider，可能消耗额度。
@@ -519,7 +567,7 @@ export function PanelApp({
             ) : null}
             {analysisCard ? (
               <article
-                className="mt-3 space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/20 p-3 text-xs"
+                className="mt-2.5 space-y-2.5 rounded-lg border border-[#b7d1db] bg-[#f4f9fa] p-2.5 text-xs"
                 data-testid="repository-analysis-card"
               >
                 <div className="flex items-start justify-between gap-2">
@@ -527,7 +575,7 @@ export function PanelApp({
                     <h3 className="break-words text-sm font-semibold">{analysisCard.repository}</h3>
                   </div>
                   <button
-                    className={`${secondaryButtonClass} shrink-0 border-emerald-300 text-emerald-800`}
+                    className={`${secondaryButtonClass} shrink-0 border-[#8fb7c6] text-[#176b87]`}
                     onClick={() => connection.current?.openGitHubPage?.(analysisCard.url)}
                     type="button"
                   >
@@ -536,7 +584,7 @@ export function PanelApp({
                 </div>
 
                 <section
-                  className="rounded-lg border border-emerald-100 bg-white p-3 shadow-sm"
+                  className="rounded-lg border border-[#c8dde5] bg-white p-2.5 shadow-[0_2px_8px_rgba(23,34,56,0.06)]"
                   data-testid="repository-overview"
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -850,19 +898,23 @@ export function PanelApp({
       </section>
 
       <section
-        className="m-3 mb-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+        aria-labelledby="panel-tab-search"
+        className="m-2.5 rounded-lg border border-[#d5dce7] bg-white p-2.5 shadow-[0_2px_8px_rgba(23,34,56,0.08)]"
         data-testid="github-search"
+        hidden={activeSection !== 'search'}
+        id="panel-section-search"
+        role="tabpanel"
       >
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h2 className="text-sm font-semibold">中文搜索 GitHub</h2>
-            <p className="mt-0.5 text-xs text-slate-500">用自然语言描述你想找的仓库或 Issue</p>
+            <p className="mt-0.5 text-xs text-[#65738a]">用自然语言描述你想找的仓库或 Issue</p>
           </div>
           <span className="rounded-full bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
             使用当前文本 Provider · 本地安全校验
           </span>
         </div>
-        <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500">
+        <p className="mt-2.5 rounded-lg bg-[#f7f9fc] px-2.5 py-2 text-xs leading-5 text-[#65738a]">
           每次搜索最多调用 1 次，仅发送搜索描述，可能产生少量费用；失败时自动改用本地规则。
         </p>
         <form
@@ -911,7 +963,7 @@ export function PanelApp({
         ) : null}
         {searchResult ? (
           <div className="mt-3 space-y-2">
-            <div className="rounded-lg bg-slate-100 p-3 text-xs text-slate-700">
+            <div className="rounded-lg border border-[#d5dce7] bg-[#eef2f6] p-2.5 text-xs text-[#334155]">
               <p>{searchResult.conversion.explanation}</p>
               <code className="mt-1 block break-all text-blue-800">
                 {searchResult.conversion.query}
@@ -927,7 +979,7 @@ export function PanelApp({
             </div>
             {searchResult.items.map((item) => (
               <article
-                className="rounded-lg border border-slate-200 bg-white p-3 text-xs shadow-sm"
+                className="rounded-lg border border-[#d5dce7] bg-white p-2.5 text-xs shadow-[0_2px_8px_rgba(23,34,56,0.06)]"
                 key={`${item.kind}:${item.id}`}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -961,7 +1013,7 @@ export function PanelApp({
               </article>
             ))}
             {searchResult.localResults?.length ? (
-              <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs">
+              <div className="rounded-lg border border-[#d5dce7] bg-white p-2.5 text-xs">
                 <h3 className="font-medium">当前页面的本地结果</h3>
                 <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-600">
                   {searchResult.localResults.map((item, index) => (
@@ -986,26 +1038,24 @@ export function PanelApp({
       </section>
 
       <section
-        className="m-3 flex flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+        aria-labelledby="panel-tab-qa"
+        className="m-2.5 flex flex-1 flex-col overflow-hidden rounded-lg border border-[#d5dce7] bg-white shadow-[0_2px_8px_rgba(23,34,56,0.08)]"
         data-testid="question-answer"
+        hidden={activeSection !== 'qa'}
+        id="panel-section-qa"
+        role="tabpanel"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-slate-200 p-4">
+        <div className="border-b border-[#d5dce7] p-2.5">
           <div>
             <h2 className="text-sm font-semibold">问答</h2>
-            <p className="mt-0.5 text-xs text-slate-500">围绕当前页面继续提问</p>
+            <p className="mt-0.5 text-xs text-[#65738a]">围绕当前页面继续提问</p>
           </div>
-          <button
-            aria-expanded={conversationExpanded}
-            className={secondaryButtonClass}
-            onClick={() => setConversationExpanded((expanded) => !expanded)}
-            type="button"
-          >
-            <ChevronIcon className={conversationExpanded ? 'rotate-90' : ''} />
-            {conversationExpanded ? '收起问答' : '展开问答'}
-          </button>
         </div>
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-b border-slate-200 bg-slate-50/70 p-3">
-          <label className="block min-w-0 text-xs font-medium text-slate-600">
+        <div
+          className="m-2.5 mb-2.5 grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-lg border border-[#d5dce7] bg-[#f7f9fc] p-2.5"
+          data-testid="session-controls"
+        >
+          <label className="block min-w-0 text-xs font-medium text-[#65738a]">
             当前会话
             <select
               className={`${controlClass} mt-1`}
@@ -1034,7 +1084,6 @@ export function PanelApp({
             disabled={!connected || Boolean(activeRequestId)}
             onClick={() => {
               beginNewSession();
-              setConversationExpanded(true);
               connection.current?.newSession?.();
             }}
             type="button"
@@ -1056,7 +1105,7 @@ export function PanelApp({
                   >
                     <button
                       aria-current={session.sessionId === sessionId ? 'true' : undefined}
-                      className="min-w-0 flex-1 truncate rounded-lg px-2 py-2 text-left aria-[current=true]:bg-emerald-50 aria-[current=true]:font-medium aria-[current=true]:text-emerald-800"
+                      className="min-w-0 flex-1 truncate rounded-lg px-2 py-2 text-left aria-[current=true]:bg-[#e8f2f5] aria-[current=true]:font-medium aria-[current=true]:text-[#176b87]"
                       disabled={!connected || Boolean(activeRequestId)}
                       onClick={() => connection.current?.selectSession?.(session.sessionId)}
                       title={`${session.title}${session.repository ? ` · ${session.repository}` : ''}`}
@@ -1114,182 +1163,169 @@ export function PanelApp({
             )}
           </details>
         </div>
-        {conversationExpanded ? (
-          <>
-            <section
-              aria-live="polite"
-              className="flex-1 space-y-4 overflow-y-auto bg-slate-100/60 p-3"
-              data-testid="conversation"
-            >
-              {sessionHistoryTruncated ? (
-                <p className="rounded bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  较早消息已摘要或因消息大小限制未在面板中展开。
-                </p>
-              ) : null}
-              {messages.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center text-sm text-slate-500">
-                  输入一条消息，开始询问当前 GitHub 页面。
-                </div>
-              ) : (
-                groupConversation(messages).map((turn) => {
-                  const collapsed = collapsedTurnIds.has(turn.id);
-                  const questionLabel = turn.question?.content.slice(0, 80);
-                  return (
-                    <div className="space-y-2.5" key={turn.id}>
-                      {turn.question ? (
-                        <article className="ml-6 flex items-start gap-2.5 rounded-xl rounded-tr-sm bg-slate-900 p-3 text-sm leading-6 text-white shadow-sm">
-                          <button
-                            aria-expanded={!collapsed}
-                            aria-label={`${collapsed ? '展开' : '收起'}问答：${questionLabel}`}
-                            className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-300 transition hover:bg-slate-700 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                            onClick={() =>
-                              setCollapsedTurnIds((current) => {
-                                const next = new Set(current);
-                                if (next.has(turn.id)) {
-                                  next.delete(turn.id);
-                                } else {
-                                  next.add(turn.id);
-                                }
-                                return next;
-                              })
+        <section
+          aria-live="polite"
+          className="mx-2.5 mb-2.5 flex-1 space-y-4 overflow-y-auto rounded-lg border border-[#d5dce7] bg-[#f7f9fc] p-2.5"
+          data-testid="conversation"
+        >
+          {sessionHistoryTruncated ? (
+            <p className="rounded bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              较早消息已摘要或因消息大小限制未在面板中展开。
+            </p>
+          ) : null}
+          {messages.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-[#b8c2d0] bg-white p-5 text-center text-sm text-[#65738a]">
+              输入一条消息，开始询问当前 GitHub 页面。
+            </div>
+          ) : (
+            groupConversation(messages).map((turn) => {
+              const collapsed = collapsedTurnIds.has(turn.id);
+              const questionLabel = turn.question?.content.slice(0, 80);
+              return (
+                <div className="space-y-2.5" key={turn.id}>
+                  {turn.question ? (
+                    <article className="ml-6 flex items-start gap-2.5 rounded-lg rounded-tr-sm border border-[#b7c2cd] bg-[#c7d0d9] p-2.5 text-sm leading-6 text-[#172238] shadow-sm">
+                      <button
+                        aria-expanded={!collapsed}
+                        aria-label={`${collapsed ? '展开' : '收起'}问答：${questionLabel}`}
+                        className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[#526173] transition hover:bg-[#b7c2cd] hover:text-[#172238] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#176b87]/30"
+                        onClick={() =>
+                          setCollapsedTurnIds((current) => {
+                            const next = new Set(current);
+                            if (next.has(turn.id)) {
+                              next.delete(turn.id);
+                            } else {
+                              next.add(turn.id);
                             }
-                            title={collapsed ? '展开这轮问答' : '收起这轮问答'}
-                            type="button"
-                          >
-                            <ChevronIcon className={collapsed ? '' : 'rotate-90'} />
-                          </button>
-                          <p className="min-w-0 whitespace-pre-wrap break-words">
-                            {turn.question.content}
-                          </p>
-                        </article>
-                      ) : null}
-                      {!collapsed
-                        ? turn.replies.map((reply) => (
-                            <article
-                              className="mr-6 overflow-hidden rounded-xl rounded-tl-sm border border-slate-200 bg-white text-sm leading-6 shadow-sm"
-                              key={reply.id}
+                            return next;
+                          })
+                        }
+                        title={collapsed ? '展开这轮问答' : '收起这轮问答'}
+                        type="button"
+                      >
+                        <ChevronIcon className={collapsed ? '' : 'rotate-90'} />
+                      </button>
+                      <p className="min-w-0 whitespace-pre-wrap break-words">
+                        {turn.question.content}
+                      </p>
+                    </article>
+                  ) : null}
+                  {!collapsed
+                    ? turn.replies.map((reply) => (
+                        <article
+                          className="mr-6 overflow-hidden rounded-lg rounded-tl-sm border border-[#d5dce7] bg-white text-sm leading-6 shadow-[0_2px_8px_rgba(23,34,56,0.06)]"
+                          key={reply.id}
+                        >
+                          {turn.question && sessionId ? (
+                            <div
+                              className="flex min-h-9 items-center justify-end border-b border-slate-100 bg-slate-50/70 px-2 py-1"
+                              data-testid="turn-actions"
                             >
-                              {turn.question && sessionId ? (
-                                <div
-                                  className="flex min-h-9 items-center justify-end border-b border-slate-100 bg-slate-50/70 px-2 py-1"
-                                  data-testid="turn-actions"
+                              {pendingTurnDeleteId === turn.id ? (
+                                <span
+                                  aria-label={`确认是否删除问答：${questionLabel}`}
+                                  className="flex items-center gap-1"
+                                  role="group"
                                 >
-                                  {pendingTurnDeleteId === turn.id ? (
-                                    <span
-                                      aria-label={`确认是否删除问答：${questionLabel}`}
-                                      className="flex items-center gap-1"
-                                      role="group"
-                                    >
-                                      <span className="mr-1 text-xs text-rose-700">
-                                        删除这轮问答？
-                                      </span>
-                                      <button
-                                        aria-label={`确认删除问答：${questionLabel}`}
-                                        className={`${iconButtonClass} text-rose-700 hover:bg-rose-100 hover:text-rose-800`}
-                                        disabled={!connected || Boolean(activeRequestId)}
-                                        onClick={() => {
-                                          connection.current?.deleteTurn?.(
-                                            sessionId,
-                                            turn.question!.id,
-                                          );
-                                          setPendingTurnDeleteId(undefined);
-                                        }}
-                                        title="确认删除"
-                                        type="button"
-                                      >
-                                        <CheckIcon />
-                                      </button>
-                                      <button
-                                        aria-label={`取消删除问答：${questionLabel}`}
-                                        className={iconButtonClass}
-                                        onClick={() => setPendingTurnDeleteId(undefined)}
-                                        title="取消删除"
-                                        type="button"
-                                      >
-                                        <CloseIcon />
-                                      </button>
-                                    </span>
-                                  ) : (
-                                    <button
-                                      aria-label={`删除问答：${questionLabel}`}
-                                      className={`${iconButtonClass} hover:border-rose-100 hover:bg-rose-50 hover:text-rose-700`}
-                                      disabled={!connected || Boolean(activeRequestId)}
-                                      onClick={() => setPendingTurnDeleteId(turn.id)}
-                                      title="删除这轮问答"
-                                      type="button"
-                                    >
-                                      <TrashIcon />
-                                    </button>
-                                  )}
-                                </div>
-                              ) : null}
-                              <div className="p-3">
-                                <MarkdownMessage content={reply.content} />
-                              </div>
-                            </article>
-                          ))
-                        : null}
-                    </div>
-                  );
-                })
-              )}
-            </section>
+                                  <span className="mr-1 text-xs text-rose-700">删除这轮问答？</span>
+                                  <button
+                                    aria-label={`确认删除问答：${questionLabel}`}
+                                    className={`${iconButtonClass} text-rose-700 hover:bg-rose-100 hover:text-rose-800`}
+                                    disabled={!connected || Boolean(activeRequestId)}
+                                    onClick={() => {
+                                      connection.current?.deleteTurn?.(
+                                        sessionId,
+                                        turn.question!.id,
+                                      );
+                                      setPendingTurnDeleteId(undefined);
+                                    }}
+                                    title="确认删除"
+                                    type="button"
+                                  >
+                                    <CheckIcon />
+                                  </button>
+                                  <button
+                                    aria-label={`取消删除问答：${questionLabel}`}
+                                    className={iconButtonClass}
+                                    onClick={() => setPendingTurnDeleteId(undefined)}
+                                    title="取消删除"
+                                    type="button"
+                                  >
+                                    <CloseIcon />
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  aria-label={`删除问答：${questionLabel}`}
+                                  className={`${iconButtonClass} hover:border-rose-100 hover:bg-rose-50 hover:text-rose-700`}
+                                  disabled={!connected || Boolean(activeRequestId)}
+                                  onClick={() => setPendingTurnDeleteId(turn.id)}
+                                  title="删除这轮问答"
+                                  type="button"
+                                >
+                                  <TrashIcon />
+                                </button>
+                              )}
+                            </div>
+                          ) : null}
+                          <div className="p-3">
+                            <MarkdownMessage content={reply.content} />
+                          </div>
+                        </article>
+                      ))
+                    : null}
+                </div>
+              );
+            })
+          )}
+        </section>
 
-            <form
-              className="sticky bottom-0 z-10 border-t border-slate-200 bg-white/95 p-3 backdrop-blur"
-              onSubmit={(event) => {
+        <form
+          className="sticky bottom-0 z-10 border-t border-[#d5dce7] bg-white/95 p-2.5 backdrop-blur"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit();
+          }}
+        >
+          <label className="sr-only" htmlFor="panel-message">
+            输入问题
+          </label>
+          <textarea
+            className="min-h-24 w-full resize-y rounded-lg border border-[#d5dce7] bg-white p-2.5 text-sm leading-6 text-[#172238] shadow-[0_2px_8px_rgba(23,34,56,0.08)] outline-none transition placeholder:text-[#8b97a8] focus:border-[#176b87] focus:ring-2 focus:ring-[#176b87]/15"
+            id="panel-message"
+            maxLength={8_000}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
                 event.preventDefault();
                 submit();
-              }}
+              }
+            }}
+            placeholder="问问当前 GitHub 页面……"
+            ref={questionInput}
+            value={draft}
+          />
+          <p className="mt-1.5 text-xs text-[#65738a]">Enter 发送 · Shift+Enter 换行</p>
+          {activeRequestId ? (
+            <button
+              className={`${secondaryButtonClass} mt-2 w-full border-rose-300 text-rose-700`}
+              onClick={() => connection.current?.abort(activeRequestId)}
+              type="button"
             >
-              <label className="sr-only" htmlFor="panel-message">
-                输入问题
-              </label>
-              <textarea
-                className="min-h-24 w-full resize-y rounded-lg border border-slate-300 bg-white p-3 text-sm leading-6 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                id="panel-message"
-                maxLength={8_000}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-                    event.preventDefault();
-                    submit();
-                  }
-                }}
-                placeholder="问问当前 GitHub 页面……"
-                ref={questionInput}
-                value={draft}
-              />
-              <p className="mt-1.5 text-xs text-slate-500">Enter 发送 · Shift+Enter 换行</p>
-              {activeRequestId ? (
-                <button
-                  className={`${secondaryButtonClass} mt-2 w-full border-rose-300 text-rose-700`}
-                  onClick={() => connection.current?.abort(activeRequestId)}
-                  type="button"
-                >
-                  停止生成
-                </button>
-              ) : (
-                <button
-                  className={`${primaryButtonClass} mt-2 w-full`}
-                  disabled={
-                    !connected ||
-                    !draft.trim() ||
-                    pickStatus === 'active' ||
-                    regionStatus === 'active'
-                  }
-                  type="submit"
-                >
-                  发送
-                </button>
-              )}
-            </form>
-          </>
-        ) : (
-          <p className="bg-slate-50 p-4 text-xs text-slate-500">
-            问答已收起；展开后可继续当前会话。
-          </p>
-        )}
+              停止生成
+            </button>
+          ) : (
+            <button
+              className={`${primaryButtonClass} mt-2 w-full`}
+              disabled={
+                !connected || !draft.trim() || pickStatus === 'active' || regionStatus === 'active'
+              }
+              type="submit"
+            >
+              发送
+            </button>
+          )}
+        </form>
       </section>
     </main>
   );

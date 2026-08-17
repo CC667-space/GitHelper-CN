@@ -63,6 +63,39 @@ afterEach(() => {
 });
 
 describe('Phase 5 UI', () => {
+  it('Panel 以四个分段导航切换功能区，问答区不再提供整体收起按钮', async () => {
+    const connect = vi.fn((_onEvent, _onProviderState, onConnectionChange) => {
+      onConnectionChange(true);
+      return {
+        send: vi.fn(),
+        abort: vi.fn(),
+        disconnect: vi.fn(),
+      };
+    });
+    const user = userEvent.setup();
+
+    render(<PanelApp connect={connect} />);
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      '页面提问',
+      '仓库分析',
+      '中文搜索',
+      '问答',
+    ]);
+    expect(tabs[0]?.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByTestId('page-question').hasAttribute('hidden')).toBe(false);
+    expect(screen.getByTestId('question-answer').hasAttribute('hidden')).toBe(true);
+
+    await user.click(screen.getByRole('tab', { name: '问答' }));
+
+    expect(screen.getByRole('tab', { name: '问答' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByTestId('question-answer').hasAttribute('hidden')).toBe(false);
+    expect(screen.getByTestId('page-question').hasAttribute('hidden')).toBe(true);
+    expect(screen.getByTestId('repository-analysis').hasAttribute('hidden')).toBe(true);
+    expect(screen.queryByRole('button', { name: '收起问答' })).toBeNull();
+  });
+
   it('Panel 重开后恢复会话并提示未展开的早期历史', async () => {
     let emitSessionState: ((state: PanelSessionState) => void) | undefined;
     const connect = vi.fn((_onEvent, _onProviderState, onConnectionChange, onSessionState) => {
@@ -127,12 +160,16 @@ describe('Phase 5 UI', () => {
     expect(screen.queryByText('其他页面自动匹配的会话')).toBeNull();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: '收起问答' }));
-    expect(screen.queryByTestId('conversation')).toBeNull();
-    expect(screen.queryByLabelText('输入问题')).toBeNull();
-    await user.click(screen.getByRole('button', { name: '展开问答' }));
+    await user.click(screen.getByRole('tab', { name: '问答' }));
+    const qaPanel = screen.getByRole('tabpanel', { name: '问答' });
     expect(screen.getByTestId('conversation')).toBeTruthy();
     expect(screen.getByLabelText('输入问题')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '收起问答' })).toBeNull();
+    await user.click(screen.getByRole('tab', { name: '页面提问' }));
+    expect(qaPanel.hidden).toBe(true);
+    await user.click(screen.getByRole('tab', { name: '问答' }));
+    expect(qaPanel.hidden).toBe(false);
+    expect(screen.getByText('此前的问题')).toBeTruthy();
   });
 
   it('Panel 可选择最近会话并显式新建隔离会话', async () => {
@@ -183,6 +220,7 @@ describe('Phase 5 UI', () => {
     const user = userEvent.setup();
     render(<PanelApp connect={connect} />);
 
+    await user.click(screen.getByRole('tab', { name: '问答' }));
     expect(await screen.findByRole('option', { name: /第一个主题/ })).toBeTruthy();
     expect(screen.getByRole('option', { name: /第二个主题/ })).toBeTruthy();
     await user.selectOptions(screen.getByLabelText('当前会话'), 'session-2');
@@ -276,6 +314,12 @@ describe('Phase 5 UI', () => {
     const user = userEvent.setup();
     render(<PanelApp connect={connect} />);
 
+    await user.click(screen.getByRole('tab', { name: '问答' }));
+    const questionBubble = screen.getByText('第一个问题').closest('article');
+    expect(questionBubble?.className).toContain('bg-[#c7d0d9]');
+    expect(questionBubble?.className).toContain('text-[#172238]');
+    expect(screen.getByTestId('session-controls').className).toContain('mb-2.5');
+
     await user.click(screen.getByRole('button', { name: '收起问答：第一个问题' }));
     expect(screen.queryByText('第一个回答')).toBeNull();
     expect(screen.getByText('第二个回答')).toBeTruthy();
@@ -346,6 +390,7 @@ describe('Phase 5 UI', () => {
     const user = userEvent.setup();
     render(<PanelApp connect={connect} />);
 
+    await user.click(screen.getByRole('tab', { name: '问答' }));
     await user.click(screen.getByText('管理会话（2）'));
     const deleteSessionButton = screen.getByRole('button', { name: '删除会话：第一个主题' });
     expect(deleteSessionButton.querySelector('[data-icon="trash"]')).toBeTruthy();

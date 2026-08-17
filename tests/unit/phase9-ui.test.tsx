@@ -68,6 +68,7 @@ describe('Phase 9 repository analysis Panel', () => {
     const user = userEvent.setup();
     render(<PanelApp connect={connect} />);
 
+    await user.click(screen.getByRole('tab', { name: '仓库分析' }));
     await user.click(screen.getByRole('button', { name: '一键分析' }));
     expect(analyzeRepository).toHaveBeenCalledExactlyOnceWith('deepseek');
     act(() =>

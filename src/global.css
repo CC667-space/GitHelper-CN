@@ -1,8 +1,8 @@
 @import 'tailwindcss';
 
 :root {
-  color: #1f2328;
-  background: #ffffff;
+  color: #172238;
+  background: #f7f9fc;
   font-family:
     Inter,
     ui-sans-serif,
@@ -10,7 +10,9 @@
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
+    'Microsoft YaHei',
     sans-serif;
+  font-size: 14px;
 }
 
 * {
@@ -20,6 +22,7 @@
 body {
   margin: 0;
   min-width: 320px;
+  background: #f7f9fc;
 }
 
 button,

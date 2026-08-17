@@ -64,6 +64,7 @@ describe('Phase 8 Panel GitHub search', () => {
     const user = userEvent.setup();
     render(<PanelApp connect={connect} />);
 
+    await user.click(screen.getByRole('tab', { name: '中文搜索' }));
     expect(screen.queryByText('不调用 AI Provider')).toBeNull();
     expect(screen.getByText('使用当前文本 Provider · 本地安全校验')).toBeTruthy();
     expect(screen.getByText(/每次搜索最多调用 1 次/)).toBeTruthy();
@@ -143,6 +144,7 @@ describe('Phase 8 Panel GitHub search', () => {
     );
     const user = userEvent.setup();
     render(<PanelApp connect={connect} />);
+    await user.click(screen.getByRole('tab', { name: '中文搜索' }));
     act(() =>
       emitSearchState?.({
         status: 'done',
