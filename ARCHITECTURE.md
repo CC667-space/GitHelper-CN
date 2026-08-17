@@ -213,6 +213,9 @@ password input 不读取 value。`sourceUrl` 与发送时页面不一致则丢�
 Provider 只接收用户主动填写的搜索描述、目标类型和当前日期，不接收 PageContext；每次搜索最多
 调用一次、不重试，输出不能直接提供 URL 或原始 GitHub query。日期换算、限定词拼接、长度限制、
 工具白名单和最终 API 请求始终由本地代码控制。Provider 不可用时自动使用本地转换器。
+本地降级器会移除 GitHub 无法执行的中文请求套话并保留核心主题，不使用领域硬编码翻译；失败提示
+只显示 Provider 的脱敏类别。GitHub Search 返回的可选仓库描述超过 2,000 字符时丢弃该字段但保留
+其余结果；其他 Schema 异常只向 Panel 返回固定中文错误，不透传 Zod 内部路径（D-065）。
 `github:rate-limits:v1` 持久化 `core/search/code_search` 三桶的 remaining/reset/blockedUntil，
 同桶限流后到点前直接降级且不重试。API 与网页 URL 都由 Background 固定构造，Panel 不能要求
 Background fetch 任意 URL；结果打开只接受 `https://github.com/*`。

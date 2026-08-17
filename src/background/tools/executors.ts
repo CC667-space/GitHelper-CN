@@ -6,12 +6,36 @@ import {
   type SearchTarget,
 } from '../../lib/github-search';
 import { GitHubApiClient, GitHubRateLimitError } from '../github-api';
+import { ProviderSelectionError } from '../provider-manager';
+import { ProviderError } from '../providers/base';
 import {
   compileProviderSearchIntent,
   convertNaturalLanguageSearch,
   type ProviderSearchIntent,
 } from '../search-query';
 import { SearchToolRegistry } from './registry';
+
+function searchIntentFallbackNotice(error: unknown): string {
+  let reason = '当前文本 Provider 请求失败';
+  if (error instanceof ProviderSelectionError) {
+    reason =
+      error.code === 'MODEL_REQUIRED'
+        ? '当前文本 Provider 未配置模型'
+        : '当前文本 Provider 尚不可用';
+  } else if (error instanceof ProviderError) {
+    const reasons: Record<ProviderError['code'], string> = {
+      AUTH: '当前文本 Provider 鉴权失败',
+      RATE_LIMIT: '当前文本 Provider 已限流',
+      MODEL_UNAVAILABLE: '当前文本 Provider 模型不可用',
+      PROVIDER_UNAVAILABLE: '当前文本 Provider 请求失败',
+      INVALID_RESPONSE: 'Provider 返回格式不符合搜索要求',
+      ABORTED: 'AI 理解请求已取消',
+      HTTP_ERROR: '当前文本 Provider 请求失败',
+    };
+    reason = reasons[error.code];
+  }
+  return `AI 理解失败：${reason}；已自动使用本地规则生成查询。`;
+}
 
 function githubSearchUrl(query: string, target: 'repositories' | 'issues'): string {
   const url = new URL('https://github.com/search');
@@ -90,7 +114,7 @@ export class GitHubSearchExecutor {
           throw error;
         }
         conversion = convertNaturalLanguageSearch(input.naturalLanguage, input.target, now);
-        conversionNotice = 'AI 理解暂不可用，已自动使用本地规则生成查询。';
+        conversionNotice = searchIntentFallbackNotice(error);
       }
     } else {
       conversion = convertNaturalLanguageSearch(input.naturalLanguage, input.target, now);

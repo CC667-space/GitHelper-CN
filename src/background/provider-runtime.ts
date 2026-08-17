@@ -12,8 +12,12 @@ import { runCapabilityProbe, type CapabilityProbeReport } from './capability-pro
 import { buildMinimalContext } from './context-builder';
 import { getCredentialMask } from './credential-store';
 import { assertPublicContext } from './outbound-policy';
-import { ProviderManager, type CapabilityProbeSummary } from './provider-manager';
-import type { Provider, ProviderChatRequest } from './providers/base';
+import {
+  ProviderManager,
+  ProviderSelectionError,
+  type CapabilityProbeSummary,
+} from './provider-manager';
+import { ProviderError, type Provider, type ProviderChatRequest } from './providers/base';
 import { DeepSeekProvider } from './providers/deepseek';
 import { AnthropicProvider } from './providers/anthropic';
 import { GeminiProvider } from './providers/gemini';
@@ -446,7 +450,7 @@ export class ProviderRuntime {
     const settings = await providerSettingsStore().read();
     const model = settings.providers[provider.id]?.textModel;
     if (!model) {
-      throw new Error(`${provider.label} 尚未配置文本模型 ID`);
+      throw new ProviderSelectionError('MODEL_REQUIRED', `${provider.label} 尚未配置文本模型 ID`);
     }
     const sanitized = sanitizeUnknown({
       naturalLanguage: input.naturalLanguage,
@@ -473,11 +477,15 @@ export class ProviderRuntime {
       temperature: 0,
     };
     const response = await provider.chat(request, input.signal);
-    return {
-      intent: parseProviderSearchIntent(response.content),
-      providerId: provider.id,
-      providerLabel: provider.label,
-    };
+    try {
+      return {
+        intent: parseProviderSearchIntent(response.content),
+        providerId: provider.id,
+        providerLabel: provider.label,
+      };
+    } catch {
+      throw new ProviderError('INVALID_RESPONSE', 'Provider 返回格式不符合搜索要求');
+    }
   }
 
   abort(requestId: string): boolean {

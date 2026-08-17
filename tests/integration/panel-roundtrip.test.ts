@@ -5,6 +5,7 @@ import { handlePageInfoRequest } from '../../src/content/page-info';
 import { createEnvelope, parseEnvelope, type Envelope } from '../../src/lib/messaging';
 import { pageInfoSchema, type StreamEvent } from '../../src/lib/bridge-protocol';
 import { defaultUserPreferences } from '../../src/background/prefs-store';
+import { githubSearchResultSchema } from '../../src/lib/github-search';
 
 const runtimeId = 'abcdefghijklmnopabcdefghijklmnop';
 const panelSender = {
@@ -708,6 +709,59 @@ describe('Panel → Background → Content → Panel', () => {
       requestId: 'search-private-page',
       error: expect.stringMatching(/私有|禁止出站/u),
     });
+  });
+
+  it('搜索响应 Schema 异常时只向 Panel 返回安全中文错误', async () => {
+    const emitSearchState = vi.fn();
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(async () => {
+        throw new Error('当前 GitHub 页面尚未完成解析');
+      }),
+      streamAnswer: vi.fn(),
+      search: vi.fn(async () =>
+        githubSearchResultSchema.parse({
+          status: 'ok',
+          conversion: {
+            naturalLanguage: '声音克隆',
+            target: 'repositories',
+            query: '声音克隆',
+            explanation: '搜索公开仓库。',
+          },
+          totalCount: 1,
+          items: [
+            {
+              kind: 'repository',
+              id: 1,
+              title: 'example/repository',
+              url: 'https://github.com/example/repository',
+              description: 'x'.repeat(2_001),
+              stars: 1,
+              updatedAt: '2026-08-17T00:00:00.000Z',
+              archived: false,
+            },
+          ],
+        }),
+      ),
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitSearchState,
+    });
+
+    await bridge.dispatch(
+      createEnvelope(
+        'PANEL_SEARCH',
+        { naturalLanguage: '声音克隆', target: 'repositories' },
+        { id: 'search-invalid-response' },
+      ),
+      panelSender,
+    );
+
+    expect(emitSearchState).toHaveBeenLastCalledWith({
+      status: 'error',
+      requestId: 'search-invalid-response',
+      error: 'GitHub 返回的数据格式异常，本次搜索未显示结果。',
+    });
+    expect(JSON.stringify(emitSearchState.mock.calls)).not.toMatch(/too_big|items|description/u);
   });
 
   it('一键仓库分析经当前 PageContext 执行并推回固定卡片', async () => {

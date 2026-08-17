@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ProviderRuntime } from '../../src/background/provider-runtime';
-import type { Provider } from '../../src/background/providers/base';
+import { ProviderError, type Provider } from '../../src/background/providers/base';
 import type { ProviderCapabilities, ProviderId } from '../../src/lib/types';
 
 function provider(chat: Provider['chat']): Provider {
@@ -110,5 +110,31 @@ describe('ProviderRuntime search intent', () => {
     const serializedMessages = JSON.stringify(chat.mock.calls[0]?.[0].messages);
     expect(serializedMessages).toContain('最近两个月 Star 超过 1000 的 AI 相关项目');
     expect(serializedMessages).not.toContain('PageContext');
+  });
+
+  it('把不符合搜索 Schema 的 Provider 内容归类为 INVALID_RESPONSE', async () => {
+    stubStorage();
+    const runtime = new ProviderRuntime(
+      new Map<ProviderId, Provider>([
+        [
+          'deepseek',
+          provider(
+            vi.fn(async () => ({
+              content: '{"target":"repository","keywords":["voice cloning"]}',
+            })),
+          ),
+        ],
+      ]),
+    );
+
+    const result = runtime.generateSearchIntent({
+      requestId: 'search-intent-invalid',
+      naturalLanguage: '声音克隆',
+      requestedTarget: 'auto',
+      signal: new AbortController().signal,
+    });
+
+    await expect(result).rejects.toBeInstanceOf(ProviderError);
+    await expect(result).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
 });

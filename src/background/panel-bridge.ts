@@ -1,3 +1,5 @@
+import { ZodError } from 'zod';
+
 import {
   contentPickCancelSchema,
   contentPickCancelResponseSchema,
@@ -449,9 +451,13 @@ export class PanelBridge {
       });
       return { accepted: true, requestId: context.requestId };
     } catch (error: unknown) {
-      const message = sanitizeText(
-        error instanceof Error ? error.message : String(error),
-      ).value.slice(0, 1_000);
+      const message =
+        error instanceof ZodError
+          ? 'GitHub 返回的数据格式异常，本次搜索未显示结果。'
+          : sanitizeText(error instanceof Error ? error.message : String(error)).value.slice(
+              0,
+              1_000,
+            );
       this.dependencies.emitSearchState({
         status: 'error',
         requestId: context.requestId,

@@ -73,6 +73,16 @@ describe('中文自然语言 GitHub 搜索转换', () => {
     expect(result.query).not.toMatch(/最近|相关|项目|(?:^|\s)的(?:\s|$)/u);
   });
 
+  it.each(['找一些声音克隆相关的项目', '帮我找一些声音克隆相关的完整功能项目'])(
+    '本地降级时移除无法执行的搜索套话：%s',
+    (input) => {
+      const result = convertNaturalLanguageSearch(input, 'auto', NOW);
+
+      expect(result.target).toBe('repositories');
+      expect(result.query).toBe('声音克隆');
+    },
+  );
+
   it('把 Provider 的受限语义结构编译为本地校验的 GitHub query', () => {
     const result = compileProviderSearchIntent(
       '最近两个月 Star 超过 1000 的 AI 相关项目',

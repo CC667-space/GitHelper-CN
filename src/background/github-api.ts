@@ -78,6 +78,11 @@ export interface GitHubApiDependencies {
   writeRateLimits(value: RateLimitStorage): Promise<void>;
 }
 
+const searchRepositoryDescriptionSchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.length > 2_000 ? null : value),
+  z.string().max(2_000).nullable(),
+);
+
 const repositorySearchResponseSchema = z
   .object({
     total_count: z.number().int().nonnegative(),
@@ -87,7 +92,7 @@ const repositorySearchResponseSchema = z
           id: z.number().int().nonnegative(),
           full_name: z.string().min(1).max(500),
           html_url: z.url(),
-          description: z.string().max(2_000).nullable(),
+          description: searchRepositoryDescriptionSchema,
           language: z.string().max(100).nullable(),
           stargazers_count: z.number().int().nonnegative(),
           updated_at: z.iso.datetime(),

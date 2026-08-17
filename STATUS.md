@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 11 — 测试、打包与 MVP 验收：八家固定 Provider 配置体系已完成自动验收，等待真实 Chrome 单 Provider 复测，随后继续 S1–S5 复核。**
+**Phase 11 — 测试、打包与 MVP 验收：中文搜索异常降级补丁已完成自动验收，等待真实 Chrome 复测，随后继续 Provider 与 S1–S5 复核。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -249,10 +249,16 @@
   - 自动门禁：定向回归 4/4；Vitest 53 files / 253 tests 全过（另 1 个 Phase 9 live test 默认跳过）；typecheck、lint、变更文件格式、build（414 modules）与构建安全扫描通过
   - 隔离 Chrome 149 E2E 通过，原生 Panel 打开及标签切换关闭正常，Provider 请求 0、页面异常 0
   - 最新本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `542add1c74f9b24ae077e70e77e5c0756976a1e04fd96fc6ceaf0b355c46f8ce`
+- [x] **Phase 11 — 中文搜索异常降级补丁（2026-08-17）完成**：
+  - 红测复现 GitHub 公开搜索返回 54,926/55,700 字符仓库描述后整批触发 `description too_big`，改为丢弃单条异常超长的可选描述并保留仓库结果；搜索 Schema 异常只返回安全中文提示，不再向 Panel 暴露 Zod 路径
+  - 本地降级器清理“找一些/找几个”和“完整功能/功能完整”等不可执行套话，截图原句均收敛为核心 query `声音克隆`；不硬编码领域翻译或虚构 Star、语言等条件
+  - Provider 失败继续不重试，并按现有 `ProviderSelectionError` / `ProviderError` 显示脱敏类别（不可用、未配置模型、鉴权、限流、模型不可用、格式不合格），不显示上游响应正文
+  - 记录 D-065；定向回归 48/48；Vitest 53 files / 264 tests 全过（另 1 个 Phase 9 live test 默认跳过）；typecheck、lint、变更文件格式、build（414 modules）与构建安全扫描通过
+  - 隔离 Chrome 149 E2E 通过，S3 在无 Provider 环境显示脱敏失败类别并完成本地降级搜索；Provider 请求 0、页面异常 0
 
 ## 下一任务
-**真实 Chrome 复核 D-064 → Phase 11 Provider 单家真实复测 → 强制确认节点 ② S1–S5 批量体验复核**。
-用户在真实 Chrome 重新加载最新 `dist/`，打开后关闭 Panel 或切换标签页，确认扩展错误页不再新增 disconnected-port 异常；随后确认 Options 显示八家 Provider，并使用已保存 Key 点击 DeepSeek（或任一既有可用家）的“仅复测该 Provider”。无需重填 Key，也无需配置新增五家。复测通过后继续 `docs/USER_GUIDE.md` 第 9 节 S1–S5；全部通过后执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
+**真实 Chrome 复核 D-065 中文搜索补丁 → D-064 → Phase 11 Provider 单家真实复测 → 强制确认节点 ② S1–S5 批量体验复核**。
+用户在真实 Chrome 重新加载最新 `dist/`，分别重试“找一些声音克隆相关的项目”和“帮我找一些声音克隆相关的完整功能项目”，确认不再显示原始 Schema JSON；若 AI 意图解析失败并显示本地降级，query 应为“声音克隆”，若 Provider 成功则允许显示其提取并经本地校验的英文语义词。随后打开后关闭 Panel 或切换标签页，确认扩展错误页不再新增 disconnected-port 异常。最后确认 Options 显示八家 Provider，并使用已保存 Key 点击 DeepSeek（或任一既有可用家）的“仅复测该 Provider”。无需重填 Key，也无需配置新增五家。复测通过后继续 `docs/USER_GUIDE.md` 第 9 节 S1–S5；全部通过后执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
 
 ## 已登记的后续优化
 - [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
@@ -332,3 +338,4 @@
 - 2026-07-30：Phase 11 Side Panel 标签页切换关闭补丁完成；Chrome 141+ 使用 feature-detected `sidePanel.close({windowId})`，保留 direct-open user gesture 路径且不新增权限（D-062）；任务 1 已由 Chrome 149 原生 `onClosed` E2E 证明，任务 2–4 按选做降级规则跳过。
 - 2026-08-03：经用户明确授权完成 v1.3 Provider 定向修订（D-063）：八家固定目录、五家逐家精确可选 Host 权限、无密钥设置 JSON、旧配置迁移及 OpenAI 当前 token 参数映射落地；249 项常规测试及完整静态/构建/安全/E2E 门禁通过，待真实 Chrome 重载后使用既有 Key 做一次单 Provider 复测。
 - 2026-08-03：Phase 11 Side Panel 断开 Port 异常补丁完成；异步出站统一接入连接生命周期门控并覆盖 `onDisconnect` 前竞态（D-064），253 项常规测试及完整静态/构建/安全/E2E 门禁通过，待真实 Chrome 扩展错误页复核。
+- 2026-08-17：Phase 11 中文搜索异常降级补丁完成；异常超长仓库描述不再阻断整批结果，本地 query 清理截图套话，Provider 失败显示脱敏类别且 Panel 不再暴露 Zod JSON（D-065）；264 项常规测试及完整静态/构建/安全/E2E 门禁通过，待真实 Chrome 复测两条截图原句。

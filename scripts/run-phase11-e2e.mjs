@@ -432,8 +432,10 @@ try {
   assert(githubSearchText.includes('stars:>1000'), 'E2E 搜索结果缺少 Star 查询解释');
   assert(githubSearchText.includes('pushed:>='), 'E2E 搜索结果缺少时间查询解释');
   assert(
-    githubSearchText.includes('AI 理解暂不可用，已自动使用本地规则生成查询。'),
-    'E2E 无 Provider 环境未显示本地降级说明',
+    githubSearchText.includes(
+      'AI 理解失败：当前文本 Provider 尚不可用；已自动使用本地规则生成查询。',
+    ),
+    'E2E 无 Provider 环境未显示脱敏失败类别与本地降级说明',
   );
   assert(githubSearchText.includes('2,600'), 'E2E 搜索结果缺少 Star 数据');
 

@@ -113,6 +113,49 @@ describe('GitHubApiClient', () => {
     expect(urls[1]).toContain('/search/issues?');
   });
 
+  it('远端仓库 description 异常超长时丢弃描述但保留搜索结果', async () => {
+    const longDescription = 'x'.repeat(55_700);
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            total_count: 2,
+            items: [1, 2].map((id) => ({
+              id,
+              full_name: `example/repository-${id}`,
+              html_url: `https://github.com/example/repository-${id}`,
+              description: longDescription,
+              language: 'TypeScript',
+              stargazers_count: id,
+              updated_at: '2026-08-17T00:00:00.000Z',
+              archived: false,
+            })),
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'X-RateLimit-Resource': 'search',
+              'X-RateLimit-Remaining': '9',
+              'X-RateLimit-Reset': '1786928400',
+            },
+          },
+        ),
+    );
+    const client = new GitHubApiClient(dependencies(fetchMock).dependencies);
+
+    const result = await client.searchRepositories('找一些声音克隆', new AbortController().signal);
+
+    expect(result.totalCount).toBe(2);
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0]).toMatchObject({
+      kind: 'repository',
+      title: 'example/repository-1',
+    });
+    expect(result.items[0]?.kind === 'repository' && result.items[0].description).toBeUndefined();
+    expect(result.items[1]?.kind === 'repository' && result.items[1].description).toBeUndefined();
+  });
+
   it('命中 search 限流后不重试，同桶请求直接拒绝，到点后恢复一次请求', async () => {
     const resetSeconds = Math.floor(Date.parse('2026-07-24T08:01:00.000Z') / 1_000);
     const fetchMock = vi

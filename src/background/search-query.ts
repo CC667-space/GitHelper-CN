@@ -279,9 +279,13 @@ function removeRecognizedPhrases(input: string): string {
       /\b(?:language|stars|topic|repo|org|user|is|state|label|pushed|created|updated|archived|license):(?:"[^"]+"|\S+)/giu,
       ' ',
     )
-    .replace(/(?:请|帮我|帮忙|搜索|查找|找一下|寻找|查一下|查找一下|有哪些|有没有|我想找)/gu, ' ')
+    .replace(
+      /(?:请|帮我|帮忙|搜索|查找|找一下|找一些|找几个|寻找|查一下|查找一下|有哪些|有没有|我想找)/gu,
+      ' ',
+    )
     .replace(/\b(?:good first issue|help wanted|documentation|bug)\b/giu, ' ')
     .replace(/(?:仓库|项目|代码库|issues?|议题|问题单|工单)/giu, ' ')
+    .replace(/(?:完整功能|功能完整)/gu, ' ')
     .replace(
       /(?:stars?|star|星标|星星|收藏)[^\d]{0,10}(?:(?:至少|不低于|大于等于|超过|大于|至多|不高于|小于等于|少于|小于|>=|<=|>|<)\s*)?\d+/giu,
       ' ',

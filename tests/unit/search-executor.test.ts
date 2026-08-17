@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { GitHubSearchExecutor } from '../../src/background/tools/executors';
 import { GitHubRateLimitError, type GitHubApiClient } from '../../src/background/github-api';
+import { ProviderSelectionError } from '../../src/background/provider-manager';
+import { ProviderError } from '../../src/background/providers/base';
 
 describe('GitHubSearchExecutor 降级', () => {
   it('优先使用一次 Provider 语义解析，再由本地编译查询', async () => {
@@ -75,7 +77,56 @@ describe('GitHubSearchExecutor 降级', () => {
       'AI stars:>1000 pushed:>=2026-05-28',
       expect.any(AbortSignal),
     );
-    expect(result.notice).toBe('AI 理解暂不可用，已自动使用本地规则生成查询。');
+    expect(result.notice).toBe(
+      'AI 理解失败：当前文本 Provider 请求失败；已自动使用本地规则生成查询。',
+    );
+  });
+
+  it.each([
+    {
+      error: new ProviderSelectionError('TEXT_UNVERIFIED', 'DeepSeek 尚未完成真实文本能力探针'),
+      reason: '当前文本 Provider 尚不可用',
+    },
+    {
+      error: new ProviderSelectionError('MODEL_REQUIRED', 'DeepSeek 尚未配置文本模型 ID'),
+      reason: '当前文本 Provider 未配置模型',
+    },
+    {
+      error: new ProviderError('AUTH', 'DeepSeek: secret upstream auth body', 401),
+      reason: '当前文本 Provider 鉴权失败',
+    },
+    {
+      error: new ProviderError('RATE_LIMIT', 'DeepSeek: secret upstream rate body', 429),
+      reason: '当前文本 Provider 已限流',
+    },
+    {
+      error: new ProviderError('MODEL_UNAVAILABLE', 'DeepSeek: model missing', 404),
+      reason: '当前文本 Provider 模型不可用',
+    },
+    {
+      error: new ProviderError('INVALID_RESPONSE', 'secret invalid response body'),
+      reason: 'Provider 返回格式不符合搜索要求',
+    },
+  ])('Provider 失败只显示脱敏类别：$reason', async ({ error, reason }) => {
+    const executor = new GitHubSearchExecutor(
+      {
+        searchRepositories: vi.fn(async () => ({ totalCount: 0, items: [] })),
+        searchIssues: vi.fn(),
+      } as unknown as GitHubApiClient,
+      vi.fn(async () => {
+        throw error;
+      }),
+    );
+
+    const result = await executor.search({
+      naturalLanguage: '声音克隆',
+      target: 'repositories',
+      signal: new AbortController().signal,
+    });
+
+    expect(result.notice).toContain(reason);
+    expect(result.notice).toContain('已自动使用本地规则生成查询');
+    expect(result.notice).not.toMatch(/secret|upstream|auth body|rate body/iu);
   });
 
   it('search 桶受限时返回 GitHub 网页 URL 且不做第二次 API 请求', async () => {
