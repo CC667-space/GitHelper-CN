@@ -16,13 +16,17 @@ export const providerIdSchema = z.enum(PROVIDER_IDS);
 export interface ProviderCatalogEntry {
   id: ProviderId;
   label: string;
+  settingsLabel?: string;
   apiHost: string;
   apiPath: string;
   hostPermission: 'required' | 'optional';
   intermediary: boolean;
   defaultTextModel: string;
   defaultVisionModel?: string;
-  modelSuggestions: string[];
+  modelSuggestions: {
+    text: readonly string[];
+    vision: readonly string[];
+  };
   connectionNote?: string;
 }
 
@@ -35,7 +39,10 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     hostPermission: 'required',
     intermediary: false,
     defaultTextModel: 'deepseek-v4-flash',
-    modelSuggestions: ['deepseek-v4-flash', 'deepseek-v4-pro'],
+    modelSuggestions: {
+      text: ['deepseek-v4-flash', 'deepseek-v4-pro'],
+      vision: [],
+    },
   },
   {
     id: 'uuapi',
@@ -46,7 +53,7 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     intermediary: true,
     defaultTextModel: '',
     defaultVisionModel: '',
-    modelSuggestions: [],
+    modelSuggestions: { text: [], vision: [] },
   },
   {
     id: 'openrouter',
@@ -57,29 +64,41 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     intermediary: true,
     defaultTextModel: '~openai/gpt-latest',
     defaultVisionModel: 'openrouter/free',
-    modelSuggestions: ['~openai/gpt-latest', 'openrouter/free'],
+    modelSuggestions: {
+      text: ['openrouter/auto', 'openrouter/free', '~openai/gpt-latest'],
+      vision: ['openrouter/free', '~openai/gpt-latest', '~google/gemini-flash-latest'],
+    },
   },
   {
     id: 'openai',
     label: 'OpenAI',
+    settingsLabel: 'ChatGPT（OpenAI API）',
     apiHost: 'https://api.openai.com',
     apiPath: '/v1/chat/completions',
     hostPermission: 'optional',
     intermediary: false,
     defaultTextModel: 'gpt-5-mini',
     defaultVisionModel: 'gpt-5-mini',
-    modelSuggestions: ['gpt-5-mini', 'gpt-4.1-mini'],
+    modelSuggestions: {
+      text: ['gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.6-sol'],
+      vision: ['gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.6-sol'],
+    },
+    connectionNote: '需要 OpenAI API Key；ChatGPT 登录或订阅不能代替 API Key。',
   },
   {
     id: 'anthropic',
     label: 'Anthropic',
+    settingsLabel: 'Claude（Anthropic API）',
     apiHost: 'https://api.anthropic.com',
     apiPath: '/v1/chat/completions',
     hostPermission: 'optional',
     intermediary: false,
     defaultTextModel: 'claude-sonnet-4-6',
     defaultVisionModel: 'claude-sonnet-4-6',
-    modelSuggestions: ['claude-sonnet-4-6', 'claude-opus-5'],
+    modelSuggestions: {
+      text: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5'],
+      vision: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5'],
+    },
     connectionNote: '当前使用 Anthropic 官方 OpenAI 兼容层；高级原生能力不在本版本范围内。',
   },
   {
@@ -91,7 +110,10 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     intermediary: false,
     defaultTextModel: 'gemini-3.6-flash',
     defaultVisionModel: 'gemini-3.6-flash',
-    modelSuggestions: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
+    modelSuggestions: {
+      text: ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite'],
+      vision: ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite'],
+    },
     connectionNote: '当前使用 Google 官方 OpenAI 兼容接口。',
   },
   {
@@ -103,7 +125,10 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     intermediary: false,
     defaultTextModel: 'qwen-plus',
     defaultVisionModel: 'qwen-vl-plus',
-    modelSuggestions: ['qwen-plus', 'qwen3.8-max', 'qwen-vl-plus', 'qwen-vl-max'],
+    modelSuggestions: {
+      text: ['qwen3.7-max', 'qwen3.7-plus', 'qwen3.6-flash'],
+      vision: ['qwen3.7-plus', 'qwen3.6-flash', 'qwen3-vl-plus'],
+    },
     connectionNote: '使用只需 API Key 的百炼共享端点；模型 ID 可按账号可用范围修改。',
   },
   {
@@ -113,8 +138,11 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     apiPath: '/v1/chat/completions',
     hostPermission: 'optional',
     intermediary: true,
-    defaultTextModel: 'Pro/zai-org/GLM-4.7',
-    modelSuggestions: ['Pro/zai-org/GLM-4.7', 'Qwen/Qwen3.5-9B'],
+    defaultTextModel: 'Pro/zai-org/GLM-5.1',
+    modelSuggestions: {
+      text: ['zai-org/GLM-5.2', 'Pro/zai-org/GLM-5.1', 'moonshotai/Kimi-K2.7-Code'],
+      vision: ['Qwen/Qwen3.6-35B-A3B', 'Qwen/Qwen3.6-27B', 'Qwen/Qwen3.5-397B-A17B'],
+    },
     connectionNote: '模型上下线与能力可能变化；可在模型框中填写账号当前可用的模型 ID。',
   },
 ] as const;

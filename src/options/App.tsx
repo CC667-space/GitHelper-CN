@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 
-import { PROVIDER_CATALOG } from '../lib/provider-catalog';
+import {
+  PROVIDER_CATALOG,
+  providerCatalogEntry,
+  type ProviderCatalogEntry,
+} from '../lib/provider-catalog';
 import type { ProviderRuntimeView } from '../lib/bridge-protocol';
 import type { ProviderId, UserPreferences } from '../lib/types';
 import { defaultUserPreferences } from '../background/prefs-store';
@@ -8,6 +12,18 @@ import { defaultOptionsServices, type OptionsServices, type StorageUsage } from 
 
 function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+type ModelRole = 'text' | 'vision';
+
+const CUSTOM_MODEL_ID = '__custom__';
+const DEFAULT_PROVIDER_SELECTION: Record<ModelRole, ProviderId> = {
+  text: 'deepseek',
+  vision: 'openrouter',
+};
+
+function providerSettingsLabel(provider: ProviderCatalogEntry): string {
+  return provider.settingsLabel ?? provider.label;
 }
 
 export function OptionsApp({
@@ -19,6 +35,9 @@ export function OptionsApp({
   const [providerProbeTarget, setProviderProbeTarget] = useState<ProviderId | 'all'>();
   const [providerProbeStatus, setProviderProbeStatus] = useState('尚未运行');
   const [providers, setProviders] = useState<ProviderRuntimeView[]>([]);
+  const [selectedProviders, setSelectedProviders] = useState<Record<ModelRole, ProviderId>>(
+    DEFAULT_PROVIDER_SELECTION,
+  );
   const [keys, setKeys] = useState<Partial<Record<ProviderId, string>>>({});
   const [models, setModels] = useState<
     Partial<Record<ProviderId, { textModel: string; visionModel: string }>>
@@ -104,7 +123,7 @@ export function OptionsApp({
     const targetLabel =
       providerId === undefined
         ? '全部已配置 Provider'
-        : (PROVIDER_CATALOG.find((provider) => provider.id === providerId)?.label ?? providerId);
+        : providerSettingsLabel(providerCatalogEntry(providerId));
     setProviderProbeTarget(providerId ?? 'all');
     setProviderProbeStatus(`正在复测${targetLabel}；会消耗少量 Provider 额度…`);
     setStatus(`正在复测${targetLabel}；会消耗少量 Provider 额度…`);
@@ -157,6 +176,219 @@ export function OptionsApp({
     setStatus('全部本地数据已清除');
   }
 
+  function updateModel(providerId: ProviderId, role: ModelRole, value: string): void {
+    const catalog = providerCatalogEntry(providerId);
+    const current = models[providerId] ?? {
+      textModel: catalog.defaultTextModel,
+      visionModel: catalog.defaultVisionModel ?? '',
+    };
+    setModels((allModels) => ({
+      ...allModels,
+      [providerId]: {
+        ...current,
+        [role === 'text' ? 'textModel' : 'visionModel']: value,
+      },
+    }));
+  }
+
+  function renderModelCard(role: ModelRole): React.JSX.Element {
+    const roleLabel = role === 'text' ? '文本' : '视觉';
+    const providerId = selectedProviders[role];
+    const catalog = providerCatalogEntry(providerId);
+    const displayLabel = providerSettingsLabel(catalog);
+    const provider = providers.find((item) => item.id === providerId);
+    const model = models[providerId] ?? {
+      textModel: catalog.defaultTextModel,
+      visionModel: catalog.defaultVisionModel ?? '',
+    };
+    const modelValue = role === 'text' ? model.textModel : model.visionModel;
+    const suggestions = catalog.modelSuggestions[role];
+    const selectedModel = suggestions.includes(modelValue) ? modelValue : CUSTOM_MODEL_ID;
+    const selectableProviders =
+      role === 'text'
+        ? PROVIDER_CATALOG
+        : PROVIDER_CATALOG.filter((entry) => entry.id !== 'deepseek');
+
+    return (
+      <article
+        className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+        data-testid={`${role}-model-card`}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-medium">{roleLabel} Model</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              先选 Provider，再配置同一家服务的 Key 与 {roleLabel} Model。
+            </p>
+          </div>
+          <span className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-600">
+            {provider?.availability ?? 'needs_key'}
+          </span>
+        </div>
+
+        <label className="mt-4 block text-sm font-medium">
+          {roleLabel} Provider
+          <select
+            className="mt-1 w-full rounded-md border border-slate-300 p-2"
+            onChange={(event) =>
+              setSelectedProviders((current) => ({
+                ...current,
+                [role]: event.target.value as ProviderId,
+              }))
+            }
+            value={providerId}
+          >
+            {selectableProviders.map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {providerSettingsLabel(entry)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="mt-3 rounded-md bg-slate-50 p-3">
+          <p className="font-medium text-slate-800">{displayLabel}</p>
+          <p className="mt-1 break-all text-xs text-slate-500">
+            {catalog.apiHost}
+            {catalog.apiPath}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+            <span>文本：{provider?.availability === 'available' ? '已验证' : '未验证/不可用'}</span>
+            <span>视觉：{provider?.capabilities.supportsVision ? '已验证' : '未验证/不支持'}</span>
+          </div>
+          {provider?.disabledReason ? (
+            <p className="mt-2 rounded bg-red-50 px-2 py-1 text-xs text-red-700">
+              失败原因：{provider.disabledReason}
+            </p>
+          ) : null}
+          {provider?.visionFailureReason ? (
+            <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
+              视觉失败原因：{provider.visionFailureReason}
+            </p>
+          ) : null}
+        </div>
+
+        <label className="mt-4 block text-sm font-medium" htmlFor={`${role}-${providerId}-key`}>
+          {displayLabel} API Key
+        </label>
+        <input
+          aria-label={`${displayLabel} API Key`}
+          autoComplete="off"
+          className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm"
+          id={`${role}-${providerId}-key`}
+          onChange={(event) =>
+            setKeys((current) => ({
+              ...current,
+              [providerId]: event.target.value,
+            }))
+          }
+          placeholder={provider?.keyMask ?? '未配置'}
+          type="password"
+          value={keys[providerId] ?? ''}
+        />
+        <p className="mt-1 text-xs text-slate-500">已存：{provider?.keyMask ?? '无'}</p>
+        {catalog.hostPermission === 'optional' ? (
+          <p className="mt-1 text-xs text-slate-500">
+            首次保存时，Chrome 仅请求访问 {catalog.apiHost}。
+          </p>
+        ) : null}
+        {catalog.connectionNote ? (
+          <p className="mt-1 text-xs text-slate-500">{catalog.connectionNote}</p>
+        ) : null}
+
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            className="rounded bg-slate-900 px-3 py-2 text-sm text-white"
+            onClick={() =>
+              void saveKey(providerId).catch((error: unknown) =>
+                setStatus(error instanceof Error ? error.message : String(error)),
+              )
+            }
+            type="button"
+          >
+            保存 Key
+          </button>
+          <button
+            className="rounded border border-slate-300 px-3 py-2 text-sm disabled:text-slate-400"
+            disabled={!provider?.keyMask}
+            onClick={() =>
+              void removeKey(providerId).catch((error: unknown) =>
+                setStatus(error instanceof Error ? error.message : String(error)),
+              )
+            }
+            type="button"
+          >
+            删除 Key
+          </button>
+        </div>
+
+        <label className="mt-4 block text-sm font-medium">
+          {roleLabel} Model 候选
+          <select
+            className="mt-1 w-full rounded-md border border-slate-300 p-2"
+            onChange={(event) =>
+              updateModel(
+                providerId,
+                role,
+                event.target.value === CUSTOM_MODEL_ID ? '' : event.target.value,
+              )
+            }
+            value={selectedModel}
+          >
+            {suggestions.map((suggestion) => (
+              <option key={suggestion} value={suggestion}>
+                {suggestion}
+              </option>
+            ))}
+            <option value={CUSTOM_MODEL_ID}>自行填写 Model ID</option>
+          </select>
+        </label>
+        {selectedModel === CUSTOM_MODEL_ID ? (
+          <label className="mt-3 block text-sm">
+            自行填写{roleLabel} Model ID
+            <input
+              className="mt-1 w-full rounded-md border border-slate-300 p-2"
+              maxLength={300}
+              onChange={(event) => updateModel(providerId, role, event.target.value)}
+              placeholder="输入账号实际可用的 Model ID"
+              value={modelValue}
+            />
+          </label>
+        ) : null}
+        <p className="mt-2 text-xs text-slate-500">
+          预设仅作便捷候选；最终可用性以当前账号权限和真实能力探针为准。
+        </p>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            className="rounded border border-slate-300 px-3 py-2 text-sm"
+            disabled={!modelValue.trim()}
+            onClick={() =>
+              void saveModels(providerId).catch((error: unknown) =>
+                setStatus(error instanceof Error ? error.message : String(error)),
+              )
+            }
+            type="button"
+          >
+            保存模型配置
+          </button>
+          <button
+            className="rounded border border-amber-700 px-3 py-2 text-sm text-amber-900 disabled:border-slate-200 disabled:text-slate-400"
+            disabled={providerProbeTarget !== undefined || !provider?.keyMask || !modelValue.trim()}
+            onClick={() =>
+              void runProbes(providerId).catch((error: unknown) =>
+                setStatus(error instanceof Error ? error.message : String(error)),
+              )
+            }
+            type="button"
+          >
+            {providerProbeTarget === providerId ? `正在测试 ${displayLabel}…` : '测试 Key 与模型'}
+          </button>
+        </div>
+      </article>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-2xl space-y-6 p-6">
       <header>
@@ -174,236 +406,83 @@ export function OptionsApp({
         {status}
       </p>
 
-      <section className="space-y-4">
-        <h2 className="text-lg font-medium">Provider 与 API Key</h2>
-        {PROVIDER_CATALOG.map((catalog) => {
-          const provider = providers.find((item) => item.id === catalog.id);
-          const model = models[catalog.id] ?? {
-            textModel: catalog.defaultTextModel,
-            visionModel: catalog.defaultVisionModel ?? '',
-          };
-          return (
-            <article className="rounded-lg border border-slate-200 p-4" key={catalog.id}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-medium">{catalog.label}</h3>
-                  <p className="text-xs text-slate-500">
-                    {catalog.apiHost}
-                    {catalog.apiPath}
-                  </p>
-                </div>
-                <span className="rounded bg-slate-100 px-2 py-1 text-xs">
-                  {provider?.availability ?? 'needs_key'}
-                </span>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
-                <span>
-                  文本：
-                  {provider?.availability === 'available' ? '已验证' : '未验证/不可用'}
-                </span>
-                <span>
-                  视觉：{provider?.capabilities.supportsVision ? '已验证' : '未验证/不支持'}
-                </span>
-              </div>
-              {provider?.disabledReason ? (
-                <p className="mt-2 rounded bg-red-50 px-2 py-1 text-xs text-red-700">
-                  失败原因：{provider.disabledReason}
-                </p>
-              ) : null}
-              {provider?.visionFailureReason ? (
-                <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
-                  视觉失败原因：{provider.visionFailureReason}
-                </p>
-              ) : null}
-
-              <label className="mt-4 block text-sm font-medium" htmlFor={`${catalog.id}-api-key`}>
-                {catalog.label} API Key
-              </label>
-              <input
-                autoComplete="off"
-                className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm"
-                id={`${catalog.id}-api-key`}
-                onChange={(event) =>
-                  setKeys((current) => ({
-                    ...current,
-                    [catalog.id]: event.target.value,
-                  }))
-                }
-                placeholder={provider?.keyMask ?? '未配置'}
-                type="password"
-                value={keys[catalog.id] ?? ''}
-              />
-              <p className="mt-1 text-xs text-slate-500">已存：{provider?.keyMask ?? '无'}</p>
-              {catalog.hostPermission === 'optional' ? (
-                <p className="mt-1 text-xs text-slate-500">
-                  首次保存时，Chrome 会请求仅访问 {catalog.apiHost} 的权限。
-                </p>
-              ) : null}
-              {catalog.connectionNote ? (
-                <p className="mt-1 text-xs text-slate-500">{catalog.connectionNote}</p>
-              ) : null}
-              <div className="mt-2 flex gap-2">
-                <button
-                  className="rounded bg-slate-900 px-3 py-2 text-sm text-white"
-                  onClick={() =>
-                    void saveKey(catalog.id).catch((error: unknown) =>
-                      setStatus(error instanceof Error ? error.message : String(error)),
-                    )
-                  }
-                  type="button"
-                >
-                  保存 Key
-                </button>
-                <button
-                  className="rounded border border-slate-300 px-3 py-2 text-sm"
-                  disabled={!provider?.keyMask}
-                  onClick={() =>
-                    void removeKey(catalog.id).catch((error: unknown) =>
-                      setStatus(error instanceof Error ? error.message : String(error)),
-                    )
-                  }
-                  type="button"
-                >
-                  删除 Key
-                </button>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <label className="text-sm">
-                  文本 model ID
-                  <input
-                    className="mt-1 w-full rounded-md border border-slate-300 p-2"
-                    list={`${catalog.id}-model-suggestions`}
-                    onChange={(event) =>
-                      setModels((current) => ({
-                        ...current,
-                        [catalog.id]: { ...model, textModel: event.target.value },
-                      }))
-                    }
-                    value={model.textModel}
-                  />
-                </label>
-                {catalog.id !== 'deepseek' ? (
-                  <label className="text-sm">
-                    视觉 model ID
-                    <input
-                      className="mt-1 w-full rounded-md border border-slate-300 p-2"
-                      list={`${catalog.id}-model-suggestions`}
-                      onChange={(event) =>
-                        setModels((current) => ({
-                          ...current,
-                          [catalog.id]: { ...model, visionModel: event.target.value },
-                        }))
-                      }
-                      value={model.visionModel}
-                    />
-                  </label>
-                ) : (
-                  <p className="self-end rounded bg-amber-50 p-2 text-xs text-amber-800">
-                    DeepSeek 不支持图像输入
-                  </p>
-                )}
-              </div>
-              <datalist id={`${catalog.id}-model-suggestions`}>
-                {catalog.modelSuggestions.map((suggestion) => (
-                  <option key={suggestion} value={suggestion} />
-                ))}
-              </datalist>
-              <button
-                className="mt-3 rounded border border-slate-300 px-3 py-2 text-sm"
-                onClick={() =>
-                  void saveModels(catalog.id).catch((error: unknown) =>
-                    setStatus(error instanceof Error ? error.message : String(error)),
-                  )
-                }
-                type="button"
-              >
-                保存模型配置
-              </button>
-              <button
-                className="ml-2 mt-3 rounded border border-amber-700 px-3 py-2 text-sm text-amber-900 disabled:border-slate-200 disabled:text-slate-400"
-                disabled={providerProbeTarget !== undefined || !provider?.keyMask}
-                onClick={() =>
-                  void runProbes(catalog.id).catch((error: unknown) =>
-                    setStatus(error instanceof Error ? error.message : String(error)),
-                  )
-                }
-                type="button"
-              >
-                {providerProbeTarget === catalog.id
-                  ? `正在复测 ${catalog.label}…`
-                  : `仅复测 ${catalog.label}`}
-              </button>
-            </article>
-          );
-        })}
-        <div className="rounded-lg border border-slate-200 p-4">
-          <h3 className="font-medium">Provider 设置 JSON</h3>
+      <section className="space-y-4" data-testid="provider-model-settings">
+        <div>
+          <h2 className="text-lg font-medium">Provider 与 API Key</h2>
           <p className="mt-1 text-sm text-slate-600">
-            用于迁移内置 Provider 的 model ID。JSON 不得包含 API Key 或自定义端点；Key
-            仍只能在上方密码框中单独保存。
+            仅配置文本与视觉两条使用路线；两张卡共用各 Provider 已保存的 Key。
           </p>
-          <label className="mt-3 block text-sm" htmlFor="provider-settings-json">
-            Provider 设置 JSON
-          </label>
-          <textarea
-            className="mt-1 min-h-40 w-full rounded-md border border-slate-300 p-2 font-mono text-xs"
-            id="provider-settings-json"
-            onChange={(event) => setProviderSettingsJson(event.target.value)}
-            placeholder='{"schemaVersion":1,"providers":{"openai":{"textModel":"gpt-5-mini"}}}'
-            spellCheck={false}
-            value={providerSettingsJson}
-          />
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              className="rounded border border-slate-300 px-3 py-2 text-sm"
-              onClick={() =>
-                void exportProviderSettings().catch((error: unknown) =>
-                  setStatus(error instanceof Error ? error.message : String(error)),
-                )
-              }
-              type="button"
-            >
-              导出配置 JSON
-            </button>
-            <button
-              className="rounded bg-slate-900 px-3 py-2 text-sm text-white disabled:bg-slate-300"
-              disabled={!providerSettingsJson.trim()}
-              onClick={() =>
-                void importProviderSettings().catch((error: unknown) =>
-                  setStatus(error instanceof Error ? error.message : String(error)),
-                )
-              }
-              type="button"
-            >
-              导入配置 JSON
-            </button>
-          </div>
         </div>
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <h3 className="font-medium text-amber-900">真实能力探针</h3>
-          <p className="mt-1 text-sm text-amber-800">
-            会向已配置 Provider
-            发送最小文本、流式、取消、工具、结构化输出及视觉测试请求，可能产生少量费用。
-          </p>
+        {renderModelCard('text')}
+        {renderModelCard('vision')}
+      </section>
+
+      <section className="rounded-lg border border-slate-200 p-4">
+        <h2 className="font-medium">高级 Model 配置 JSON</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          仅迁移八家内置 Provider 的 Model ID。JSON 不得包含 API Key、自定义 Provider 或自定义端点。
+        </p>
+        <label className="mt-3 block text-sm" htmlFor="provider-settings-json">
+          Provider 设置 JSON
+        </label>
+        <textarea
+          className="mt-1 min-h-40 w-full rounded-md border border-slate-300 p-2 font-mono text-xs"
+          id="provider-settings-json"
+          onChange={(event) => setProviderSettingsJson(event.target.value)}
+          placeholder='{"schemaVersion":1,"providers":{"openai":{"textModel":"gpt-5.6-terra"}}}'
+          spellCheck={false}
+          value={providerSettingsJson}
+        />
+        <div className="mt-2 flex flex-wrap gap-2">
           <button
-            className="mt-3 rounded bg-amber-900 px-3 py-2 text-sm text-white disabled:bg-amber-300"
-            disabled={
-              providerProbeTarget !== undefined || !providers.some((provider) => provider.keyMask)
-            }
+            className="rounded border border-slate-300 px-3 py-2 text-sm"
             onClick={() =>
-              void runProbes().catch((error: unknown) =>
+              void exportProviderSettings().catch((error: unknown) =>
                 setStatus(error instanceof Error ? error.message : String(error)),
               )
             }
             type="button"
           >
-            {providerProbeTarget === 'all' ? '探针运行中…' : '运行真实能力探针'}
+            导出配置 JSON
           </button>
-          <p aria-live="polite" className="mt-2 text-sm text-amber-900">
-            {providerProbeStatus}
-          </p>
+          <button
+            className="rounded bg-slate-900 px-3 py-2 text-sm text-white disabled:bg-slate-300"
+            disabled={!providerSettingsJson.trim()}
+            onClick={() =>
+              void importProviderSettings().catch((error: unknown) =>
+                setStatus(error instanceof Error ? error.message : String(error)),
+              )
+            }
+            type="button"
+          >
+            导入配置 JSON
+          </button>
         </div>
+      </section>
+
+      <section className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <h2 className="font-medium text-amber-900">真实能力探针</h2>
+        <p className="mt-1 text-sm text-amber-800">
+          会向已配置 Provider
+          发送最小文本、流式、取消、工具、结构化输出及视觉测试请求，可能产生少量费用。
+        </p>
+        <button
+          className="mt-3 rounded bg-amber-900 px-3 py-2 text-sm text-white disabled:bg-amber-300"
+          disabled={
+            providerProbeTarget !== undefined || !providers.some((provider) => provider.keyMask)
+          }
+          onClick={() =>
+            void runProbes().catch((error: unknown) =>
+              setStatus(error instanceof Error ? error.message : String(error)),
+            )
+          }
+          type="button"
+        >
+          {providerProbeTarget === 'all' ? '探针运行中…' : '运行真实能力探针'}
+        </button>
+        <p aria-live="polite" className="mt-2 text-sm text-amber-900">
+          {providerProbeStatus}
+        </p>
       </section>
 
       <section className="rounded-lg border border-slate-200 p-4">

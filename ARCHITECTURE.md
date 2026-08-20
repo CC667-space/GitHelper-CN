@@ -71,7 +71,7 @@
 | `background/context-builder` | bg | 组装最小化上下文 |
 | `background/sanitizer` | bg | 发送前敏感信息检测与遮蔽 |
 | `background/provider-manager` | bg | Provider 实例化、Capability 路由、手动覆盖、视觉护栏、Host 白名单 |
-| `lib/provider-catalog` | shared | 八家 Provider ID、固定 endpoint、精确 Host 权限、默认 model 与披露元数据的唯一目录 |
+| `lib/provider-catalog` | shared | 八家 Provider ID、固定 endpoint、精确 Host 权限、默认 model、文本/视觉候选 model 与披露元数据的唯一目录 |
 | `background/provider-host-access` | bg/options | 新增五家 Host 权限状态、逐家请求/释放及请求前断言 |
 | `background/providers/*` | bg | DeepSeek / UUAPI / OpenRouter / OpenAI / Anthropic / Gemini / Qwen / SiliconFlow 独立适配器 |
 | `background/credential-store` | bg | 凭据独立存储访问接口；仅可信上下文可导入（Options 只 write/delete，Background 只 read/inject；Content Script 禁止导入，lint 边界保护，D-028） |
@@ -81,7 +81,7 @@
 | `background/session-store` | bg | 会话 CRUD、摘要、上下文长度控制、容量淘汰 |
 | `background/prefs-store` | bg | 长期偏好读写 |
 | `panel/*` | panel | React UI（可信上下文）：会话、消息流、Provider 下拉、分析面板、确认弹窗 |
-| `options/*` | options | Provider/Key/偏好/数据清除/数据流向披露 |
+| `options/*` | options | 以“文本 Model / 视觉 Model”两张角色卡选择内置 Provider，录入 Key、选择或手填 model、单家探针；另含偏好/数据清除/数据流向披露 |
 | `lib/storage` | shared | chrome.storage 封装 + schemaVersion + 迁移 + 容量检查 |
 | `lib/messaging` | shared | 类型化消息协议（版本/请求ID/Schema/最大载荷/超时/错误类型） |
 | `lib/logger` | shared | 分级日志（强制脱敏） |

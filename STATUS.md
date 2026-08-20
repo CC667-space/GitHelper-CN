@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 11 — 测试、打包与 MVP 验收：四分段 Panel UI 已完成自动验收，等待真实 Chrome 视觉复核，随后继续既有补丁、Provider 与 S1–S5 复核。**
+**Phase 11 — 测试、打包与 MVP 验收：Options 双角色 Provider 配置 UI 已完成自动验收，等待真实 Chrome 重载复核，再继续 S1–S5。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -262,10 +262,18 @@
   - 用户问题气泡与 fenced code block 改为浅色 `#c7d0d9` 背景、深色正文；临时调整台已删除，不保留第二套 UI
   - 记录 D-066；Vitest 53 files / 265 tests 全过（另 1 个 Phase 9 live test 默认跳过）；typecheck、lint、变更文件格式、build（414 modules）、构建安全扫描与隔离 Chrome 149 E2E 全过
   - E2E 已按分段导航覆盖中文搜索、仓库分析、问答、Panel 重载与页面切换；Provider 请求 0、页面异常 0；本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `36bf14e3d1bfa7cf0fc7c2c2e825d03f882c62b2f6da866abeec062c22a2a518`
+- [x] **Phase 11 — Options 双角色 Provider 配置 UI（2026-08-20）完成自动验收**：
+  - 将八张 Provider 常驻卡收敛为“文本 Model / 视觉 Model”两张角色卡；文本可选八家，视觉排除仅文本的 DeepSeek；选择后再显示对应 Key、固定端点、状态、model 与单家测试入口
+  - Catalog 增加按文本/视觉区分的模型候选和设置页友好名称；ChatGPT 明确对应 OpenAI API，Claude 明确对应 Anthropic API；候选只作便利预设，始终保留手填 Model ID
+  - 真实能力探针、回答与操作偏好、数据清除和披露保持原功能；高级 JSON 仍只迁移八家 model 绑定，不能写入 Key、创建 Provider 或修改 endpoint
+  - 按 v1.3 边界跳过 GLM/Kimi/Grok 独立 Provider 与任意自定义 Provider JSON；GLM/Kimi 仍可作为现有聚合 Provider 的 Model ID 手填或候选，不新增 Host、权限或适配器
+  - 新增 Catalog 与 Options 组件回归测试；修正探针状态测试的 DOM 范围，避免页面级状态与探针卡状态同文案时产生误判
+  - 自动门禁：Vitest 53 files / 267 tests 全过（另 1 个 Phase 9 live test 默认跳过）；typecheck、lint、变更 TS/TSX 格式、`git diff --check`、build（414 modules）与构建安全扫描通过
+  - 隔离 Chrome 149 E2E 通过，Provider 请求 0、页面异常 0；本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `4969fb98d8f4235718addcd293c900a47145c7ebe510c8029bb8aa5e7588a27c`
 
 ## 下一任务
-**真实 Chrome 复核 D-066 UI → D-065 中文搜索补丁 → D-064 → Phase 11 Provider 单家真实复测 → 强制确认节点 ② S1–S5 批量体验复核**。
-用户在真实 Chrome 重新加载最新 `dist/`，先确认四个分段可切换、页面提问下一步会进入问答、session 管理与会话正文之间有间隙、用户问题和代码块均为浅色，且问答区没有整体收起按钮。随后分别重试“找一些声音克隆相关的项目”和“帮我找一些声音克隆相关的完整功能项目”，确认不再显示原始 Schema JSON；若 AI 意图解析失败并显示本地降级，query 应为“声音克隆”，若 Provider 成功则允许显示其提取并经本地校验的英文语义词。再打开后关闭 Panel 或切换标签页，确认扩展错误页不再新增 disconnected-port 异常。最后确认 Options 显示八家 Provider，并使用已保存 Key 点击 DeepSeek（或任一既有可用家）的“仅复测该 Provider”。无需重填 Key，也无需配置新增五家。复测通过后继续 `docs/USER_GUIDE.md` 第 9 节 S1–S5；全部通过后执行 Agent 才能标记 MVP 完成并创建 Phase 11 最终验收提交。
+**Options 真实 Chrome 复核 → D-066/D-065/D-064 既有复核 → 单 Provider 真实复测 → 强制确认节点 ② S1–S5 批量体验复核**。
+用户在 `chrome://extensions/` 对 GitHelper-CN 点击“重新加载”，然后打开“扩展程序选项”：确认只有文本/视觉两张角色卡，DeepSeek 不在视觉列表，Provider 切换会同步更换 Key/Model/端点，候选与手填 Model ID 均可保存，既有 Key 仍只显示掩码，单家测试不调用其他 Provider。随后按既有顺序复核 D-066、D-065、D-064 和 S1–S5；全部通过后才能标记 MVP 完成并创建 Phase 11 最终验收提交。
 
 ## 已登记的后续优化
 - [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；2026-08-17 完成调整台定稿的四分段导航、视觉 Token 与浅色问答/代码块（D-066）。后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
@@ -285,7 +293,7 @@
 | 8 NL 搜索（MVP 必达） | ✅ 已完成 |
 | 9 一键仓库分析 | ✅ 已完成 |
 | 10 安全加固 + 红队测试 | ✅ 已完成 |
-| 11 测试 + 打包 + MVP 验收 | ⏸ 四分段 UI 与既有补丁自动验收通过，待真实 Chrome 视觉/错误页复核、单 Provider 真实复测与 S1–S5 人工复核 |
+| 11 测试 + 打包 + MVP 验收 | ⏸ Options 双角色配置自动门禁通过，待真实 Chrome、单 Provider 与 S1–S5 人工复核 |
 
 ## 待处理的强制确认节点
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
@@ -299,7 +307,7 @@
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-仅等待真实 Chrome 重载后的 D-066 视觉复核、D-064 错误页复核与单 Provider 复测，再继续 Phase 11 S1–S5。Chrome 自动化安全策略不允许访问 `chrome://extensions`，因此错误列表复核不能由执行 Agent 代点；无其他实现、安全、权限或 Provider 阻塞。
+仅等待用户在真实 Chrome 重新加载最新 `dist/` 后完成 Options、D-066、D-064 与单 Provider 复核，再继续 Phase 11 S1–S5。Chrome 自动化安全策略明确禁止执行 Agent 访问 `chrome://extensions`，也禁止绕过，因此无法代点“重新加载”；无其他实现、安全、权限或 Provider 阻塞。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -347,3 +355,5 @@
 - 2026-08-03：Phase 11 Side Panel 断开 Port 异常补丁完成；异步出站统一接入连接生命周期门控并覆盖 `onDisconnect` 前竞态（D-064），253 项常规测试及完整静态/构建/安全/E2E 门禁通过，待真实 Chrome 扩展错误页复核。
 - 2026-08-17：Phase 11 中文搜索异常降级补丁完成；异常超长仓库描述不再阻断整批结果，本地 query 清理截图套话，Provider 失败显示脱敏类别且 Panel 不再暴露 Zod JSON（D-065）；264 项常规测试及完整静态/构建/安全/E2E 门禁通过，待真实 Chrome 复测两条截图原句。
 - 2026-08-17：Phase 11 四分段 Panel UI 优化完成自动验收；调整台 C 版导航与定稿 Token 已吸收进正式界面，问答整体收起移除、session/会话间隙及浅色问题/代码块落地（D-066）；临时调整台删除，265 项常规测试及完整静态/构建/安全/E2E/打包门禁通过，待真实 Chrome 视觉复核。
+- 2026-08-17：Options 双角色 Provider 配置 UI 完成实现：保留八家固定目录，将配置收敛为文本/视觉两张卡，加入角色化模型候选、手填 ID 与单家测试；越界的独立 GLM/Kimi/Grok 和任意自定义 Provider JSON 已跳过。
+- 2026-08-20：Options 双角色 Provider 配置 UI 自动门禁完成：267 项常规测试及 typecheck、lint、格式、build、安全扫描、隔离 Chrome 149 E2E 与打包全过；确认此前 `spawn EPERM` 为沙箱执行限制，无需修改依赖。待用户在真实 Chrome 手动重新加载扩展后复核。

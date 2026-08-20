@@ -544,3 +544,15 @@
 - **证据**：分段导航先以失败测试锁定四个 tab 的顺序、默认区和问答整体收起移除；浅色问题气泡、浅色代码块及 session 间隙均有 UI 回归断言。全量 Vitest 265 项通过（另 1 项 live test 默认跳过），typecheck、lint、变更文件格式、build、安全扫描及隔离 Chrome 149 E2E 全过；E2E 覆盖中文搜索、仓库分析、问答、Panel 重载和页面切换，Provider 请求 0、页面异常 0。
 - **范围**：Phase 11 Panel UI 迭代；只改变布局与视觉，不改变消息协议、Provider/GitHub 请求、会话语义、权限、Host、持久数据或 MVP 功能。
 - 状态：正式代码与隔离 Chrome 已验证，待真实 Chrome 视觉复核 ｜ 2026-08-17
+
+## D-067 Options 以文本/视觉两张角色卡组织固定 Provider 配置
+- **决策**：
+  - Options 的 Provider 主配置区只保留“文本 Model”和“视觉 Model”两张角色卡。每张卡先选择固定 Catalog 内的 Provider，再呈现该家的 API Key、固定 endpoint、运行状态、对应角色的 model 和单家能力测试；同一家 Provider 在两张卡中共用既有 Key 与 model 绑定。
+  - 文本列表包含 v1.3 的八家固定 Provider；视觉列表排除已知仅文本的 DeepSeek。设置页以“ChatGPT（OpenAI API）”“Claude（Anthropic API）”帮助用户对应产品名与实际 API，但内部 Provider ID、适配器和权限边界保持 `openai` / `anthropic` 不变。
+  - Catalog 为文本与视觉分别维护 2–3 个已核对候选；无可稳定依赖的公开目录时不虚构候选。候选仅是便捷值，始终提供手填 Model ID，最终可用性仍以账号权限和真实能力探针为准，不新增自动联网拉取模型、自动读取 Key 或隐式探针。
+  - “真实能力探针”在开发阶段保留；偏好、数据清除与数据流向披露保持不变。高级 JSON 继续只导入/导出八家 model 绑定，不能包含 Key、创建 Provider、修改 Base URL/Host/endpoint。
+  - 用户提出的 GLM、Kimi、Grok 独立 Provider 与任意自定义 Provider JSON 暂不实施：前三者需要新增适配器/固定 Host/权限与基线授权；后者直接违反 D-063 的固定端点和无密钥 JSON 边界。GLM/Kimi 若由现有聚合 Provider 提供，仍可作为 Model ID 选择或手填。
+- **理由**：按使用角色选择服务比同时展示八张完整卡更贴近“先决定文本/视觉路线，再填 Key 与 model”的操作顺序；把候选集中在 Catalog 可避免 Options 与 Runtime 出现两套 Provider 元数据，同时不把易变化的 model 名误当作能力事实。
+- **证据**：Catalog 与 Options 组件测试覆盖两张角色卡、8/7 家列表、DeepSeek 视觉排除、友好名称、Provider 切换、角色化候选、手填 Model ID、保存和边界项不出现；探针状态测试按真实 `<section>` 收紧范围，避免页面级重复状态文案造成误判。Vitest 267 项常规测试通过（另 1 项 live test 默认跳过），`pnpm typecheck`、`pnpm lint`、变更 TS/TSX 格式、`git diff --check`、build（414 modules）、构建安全扫描和隔离 Chrome 149 E2E 全过；本地包 13 个条目，SHA-256 `4969fb98d8f4235718addcd293c900a47145c7ebe510c8029bb8aa5e7588a27c`。沙箱内 `spawn EPERM` 在最小授权的沙箱外执行中消失，确认不是项目依赖或代码缺陷。
+- **范围**：Phase 11 Options 前端交互补丁；不新增 Provider ID、Host、权限、适配器、凭据路径、Provider 调用、GitHub 能力、持久数据类别或 MVP 功能。
+- 状态：代码与隔离 Chrome 已验证，待真实 Chrome 复核 ｜ 2026-08-20

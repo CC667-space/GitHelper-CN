@@ -51,7 +51,7 @@
 - Panel 在 Provider 状态、会话 hydration 或请求结果返回前断开时，Background 丢弃旧 Port 的迟到消息且不得产生未处理的 disconnected-port 异常；非断开类发送错误不得被吞掉（D-064）
 - 助手 Markdown/GFM 生成语义化标题/列表/强调/代码/表格；fenced code 与行内代码样式不冲突；原始 HTML、远程图片与可点击外链不会进入 DOM（D-042/D-052）
 - Options 表单读写、Key 录入与掩码（**可实现表述，D-028**）：录入用 password input；**保存成功后输入框与受控状态被清空**（断言 value === ''）；**已保存 Key 不回显明文**——保存后重新打开 Options，DOM/组件状态中只有掩码（尾 4 位），无完整 Key 字符串；Zustand store 全量序列化后不含已存 Key 明文
-- Options 显示八家固定 Provider；新增五家保存时逐家授权；设置 JSON 导入/导出不含 Key、URL 或 Host，不能新增目录外 Provider
+- Options 只用“文本 Model / 视觉 Model”两张角色卡组织配置；文本列表显示八家固定 Provider，视觉列表排除 DeepSeek；选择 Provider 后显示该家的 Key、按角色区分的 2–3 个已核对候选（无稳定公开目录时允许为空）及手填 Model ID；新增五家保存时逐家授权；设置 JSON 导入/导出不含 Key、URL 或 Host，不能新增目录外 Provider
 - Options 偏好表单与容量用量可读；三种数据清除入口分别可用且全清有显式二次确认（D-033）、数据流向披露展示
 - Panel 收到 `SESSION_STATE` 后恢复活动会话；页面变化/Background 重连的 hydrate 不覆盖当前对话；最近会话可选择且可强制新建；恢复投影过长时明确提示早期内容未展开
 - Panel 以“页面提问 / 仓库分析 / 中文搜索 / 问答”四分段导航切换且不丢失当前状态；分析内容仍可收起，问答不提供整体收起按钮但保留逐轮收展（D-066）

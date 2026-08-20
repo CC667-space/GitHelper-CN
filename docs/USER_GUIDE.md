@@ -39,9 +39,10 @@ pnpm package:extension
 
 1. 在 `chrome://extensions/` 找到 GitHelper-CN。
 2. 打开“扩展程序选项”。
-3. 在对应 Provider 卡片中填写 API Key 和模型。
-4. 点击保存。OpenAI、Anthropic、Gemini、Qwen、SiliconFlow 首次保存时，Chrome 只请求该 Provider 的精确 API Host 权限；拒绝授权则不会保存 Key。保存成功后输入框会立即清空，页面只显示末 4 位掩码。
-5. 点击“仅复测该 Provider”，或使用页面底部“运行真实能力探针”验证全部已配置 Provider。
+3. “Provider 与 API Key”只有“文本 Model”和“视觉 Model”两张配置卡。先在卡内选择 Provider；DeepSeek 仅支持文本，不会出现在视觉列表中。
+4. 为所选 Provider 填写并保存 API Key。两张卡共用同一家 Provider 已保存的 Key；OpenAI、Anthropic、Gemini、Qwen、SiliconFlow 首次保存时，Chrome 只请求该 Provider 的精确 API Host 权限。拒绝授权则不会保存 Key；保存成功后输入框立即清空，页面只显示末 4 位掩码。
+5. 从对应角色的候选列表选择 Model，或选择“自行填写 Model ID”后输入账号实际可用的 ID，再点击“保存模型配置”。候选列表是 2026-08-17 核对的便捷预设，不代表账号一定有权限，也不替代真实能力探针；UUAPI 没有可长期依赖的公开模型目录，因此只提供手填入口。
+6. 点击卡内“测试 Key 与模型”只复测所选 Provider，或使用下方“运行真实能力探针”验证全部已配置 Provider。
 
 固定端点：
 
@@ -54,16 +55,18 @@ pnpm package:extension
 - 阿里云百炼 Qwen：`https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`（共享旧端点，避免额外 workspace 配置）
 - SiliconFlow：`https://api.siliconflow.cn/v1/chat/completions`
 
-默认建议：
+默认路线建议：
 
 - 文本：DeepSeek `deepseek-v4-flash`
 - 视觉：使用任何已配置并通过真实探针的视觉 Provider/model；加入目录不等于能力已验证
 
-Options 下方的“Provider 设置 JSON”只用于迁移 model 绑定：
+Options 下方的“高级 Model 配置 JSON”只用于迁移 model 绑定：
 
 1. 点击“导出设置 JSON”，得到不含 Key、URL、Host 的文本；
 2. 可在另一安装中粘贴后点击“导入设置 JSON”；
-3. Key 仍须在对应 Provider 的 password 输入框中单独填写，JSON 不能新增自定义 Provider 或 endpoint。
+3. Key 仍须在对应角色卡的 password 输入框中单独填写，JSON 不能新增自定义 Provider 或 endpoint。
+
+内置目录固定为上述八家。GLM、Kimi 可在账号支持时作为 SiliconFlow 等现有聚合 Provider 的 Model ID 使用，但本版本不把 GLM、Kimi 或 Grok 建成新的独立 Provider；也不接受任意 Provider/Base URL JSON。
 
 不要把 Key 发到聊天、Issue、日志、截图或设置 JSON 中。建议使用专用、可撤销、设有额度上限的 Key。UUAPI、OpenRouter 与 SiliconFlow 是中转/聚合端点，可能把请求转交其上游模型供应商。
 

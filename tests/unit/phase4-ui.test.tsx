@@ -114,24 +114,98 @@ describe('Phase 4 trusted UI', () => {
     };
     const user = userEvent.setup();
     const firstRender = render(<OptionsApp services={services} />);
-    const input = (await screen.findByLabelText('DeepSeek API Key')) as HTMLInputElement;
+    const textCard = await screen.findByTestId('text-model-card');
+    const input = within(textCard).getByLabelText('DeepSeek API Key') as HTMLInputElement;
     const secret = 'sk-test-secret-1234567890';
     await user.type(input, secret);
-    const card = input.closest('article');
-    expect(card).not.toBeNull();
-    await user.click(within(card!).getByRole('button', { name: '保存 Key' }));
+    await user.click(within(textCard).getByRole('button', { name: '保存 Key' }));
 
     await waitFor(() => expect(input.value).toBe(''));
     expect(saveKey).toHaveBeenCalledWith('deepseek', secret);
     expect(document.body.textContent).not.toContain(secret);
-    expect(await screen.findByText('已存：••••7890')).toBeTruthy();
+    expect(await within(textCard).findByText('已存：••••7890')).toBeTruthy();
 
     firstRender.unmount();
     render(<OptionsApp services={services} />);
-    const reopened = (await screen.findByLabelText('DeepSeek API Key')) as HTMLInputElement;
+    const reopenedCard = await screen.findByTestId('text-model-card');
+    const reopened = within(reopenedCard).getByLabelText('DeepSeek API Key') as HTMLInputElement;
     expect(reopened.value).toBe('');
     expect(document.body.textContent).not.toContain(secret);
-    expect(await screen.findByText('已存：••••7890')).toBeTruthy();
+    expect(await within(reopenedCard).findByText('已存：••••7890')).toBeTruthy();
+  });
+
+  it('Options 仅用文本与视觉两张配置卡组织内置 Provider', async () => {
+    const services: OptionsServices = {
+      ...phase5ServiceDefaults,
+      loadProviders: vi.fn(async () => [
+        provider('deepseek', 'needs_key'),
+        provider('uuapi', 'needs_key'),
+        provider('openrouter', 'needs_key'),
+      ]),
+      saveKey: vi.fn(),
+      deleteKey: vi.fn(),
+      saveModels: vi.fn(),
+      runProbes: vi.fn(),
+    };
+    render(<OptionsApp services={services} />);
+
+    const providerSection = await screen.findByTestId('provider-model-settings');
+    expect(within(providerSection).getAllByRole('article')).toHaveLength(2);
+    expect(within(providerSection).getByRole('heading', { name: '文本 Model' })).toBeTruthy();
+    expect(within(providerSection).getByRole('heading', { name: '视觉 Model' })).toBeTruthy();
+
+    const textProvider = within(providerSection).getByLabelText('文本 Provider');
+    const visionProvider = within(providerSection).getByLabelText('视觉 Provider');
+    expect(within(textProvider).getAllByRole('option')).toHaveLength(8);
+    expect(within(visionProvider).getAllByRole('option')).toHaveLength(7);
+    expect(within(visionProvider).queryByRole('option', { name: 'DeepSeek' })).toBeNull();
+    expect(
+      within(textProvider).getByRole('option', { name: 'ChatGPT（OpenAI API）' }),
+    ).toBeTruthy();
+    expect(
+      within(textProvider).getByRole('option', { name: 'Claude（Anthropic API）' }),
+    ).toBeTruthy();
+    expect(within(textProvider).queryByRole('option', { name: /自定 Provider/ })).toBeNull();
+    expect(within(textProvider).queryByRole('option', { name: /^GLM$/ })).toBeNull();
+    expect(within(textProvider).queryByRole('option', { name: /^Kimi$/ })).toBeNull();
+    expect(within(textProvider).queryByRole('option', { name: /^Grok$/ })).toBeNull();
+  });
+
+  it('Options 按所选 Provider 提供模型预设和手填 Model ID', async () => {
+    const services: OptionsServices = {
+      ...phase5ServiceDefaults,
+      loadProviders: vi.fn(async () => [
+        provider('deepseek', 'needs_key'),
+        provider('uuapi', 'needs_key'),
+        provider('openrouter', 'needs_key'),
+      ]),
+      saveKey: vi.fn(),
+      deleteKey: vi.fn(),
+      saveModels: vi.fn(),
+      runProbes: vi.fn(),
+    };
+    const user = userEvent.setup();
+    render(<OptionsApp services={services} />);
+
+    const textCard = await screen.findByTestId('text-model-card');
+    await user.selectOptions(within(textCard).getByLabelText('文本 Provider'), 'openai');
+    expect(within(textCard).getByText('https://api.openai.com/v1/chat/completions')).toBeTruthy();
+    expect(within(textCard).getByLabelText('ChatGPT（OpenAI API） API Key')).toBeTruthy();
+
+    const modelSelector = within(textCard).getByLabelText('文本 Model 候选');
+    expect(within(modelSelector).getByRole('option', { name: 'gpt-5.6-terra' })).toBeTruthy();
+    expect(within(modelSelector).getByRole('option', { name: 'gpt-5.6-luna' })).toBeTruthy();
+    expect(within(modelSelector).getByRole('option', { name: 'gpt-5.6-sol' })).toBeTruthy();
+    await user.selectOptions(modelSelector, '__custom__');
+    const customModel = within(textCard).getByLabelText('自行填写文本 Model ID');
+    await user.type(customModel, 'account/custom-model');
+    await user.click(within(textCard).getByRole('button', { name: '保存模型配置' }));
+    await waitFor(() =>
+      expect(services.saveModels).toHaveBeenCalledWith(
+        'openai',
+        expect.objectContaining({ textModel: 'account/custom-model' }),
+      ),
+    );
   });
 
   it('Options 提供不含 Key 和自定义端点的 Provider JSON 导入导出入口', async () => {
@@ -150,14 +224,16 @@ describe('Phase 4 trusted UI', () => {
     const user = userEvent.setup();
     render(<OptionsApp services={services} />);
 
-    expect(await screen.findByRole('heading', { name: 'OpenAI' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: '高级 Model 配置 JSON' })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '导出配置 JSON' }));
     const textarea = screen.getByLabelText('Provider 设置 JSON') as HTMLTextAreaElement;
     expect(textarea.value).toBe(exported);
 
     await user.click(screen.getByRole('button', { name: '导入配置 JSON' }));
     await waitFor(() => expect(importProviderSettings).toHaveBeenCalledWith(exported));
-    expect(document.body.textContent).toContain('JSON 不得包含 API Key 或自定义端点');
+    expect(document.body.textContent).toMatch(
+      /JSON 不得包含 API Key、自定义 Provider 或自定义端点/,
+    );
   });
 
   it('Options 点击真实探针后在按钮区域立即显示运行状态并阻止重复提交', async () => {
@@ -184,7 +260,7 @@ describe('Phase 4 trusted UI', () => {
     render(<OptionsApp services={services} />);
 
     const button = await screen.findByRole('button', { name: '运行真实能力探针' });
-    const probeCard = button.closest('div');
+    const probeCard = button.closest('section');
     expect(probeCard).not.toBeNull();
     expect((button as HTMLButtonElement).disabled).toBe(false);
 
@@ -223,10 +299,8 @@ describe('Phase 4 trusted UI', () => {
     const user = userEvent.setup();
     render(<OptionsApp services={services} />);
 
-    const deepseekHeading = await screen.findByRole('heading', { name: 'DeepSeek' });
-    const deepseekCard = deepseekHeading.closest('article');
-    expect(deepseekCard).not.toBeNull();
-    await user.click(within(deepseekCard!).getByRole('button', { name: '仅复测 DeepSeek' }));
+    const deepseekCard = await screen.findByTestId('text-model-card');
+    await user.click(within(deepseekCard).getByRole('button', { name: '测试 Key 与模型' }));
 
     await waitFor(() => expect(runProbes).toHaveBeenCalledWith('deepseek'));
   });
@@ -250,21 +324,17 @@ describe('Phase 4 trusted UI', () => {
     };
     render(<OptionsApp services={services} />);
 
-    const deepseekHeading = await screen.findByRole('heading', { name: 'DeepSeek' });
-    const deepseekCard = deepseekHeading.closest('article');
-    expect(deepseekCard).not.toBeNull();
-    expect(within(deepseekCard!).getByText('文本：未验证/不可用')).toBeTruthy();
-    expect(within(deepseekCard!).getByText('视觉：未验证/不支持')).toBeTruthy();
-    expect(within(deepseekCard!).getByText('失败原因：401 Unauthorized')).toBeTruthy();
+    const deepseekCard = await screen.findByTestId('text-model-card');
+    expect(within(deepseekCard).getByText('文本：未验证/不可用')).toBeTruthy();
+    expect(within(deepseekCard).getByText('视觉：未验证/不支持')).toBeTruthy();
+    expect(within(deepseekCard).getByText('失败原因：401 Unauthorized')).toBeTruthy();
     expect(
-      within(deepseekCard!).getByText('视觉失败原因：模型 text-only 不接受图像输入'),
+      within(deepseekCard).getByText('视觉失败原因：模型 text-only 不接受图像输入'),
     ).toBeTruthy();
 
-    const openrouterHeading = screen.getByRole('heading', { name: 'OpenRouter' });
-    const openrouterCard = openrouterHeading.closest('article');
-    expect(openrouterCard).not.toBeNull();
-    expect(within(openrouterCard!).getByText('文本：已验证')).toBeTruthy();
-    expect(within(openrouterCard!).getByText('视觉：已验证')).toBeTruthy();
+    const openrouterCard = screen.getByTestId('vision-model-card');
+    expect(within(openrouterCard).getByText('文本：已验证')).toBeTruthy();
+    expect(within(openrouterCard).getByText('视觉：已验证')).toBeTruthy();
   });
 
   it('Panel 分列展示文本/视觉 Provider，并禁用未探针项', async () => {
