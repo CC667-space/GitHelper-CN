@@ -567,3 +567,14 @@
 - **证据**：Vitest 54 files / 301 tests 全过（另 1 file / 1 Phase 9 live test 默认跳过）；typecheck、lint、本轮 TS/TSX 格式、`git diff --check`、build（419 modules）、构建安全扫描和隔离 Chrome 149 E2E 全过。构建 manifest 仅含新增三家精确 Host 与未授予的 `https://*/*` custom 候选范围；E2E Provider 请求 0、页面异常 0。本地包 13 个条目，SHA-256 `2054da14de9641e205dbde22899bc96b1f66bab95689cb00e11f4968235421b3`。新增路线尚未使用真实 Key 探针，因此能力仍标记为未验证。
 - **范围**：只扩展 Provider 配置与传输层；不改变 GitHub 读取/搜索/分析/问答功能，不新增写操作、GitHub Token、账号、云同步、远程发布或凭据导入导出。
 - 状态：Phase 12 自动验收完成；新增路线真实能力待用户自愿配置 Key 后按需探针，不阻塞既有 MVP ｜ 2026-08-20
+
+## D-069 公开源码采用 MIT License 并在首次 Push 前移除历史个人邮箱
+- **决策**：
+  - 经项目负责人 2026-08-20 明确授权，项目以 MIT License 公开到 `CC667-space/GitHelper-CN`；根目录提供面向使用者的 README 与标准 MIT License。
+  - 首次公开 Push 前，把全部历史提交的 author/committer email 统一改为 `283176701+CC667-space@users.noreply.github.com`，保留提交作者名、内容、时间和提交信息；仓库后续提交也使用该 noreply 邮箱。
+  - 创建 GitHub 公开仓库、添加 `origin` 和 Push 只在完整质量门禁及最终凭据审计通过后执行。只 Push `main`，不上传本地构建产物、浏览器数据、环境文件或备份引用。
+  - 本次公开源码不等于发布 Chrome Web Store、GitHub Release 或扩展安装包；这些外部发布行为仍须分别确认。
+- **理由**：MIT 以最小许可文本明确第三方使用、修改和分发权；首次 Push 前改写邮箱可避免把个人邮箱永久公开。把凭据审计设置为 Push 的最后硬门槛，可在不扩大产品范围的前提下降低公开仓库泄露风险。
+- **证据**：待 Phase 13 完成后记录质量门禁、历史邮箱唯一值、最终凭据审计、远程可见性与 Push 验证结果。
+- **范围**：只处理源码公开、许可证和 Git 历史身份；不改变产品功能、Chrome 权限、安全边界、Provider/GitHub 请求或 Chrome Web Store 状态。
+- 状态：已授权，执行中 ｜ 2026-08-20
