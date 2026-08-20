@@ -298,7 +298,8 @@ export const providerRuntimeViewSchema = z
   .object({
     id: providerIdSchema,
     label: z.string().min(1).max(100),
-    apiHost: z.url(),
+    apiHost: z.union([z.url(), z.literal('')]),
+    baseUrl: z.string().max(2_048).optional(),
     textModel: z.string().max(300),
     visionModel: z.string().max(300).optional(),
     intermediary: z.boolean(),

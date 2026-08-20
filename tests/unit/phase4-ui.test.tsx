@@ -156,8 +156,8 @@ describe('Phase 4 trusted UI', () => {
 
     const textProvider = within(providerSection).getByLabelText('文本 Provider');
     const visionProvider = within(providerSection).getByLabelText('视觉 Provider');
-    expect(within(textProvider).getAllByRole('option')).toHaveLength(8);
-    expect(within(visionProvider).getAllByRole('option')).toHaveLength(7);
+    expect(within(textProvider).getAllByRole('option')).toHaveLength(11);
+    expect(within(visionProvider).getAllByRole('option')).toHaveLength(10);
     expect(within(visionProvider).queryByRole('option', { name: 'DeepSeek' })).toBeNull();
     expect(
       within(textProvider).getByRole('option', { name: 'ChatGPT（OpenAI API）' }),
@@ -165,10 +165,11 @@ describe('Phase 4 trusted UI', () => {
     expect(
       within(textProvider).getByRole('option', { name: 'Claude（Anthropic API）' }),
     ).toBeTruthy();
-    expect(within(textProvider).queryByRole('option', { name: /自定 Provider/ })).toBeNull();
-    expect(within(textProvider).queryByRole('option', { name: /^GLM$/ })).toBeNull();
-    expect(within(textProvider).queryByRole('option', { name: /^Kimi$/ })).toBeNull();
-    expect(within(textProvider).queryByRole('option', { name: /^Grok$/ })).toBeNull();
+    expect(within(textProvider).getByRole('option', { name: /自定 Provider/ })).toBeTruthy();
+    expect(within(textProvider).getByRole('option', { name: /GLM/ })).toBeTruthy();
+    expect(within(textProvider).getByRole('option', { name: /Kimi/ })).toBeTruthy();
+    expect(within(textProvider).getByRole('option', { name: /Grok/ })).toBeTruthy();
+    expect(within(textProvider).queryByRole('option', { name: /UUAPI/ })).toBeNull();
   });
 
   it('Options 按所选 Provider 提供模型预设和手填 Model ID', async () => {
@@ -208,6 +209,91 @@ describe('Phase 4 trusted UI', () => {
     );
   });
 
+  it('Options 为 custom 分离保存 URL/model 与 Key，并展示安全提示', async () => {
+    const services: OptionsServices = {
+      ...phase5ServiceDefaults,
+      loadProviders: vi.fn(async () => [
+        provider('deepseek', 'needs_key'),
+        provider('openrouter', 'needs_key'),
+        provider('custom', 'needs_key', {
+          label: '自定 Provider（OpenAI-compatible）',
+          apiHost: '',
+          baseUrl: undefined,
+          textModel: '',
+          visionModel: '',
+          intermediary: true,
+        }),
+      ]),
+      saveKey: vi.fn(),
+      deleteKey: vi.fn(),
+      saveModels: vi.fn(),
+      runProbes: vi.fn(),
+    };
+    const user = userEvent.setup();
+    render(<OptionsApp services={services} />);
+
+    const textCard = await screen.findByTestId('text-model-card');
+    await user.selectOptions(within(textCard).getByLabelText('文本 Provider'), 'custom');
+    await user.type(
+      within(textCard).getByRole('textbox', { name: /API Base URL 或 Chat Completions URL/ }),
+      'https://gateway.example.com/v1',
+    );
+    await user.type(within(textCard).getByLabelText('自行填写文本 Model ID'), 'account-model');
+    await user.click(within(textCard).getByRole('button', { name: '保存模型配置' }));
+
+    await waitFor(() =>
+      expect(services.saveModels).toHaveBeenCalledWith('custom', {
+        baseUrl: 'https://gateway.example.com/v1',
+        textModel: 'account-model',
+        visionModel: undefined,
+      }),
+    );
+    expect(within(textCard).getByText(/仅允许公网 HTTPS/)).toBeTruthy();
+    expect(
+      (within(textCard).getByLabelText(/自定 Provider.*API Key/) as HTMLInputElement).type,
+    ).toBe('password');
+  });
+
+  it('Options 只用已保存的 custom URL 发起 Key 权限请求', async () => {
+    const saveKey = vi.fn(async () => undefined);
+    const services: OptionsServices = {
+      ...phase5ServiceDefaults,
+      loadProviders: vi.fn(async () => [
+        provider('deepseek', 'needs_key'),
+        provider('openrouter', 'needs_key'),
+        provider('custom', 'needs_key', {
+          label: '自定 Provider（OpenAI-compatible）',
+          apiHost: 'https://gateway.example.com',
+          baseUrl: 'https://gateway.example.com/v1',
+          textModel: 'account-model',
+          visionModel: '',
+          intermediary: true,
+        }),
+      ]),
+      saveKey,
+      deleteKey: vi.fn(),
+      saveModels: vi.fn(),
+      runProbes: vi.fn(),
+    };
+    const user = userEvent.setup();
+    render(<OptionsApp services={services} />);
+
+    const textCard = await screen.findByTestId('text-model-card');
+    await user.selectOptions(within(textCard).getByLabelText('文本 Provider'), 'custom');
+    await user.type(within(textCard).getByLabelText(/自定 Provider.*API Key/), 'sk-custom-test');
+    const saveButton = within(textCard).getByRole('button', { name: '保存 Key' });
+    expect((saveButton as HTMLButtonElement).disabled).toBe(false);
+    await user.click(saveButton);
+
+    await waitFor(() =>
+      expect(saveKey).toHaveBeenCalledWith(
+        'custom',
+        'sk-custom-test',
+        'https://gateway.example.com/v1',
+      ),
+    );
+  });
+
   it('Options 提供不含 Key 和自定义端点的 Provider JSON 导入导出入口', async () => {
     const exported = '{"schemaVersion":1,"providers":{"openai":{"textModel":"gpt-5-mini"}}}';
     const importProviderSettings = vi.fn(async () => undefined);
@@ -231,9 +317,7 @@ describe('Phase 4 trusted UI', () => {
 
     await user.click(screen.getByRole('button', { name: '导入配置 JSON' }));
     await waitFor(() => expect(importProviderSettings).toHaveBeenCalledWith(exported));
-    expect(document.body.textContent).toMatch(
-      /JSON 不得包含 API Key、自定义 Provider 或自定义端点/,
-    );
+    expect(document.body.textContent).toMatch(/JSON 不得包含 API Key、token 或 Authorization/);
   });
 
   it('Options 点击真实探针后在按钮区域立即显示运行状态并阻止重复提交', async () => {
@@ -358,8 +442,8 @@ describe('Phase 4 trusted UI', () => {
 
     expect(await screen.findByLabelText('文本 Provider')).toBeTruthy();
     expect(screen.getByLabelText('视觉 Provider')).toBeTruthy();
-    const pendingOptions = screen.getAllByRole('option', { name: /UUAPI/ });
-    expect(pendingOptions.every((option) => (option as HTMLOptionElement).disabled)).toBe(true);
+    expect(screen.queryByRole('option', { name: /UUAPI/ })).toBeNull();
+    expect(screen.getAllByRole('option', { name: /OpenRouter/ })).toHaveLength(2);
     expect(JSON.stringify(usePanelStore.getState())).not.toMatch(/apiKey|secret/i);
   });
 

@@ -5,6 +5,7 @@
 > v1.1（2026-07-24）：新增 Phase 0 探针/1.5 安全地基验收；安全表述客观化（P1-2）；移除 Token/私有仓库开关项；C-2 明确核心功能阻塞最终 MVP。
 > v1.2（2026-07-24）：修正凭据"明文不出现于 DOM/状态"为可实现表述（D-028）；Phase 4 可用性判定（D-031）；限流分桶用例（D-032）；Scheme 拒绝用例（D-013R）；三种数据清除用例（D-033）。
 > v1.3（2026-08-03）：八家固定适配器、五个精确可选 Host 权限及无密钥设置 JSON 验收（D-063）。
+> v1.4（2026-08-20）：新增 Phase 12 的 GLM/Kimi/Grok、受限 custom、UUAPI legacy 与动态精确 Host 验收（D-068）。
 
 ---
 
@@ -28,8 +29,9 @@
 - parsers：各页面类型对 fixtures 的识别与字段提取
 - sanitizer：各类凭据正/反/边界/组合用例
 - provider：mock HTTP，断言请求组装、apiHost 固定预设、model、错误映射（**八个适配器全部有 mock 测试，D-031/D-063**）
-- provider-host-access：新增五家仅请求各自精确 origin；拒绝授权时 Key 零写入；Background 在 Key 读取前断言权限；删除 Key 后释放权限
-- provider-settings：旧三家配置迁移后合并八家默认值；JSON 只接受 model 绑定，拒绝 Key/token/Authorization/URL/Host/endpoint 与未知字段，错误不回显输入
+- provider-host-access：固定可选 Provider 只请求各自精确 Host；custom 只请求已保存 URL 的精确 Host；拒绝授权时 Key 零写入；Background 在 Key 读取前断言权限；删除 Key 后释放权限
+- provider-settings：旧配置迁移后合并当前目录默认值；内置条目只接受 model，custom 可含非秘密 URL/model；拒绝 Key/token/Authorization、内置 endpoint 覆盖与未知字段，错误不回显输入
+- custom URL/transport：拒绝 credentials/query/fragment、非默认端口、localhost、IPv4/IPv6 私网/回环/链路本地/保留地址字面量；配置/权限/请求 origin 不一致在读取 Key 与 fetch 前阻断；重定向拒绝
 - provider-manager：默认路由、手动覆盖优先、Capability 护栏（vision 阻断）、探针失败 Provider 被禁用标记
 - credential-store：Options 上下文只 write/delete、Background 只 read/inject（读写路径唯一）；普通 storage 接口读不到凭据；**构建期 import 边界：`src/content/**` 引用 credential-store 触发 lint 报错（D-028）**
 - tools registry：zod 校验通过/拒绝、白名单外拒绝、**openGitHubPage 仅接受 `https://github.com/*`、非 https Scheme（javascript/data/file/chrome/chrome-extension/blob）全部拒绝（D-013R）**
@@ -51,7 +53,7 @@
 - Panel 在 Provider 状态、会话 hydration 或请求结果返回前断开时，Background 丢弃旧 Port 的迟到消息且不得产生未处理的 disconnected-port 异常；非断开类发送错误不得被吞掉（D-064）
 - 助手 Markdown/GFM 生成语义化标题/列表/强调/代码/表格；fenced code 与行内代码样式不冲突；原始 HTML、远程图片与可点击外链不会进入 DOM（D-042/D-052）
 - Options 表单读写、Key 录入与掩码（**可实现表述，D-028**）：录入用 password input；**保存成功后输入框与受控状态被清空**（断言 value === ''）；**已保存 Key 不回显明文**——保存后重新打开 Options，DOM/组件状态中只有掩码（尾 4 位），无完整 Key 字符串；Zustand store 全量序列化后不含已存 Key 明文
-- Options 只用“文本 Model / 视觉 Model”两张角色卡组织配置；文本列表显示八家固定 Provider，视觉列表排除 DeepSeek；选择 Provider 后显示该家的 Key、按角色区分的 2–3 个已核对候选（无稳定公开目录时允许为空）及手填 Model ID；新增五家保存时逐家授权；设置 JSON 导入/导出不含 Key、URL 或 Host，不能新增目录外 Provider
+- Options 只用“文本 Model / 视觉 Model”两张角色卡组织配置；常用列表排除 legacy UUAPI，视觉列表另排除 DeepSeek；选择后显示 Key、2–3 个候选及手填 Model ID；custom 先保存 URL/model 后精确授权；设置 JSON 不含 Key且不能新增白名单外 Provider
 - Options 偏好表单与容量用量可读；三种数据清除入口分别可用且全清有显式二次确认（D-033）、数据流向披露展示
 - Panel 收到 `SESSION_STATE` 后恢复活动会话；页面变化/Background 重连的 hydrate 不覆盖当前对话；最近会话可选择且可强制新建；恢复投影过长时明确提示早期内容未展开
 - Panel 以“页面提问 / 仓库分析 / 中文搜索 / 问答”四分段导航切换且不丢失当前状态；分析内容仍可收起，问答不提供整体收起按钮但保留逐轮收展（D-066）

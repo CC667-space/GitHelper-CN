@@ -21,7 +21,7 @@ class MemorySettingsArea implements ProviderSettingsArea {
 }
 
 describe('Provider settings', () => {
-  it('读取旧三家配置时保留用户模型并为 OpenAI 补齐默认值', async () => {
+  it('读取 v1 旧配置时保留用户模型并补齐 Phase 12 Provider 默认值', async () => {
     const area = new MemorySettingsArea();
     area.values['provider:settings:v1'] = {
       schemaVersion: 1,
@@ -39,6 +39,9 @@ describe('Provider settings', () => {
       textModel: 'gpt-5-mini',
       visionModel: 'gpt-5-mini',
     });
+    expect(settings.schemaVersion).toBe(2);
+    expect(settings.providers.glm.textModel).toBe('glm-5.2');
+    expect(settings.providers.custom.textModel).toBe('');
   });
 
   it('导入仅含部分 Provider 的 JSON 时保留指定模型并补齐其他默认值', () => {
@@ -56,24 +59,33 @@ describe('Provider settings', () => {
     expect(settings.providers.deepseek.textModel).toBe('deepseek-v4-flash');
   });
 
-  it('导出的 JSON 只包含 Provider 模型绑定，不包含凭据或端点', () => {
+  it('导出的 JSON 只包含模型和 custom 非秘密 URL，不包含凭据', () => {
     const settings = parseProviderSettingsJson(`{
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "providers": {
-        "openai": { "textModel": "gpt-5-mini", "visionModel": "gpt-5-mini" }
+        "openai": { "textModel": "gpt-5-mini", "visionModel": "gpt-5-mini" },
+        "custom": {
+          "baseUrl": "https://api.example.com/v1/chat/completions",
+          "textModel": "account-model"
+        }
       }
     }`);
     const exported = serializeProviderSettingsJson(settings);
 
-    expect(exported).not.toMatch(/apiKey|authorization|token|baseUrl|apiHost|endpoint/i);
-    expect(JSON.parse(exported)).toEqual(settings);
+    expect(exported).not.toMatch(/apiKey|authorization|token|apiHost|endpoint/i);
+    expect(JSON.parse(exported).providers.custom).toEqual({
+      baseUrl: 'https://api.example.com/v1',
+      textModel: 'account-model',
+    });
+    expect(JSON.parse(exported).providers.openai).not.toHaveProperty('baseUrl');
   });
 
-  it('拒绝包含 Key 或自定义端点的 JSON，错误信息不回显敏感值', () => {
+  it('拒绝 Key、未知字段或覆盖内置 endpoint，错误信息不回显输入', () => {
     const secret = 'sk-never-echo-this-value';
     const inputs = [
       `{"schemaVersion":1,"providers":{},"apiKey":"${secret}"}`,
-      '{"schemaVersion":1,"providers":{},"baseUrl":"https://example.com/v1"}',
+      '{"schemaVersion":2,"providers":{"openai":{"textModel":"x","baseUrl":"https://example.com/v1"}}}',
+      '{"schemaVersion":2,"providers":{"custom":{"textModel":"x","baseUrl":"http://example.com/v1"}}}',
     ];
 
     for (const input of inputs) {
@@ -93,7 +105,7 @@ describe('Provider settings', () => {
     const store = createProviderSettingsStore(area);
 
     await store.importJson(
-      '{"schemaVersion":1,"providers":{"openai":{"textModel":"gpt-4.1-mini"}}}',
+      '{"schemaVersion":2,"providers":{"openai":{"textModel":"gpt-4.1-mini"}}}',
     );
     const exported = await store.exportJson();
 

@@ -94,13 +94,17 @@ describe('D-033 local data clearing', () => {
     expect(sessionArea.values).toEqual({});
     expect(area.removed).toContainEqual([
       'credential:provider:deepseek',
-      'credential:provider:uuapi',
       'credential:provider:openrouter',
       'credential:provider:openai',
       'credential:provider:anthropic',
       'credential:provider:gemini',
       'credential:provider:qwen',
       'credential:provider:siliconflow',
+      'credential:provider:glm',
+      'credential:provider:kimi',
+      'credential:provider:grok',
+      'credential:provider:custom',
+      'credential:provider:uuapi',
     ]);
   });
 });

@@ -47,7 +47,7 @@ export class ProviderManager {
     private readonly providers: Map<ProviderId, Provider>,
     private readonly defaults: { text: ProviderId; vision: ProviderId; fallback: ProviderId } = {
       text: 'deepseek',
-      vision: 'uuapi',
+      vision: 'openrouter',
       fallback: 'openrouter',
     },
   ) {

@@ -31,6 +31,10 @@ export default defineManifest({
     'https://generativelanguage.googleapis.com/*',
     'https://dashscope.aliyuncs.com/*',
     'https://api.siliconflow.cn/*',
+    'https://open.bigmodel.cn/*',
+    'https://api.moonshot.cn/*',
+    'https://api.x.ai/*',
+    'https://*/*',
   ],
   background: {
     service_worker: 'src/background/service-worker.ts',

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import type { ProviderId } from '../lib/types';
+import { providerCatalogEntry } from '../lib/provider-catalog';
 import type { SearchTarget } from '../lib/github-search';
 import { connectPanel, type PanelConnection } from './connection';
 import { MarkdownMessage } from './MarkdownMessage';
@@ -328,15 +329,17 @@ export function PanelApp({
               <option disabled value="">
                 尚未配置
               </option>
-              {providers.map((provider) => (
-                <option
-                  disabled={provider.availability !== 'available'}
-                  key={provider.id}
-                  value={provider.id}
-                >
-                  {provider.label} · {provider.textModel || '未填 model'}
-                </option>
-              ))}
+              {providers
+                .filter((provider) => providerCatalogEntry(provider.id).visibility === 'common')
+                .map((provider) => (
+                  <option
+                    disabled={provider.availability !== 'available'}
+                    key={provider.id}
+                    value={provider.id}
+                  >
+                    {provider.label} · {provider.textModel || '未填 model'}
+                  </option>
+                ))}
             </select>
           </label>
           <label className="block min-w-0 text-xs font-medium text-[#65738a]">
@@ -353,17 +356,19 @@ export function PanelApp({
               <option disabled value="">
                 尚未验证
               </option>
-              {providers.map((provider) => (
-                <option
-                  disabled={
-                    provider.availability !== 'available' || !provider.capabilities.supportsVision
-                  }
-                  key={provider.id}
-                  value={provider.id}
-                >
-                  {provider.label} · {provider.visionModel || '未填 model'}
-                </option>
-              ))}
+              {providers
+                .filter((provider) => providerCatalogEntry(provider.id).visibility === 'common')
+                .map((provider) => (
+                  <option
+                    disabled={
+                      provider.availability !== 'available' || !provider.capabilities.supportsVision
+                    }
+                    key={provider.id}
+                    value={provider.id}
+                  >
+                    {provider.label} · {provider.visionModel || '未填 model'}
+                  </option>
+                ))}
             </select>
           </label>
         </div>

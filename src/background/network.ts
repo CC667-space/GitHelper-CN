@@ -1,8 +1,11 @@
 import { PROVIDER_CATALOG, type ProviderId } from '../lib/provider-catalog';
 
 export const PROVIDER_API_ORIGINS = Object.fromEntries(
-  PROVIDER_CATALOG.map((provider) => [provider.id, provider.apiHost]),
-) as Record<ProviderId, string>;
+  PROVIDER_CATALOG.filter((provider) => provider.apiHost).map((provider) => [
+    provider.id,
+    provider.apiHost,
+  ]),
+) as Partial<Record<ProviderId, string>>;
 
 export const ALLOWED_OUTBOUND_ORIGINS = new Set([
   'https://github.com',
@@ -45,13 +48,17 @@ export class RequestTimeoutError extends Error {
   }
 }
 
-export function assertAllowedOutboundUrl(value: string | URL): URL {
+export function assertAllowedOutboundUrl(
+  value: string | URL,
+  additionalAllowedOrigins: readonly string[] = [],
+): URL {
   const url = value instanceof URL ? new URL(value.href) : new URL(value);
+  const allowedOrigins = new Set([...ALLOWED_OUTBOUND_ORIGINS, ...additionalAllowedOrigins]);
   if (
     url.protocol !== 'https:' ||
     url.username ||
     url.password ||
-    !ALLOWED_OUTBOUND_ORIGINS.has(url.origin)
+    !allowedOrigins.has(url.origin)
   ) {
     throw new OutboundPolicyError(`拒绝访问未授权端点：${url.origin}`);
   }
@@ -84,6 +91,7 @@ export interface SafeFetchOptions {
   fetchImpl?: FetchLike;
   timeoutMs?: number;
   maxRequestBytes?: number;
+  additionalAllowedOrigins?: readonly string[];
 }
 
 export async function safeFetch(
@@ -91,7 +99,7 @@ export async function safeFetch(
   init: RequestInit = {},
   options: SafeFetchOptions = {},
 ): Promise<Response> {
-  const url = assertAllowedOutboundUrl(input);
+  const url = assertAllowedOutboundUrl(input, options.additionalAllowedOrigins);
   const maxRequestBytes = options.maxRequestBytes ?? DEFAULT_MAX_REQUEST_BYTES;
   const bytes = await requestBodyBytes(init.body);
   if (bytes > maxRequestBytes) {

@@ -66,7 +66,7 @@ describe('ProviderManager', () => {
       manager.setProbeResult(probe(providerId));
     }
     expect(manager.resolve({ needsVision: false }).id).toBe('deepseek');
-    expect(manager.resolve({ needsVision: true }).id).toBe('uuapi');
+    expect(manager.resolve({ needsVision: true }).id).toBe('openrouter');
     manager.setManualOverride('openrouter');
     expect(manager.resolve({ needsVision: false }).id).toBe('openrouter');
     expect(manager.resolve({ needsVision: false, manualOverrideId: 'uuapi' }).id).toBe('uuapi');

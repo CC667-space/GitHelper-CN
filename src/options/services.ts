@@ -27,7 +27,7 @@ export interface StorageUsage {
 
 export interface OptionsServices {
   loadProviders(): Promise<ProviderRuntimeView[]>;
-  saveKey(providerId: ProviderId, apiKey: string): Promise<void>;
+  saveKey(providerId: ProviderId, apiKey: string, baseUrl?: string): Promise<void>;
   deleteKey(providerId: ProviderId): Promise<void>;
   saveModels(providerId: ProviderId, setting: ProviderSetting): Promise<void>;
   importProviderSettings(source: string): Promise<void>;
@@ -65,19 +65,36 @@ async function loadProviders(): Promise<ProviderRuntimeView[]> {
 
 export const defaultOptionsServices: OptionsServices = {
   loadProviders,
-  saveKey: (providerId, apiKey) =>
+  saveKey: (providerId, apiKey, baseUrl) =>
     createProviderCredentialActions(
       { write: writeCredential, delete: deleteCredential },
       providerHostAccess(),
-    ).save(providerId, apiKey),
+    ).save(providerId, apiKey, baseUrl),
   deleteKey: (providerId) =>
     createProviderCredentialActions(
       { write: writeCredential, delete: deleteCredential },
       providerHostAccess(),
     ).delete(providerId),
-  saveModels: (providerId, setting) => providerSettingsStore().writeProvider(providerId, setting),
+  saveModels: async (providerId, setting) => {
+    const store = providerSettingsStore();
+    const previous =
+      providerId === 'custom' ? (await store.read()).providers.custom.baseUrl : undefined;
+    await store.writeProvider(providerId, setting);
+    const current =
+      providerId === 'custom' ? (await store.read()).providers.custom.baseUrl : undefined;
+    if (providerId === 'custom' && previous && previous !== current) {
+      await deleteCredential('custom');
+      await providerHostAccess().remove('custom', previous);
+    }
+  },
   importProviderSettings: async (source) => {
-    await providerSettingsStore().importJson(source);
+    const store = providerSettingsStore();
+    const previous = (await store.read()).providers.custom.baseUrl;
+    const imported = await store.importJson(source);
+    if (previous && previous !== imported.providers.custom.baseUrl) {
+      await deleteCredential('custom');
+      await providerHostAccess().remove('custom', previous);
+    }
   },
   exportProviderSettings: () => providerSettingsStore().exportJson(),
   runProbes: async (providerId) =>

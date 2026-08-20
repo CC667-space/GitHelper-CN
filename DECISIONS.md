@@ -556,3 +556,14 @@
 - **证据**：Catalog 与 Options 组件测试覆盖两张角色卡、8/7 家列表、DeepSeek 视觉排除、友好名称、Provider 切换、角色化候选、手填 Model ID、保存和边界项不出现；探针状态测试按真实 `<section>` 收紧范围，避免页面级重复状态文案造成误判。Vitest 267 项常规测试通过（另 1 项 live test 默认跳过），`pnpm typecheck`、`pnpm lint`、变更 TS/TSX 格式、`git diff --check`、build（414 modules）、构建安全扫描和隔离 Chrome 149 E2E 全过；本地包 13 个条目，SHA-256 `4969fb98d8f4235718addcd293c900a47145c7ebe510c8029bb8aa5e7588a27c`。沙箱内 `spawn EPERM` 在最小授权的沙箱外执行中消失，确认不是项目依赖或代码缺陷。
 - **范围**：Phase 11 Options 前端交互补丁；不新增 Provider ID、Host、权限、适配器、凭据路径、Provider 调用、GitHub 能力、持久数据类别或 MVP 功能。
 - 状态：代码、隔离 Chrome 与真实 Chrome 均已验证；Options 六项与 DeepSeek 单 Provider `available` 通过 ｜ 2026-08-20
+
+## D-068 常用 Provider 扩展、UUAPI 兼容降级与受限 custom 端点
+- **决策**：
+  - 经项目负责人 2026-08-20 明确授权，常用目录新增 GLM、Kimi、Grok 的官方固定 HTTPS 端点；UUAPI 适配器、旧配置和凭据保留，但从新的 Options/Panel 候选隐藏。
+  - 只提供一个 `custom` OpenAI-compatible 条目。用户填写 HTTPS Base URL 或完整 Chat Completions URL、Key 与 model；Key 继续使用独立 credential-store，配置 JSON 只允许导入导出非秘密 URL/model。
+  - custom URL 拒绝 URL credentials、query、fragment、非默认端口、localhost、私网/回环/链路本地/保留地址字面量和跨 origin 重定向。manifest 的 `https://*/*` 仅是未授予的可请求范围；Options 在用户手势中只请求经校验的精确 Host，Background 在读取 Key 前和 fetch 前再次核对配置、权限与请求 origin。
+  - Content/Panel 消息不能携带 fetch URL；custom endpoint 只能来自可信 Options 写入、严格 Schema 验证后的 storage。任何新能力仍须真实探针后才能启用。
+- **理由**：常见官方 Provider 保持“选择服务、填写 Key/model”体验；受限兼容入口满足用户自选服务需求，同时把动态 Host 的授权、URL 来源和实际出站约束在同一可信接缝。保留 UUAPI 数据避免静默破坏旧安装，但不再把中转服务作为常用推荐。
+- **证据**：Vitest 54 files / 301 tests 全过（另 1 file / 1 Phase 9 live test 默认跳过）；typecheck、lint、本轮 TS/TSX 格式、`git diff --check`、build（419 modules）、构建安全扫描和隔离 Chrome 149 E2E 全过。构建 manifest 仅含新增三家精确 Host 与未授予的 `https://*/*` custom 候选范围；E2E Provider 请求 0、页面异常 0。本地包 13 个条目，SHA-256 `2054da14de9641e205dbde22899bc96b1f66bab95689cb00e11f4968235421b3`。新增路线尚未使用真实 Key 探针，因此能力仍标记为未验证。
+- **范围**：只扩展 Provider 配置与传输层；不改变 GitHub 读取/搜索/分析/问答功能，不新增写操作、GitHub Token、账号、云同步、远程发布或凭据导入导出。
+- 状态：Phase 12 自动验收完成；新增路线真实能力待用户自愿配置 Key 后按需探针，不阻塞既有 MVP ｜ 2026-08-20

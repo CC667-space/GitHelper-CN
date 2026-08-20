@@ -6,7 +6,7 @@ export interface ProviderCredentialWriter {
 }
 
 export interface ProviderHostAccessWriter {
-  request(providerId: ProviderId): Promise<unknown>;
+  request(providerId: ProviderId, baseUrl?: string): Promise<unknown>;
   remove(providerId: ProviderId): Promise<boolean>;
 }
 
@@ -15,8 +15,12 @@ export function createProviderCredentialActions(
   hostAccess: ProviderHostAccessWriter,
 ) {
   return {
-    async save(providerId: ProviderId, apiKey: string): Promise<void> {
-      await hostAccess.request(providerId);
+    async save(providerId: ProviderId, apiKey: string, baseUrl?: string): Promise<void> {
+      if (baseUrl === undefined) {
+        await hostAccess.request(providerId);
+      } else {
+        await hostAccess.request(providerId, baseUrl);
+      }
       await credentials.write(providerId, apiKey);
     },
 

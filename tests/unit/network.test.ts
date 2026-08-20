@@ -43,6 +43,19 @@ describe('network outbound policy', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it('只在调用方提供精确动态 Origin 时允许 custom Host', async () => {
+    expect(() => assertAllowedOutboundUrl('https://gateway.example.com/v1')).toThrow(
+      OutboundPolicyError,
+    );
+    expect(
+      assertAllowedOutboundUrl('https://gateway.example.com/v1', ['https://gateway.example.com'])
+        .origin,
+    ).toBe('https://gateway.example.com');
+    expect(() =>
+      assertAllowedOutboundUrl('https://other.example.com/v1', ['https://gateway.example.com']),
+    ).toThrow(OutboundPolicyError);
+  });
+
   it('支持调用方取消与超时', async () => {
     vi.useFakeTimers();
     const fetchImpl = vi.fn(

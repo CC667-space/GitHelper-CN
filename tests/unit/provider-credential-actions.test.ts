@@ -47,4 +47,18 @@ describe('Provider credential actions', () => {
 
     expect(calls).toEqual(['request', 'write', 'delete', 'remove']);
   });
+
+  it('custom 保存 Key 时把已保存 URL 直接交给本次权限请求', async () => {
+    const credentials = { write: vi.fn(async () => undefined), delete: vi.fn() };
+    const hostAccess = {
+      request: vi.fn(async () => 'granted' as const),
+      remove: vi.fn(async () => true),
+    };
+    const actions = createProviderCredentialActions(credentials, hostAccess);
+
+    await actions.save('custom', 'sk-custom-test', 'https://gateway.example.com/v1');
+
+    expect(hostAccess.request).toHaveBeenCalledWith('custom', 'https://gateway.example.com/v1');
+    expect(credentials.write).toHaveBeenCalledWith('custom', 'sk-custom-test');
+  });
 });

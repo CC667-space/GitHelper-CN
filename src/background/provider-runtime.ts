@@ -18,9 +18,13 @@ import {
   type CapabilityProbeSummary,
 } from './provider-manager';
 import { ProviderError, type Provider, type ProviderChatRequest } from './providers/base';
+import { CustomProvider } from './providers/custom';
 import { DeepSeekProvider } from './providers/deepseek';
 import { AnthropicProvider } from './providers/anthropic';
 import { GeminiProvider } from './providers/gemini';
+import { GlmProvider } from './providers/glm';
+import { GrokProvider } from './providers/grok';
+import { KimiProvider } from './providers/kimi';
 import { OpenRouterProvider } from './providers/openrouter';
 import { OpenAIProvider } from './providers/openai';
 import { QwenProvider } from './providers/qwen';
@@ -263,6 +267,10 @@ export class ProviderRuntime {
         ['gemini', new GeminiProvider(transport)],
         ['qwen', new QwenProvider(transport)],
         ['siliconflow', new SiliconFlowProvider(transport)],
+        ['glm', new GlmProvider(transport)],
+        ['kimi', new KimiProvider(transport)],
+        ['grok', new GrokProvider(transport)],
+        ['custom', new CustomProvider(transport)],
       ]);
     this.manager = new ProviderManager(this.providers);
     this.ready = this.loadProbeState();
@@ -286,7 +294,14 @@ export class ProviderRuntime {
         return {
           id: catalog.id,
           label: catalog.label,
-          apiHost: catalog.apiHost,
+          apiHost:
+            catalog.id === 'custom'
+              ? settings.providers.custom.baseUrl
+                ? new URL(settings.providers.custom.baseUrl).origin
+                : ''
+              : catalog.apiHost,
+          baseUrl:
+            catalog.id === 'custom' ? settings.providers.custom.baseUrl || undefined : undefined,
           textModel: settings.providers[catalog.id]?.textModel ?? catalog.defaultTextModel,
           visionModel: settings.providers[catalog.id]?.visionModel ?? catalog.defaultVisionModel,
           intermediary: catalog.intermediary,

@@ -11,6 +11,7 @@ import type {
   StreamEvent,
 } from '../lib/bridge-protocol';
 import type { ProviderId } from '../lib/types';
+import { providerCatalogEntry } from '../lib/provider-catalog';
 import type { SelectedElement, SelectedRegion } from '../lib/types';
 import type { GitHubSearchResult, SearchTarget } from '../lib/github-search';
 import type { RepositoryAnalysisCard } from '../lib/repository-analysis';
@@ -99,19 +100,29 @@ export const usePanelStore = create<PanelState>((set) => ({
       ],
     })),
   applyProviderState: ({ providers }) =>
-    set((state) => ({
-      providers,
-      selectedTextProviderId:
-        state.selectedTextProviderId ??
-        providers.find((provider) => provider.id === 'deepseek')?.id,
-      selectedVisionProviderId:
-        state.selectedVisionProviderId ??
-        providers.find(
-          (provider) =>
-            provider.availability === 'available' && provider.capabilities.supportsVision,
-        )?.id ??
-        providers.find((provider) => provider.id === 'uuapi')?.id,
-    })),
+    set((state) => {
+      const commonProviders = providers.filter(
+        (provider) => providerCatalogEntry(provider.id).visibility === 'common',
+      );
+      const selectedTextStillCommon = commonProviders.some(
+        (provider) => provider.id === state.selectedTextProviderId,
+      );
+      const selectedVisionStillCommon = commonProviders.some(
+        (provider) => provider.id === state.selectedVisionProviderId,
+      );
+      return {
+        providers,
+        selectedTextProviderId: selectedTextStillCommon
+          ? state.selectedTextProviderId
+          : commonProviders.find((provider) => provider.id === 'deepseek')?.id,
+        selectedVisionProviderId: selectedVisionStillCommon
+          ? state.selectedVisionProviderId
+          : (commonProviders.find(
+              (provider) =>
+                provider.availability === 'available' && provider.capabilities.supportsVision,
+            )?.id ?? commonProviders.find((provider) => provider.id === 'openrouter')?.id),
+      };
+    }),
   selectTextProvider: (selectedTextProviderId) => set({ selectedTextProviderId }),
   selectVisionProvider: (selectedVisionProviderId) => set({ selectedVisionProviderId }),
   applySessionState: ({ sessionId, messages, truncated, cause, recentSessions }) =>

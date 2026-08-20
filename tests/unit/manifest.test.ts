@@ -38,6 +38,10 @@ describe('Phase 0 manifest', () => {
       'https://generativelanguage.googleapis.com/*',
       'https://dashscope.aliyuncs.com/*',
       'https://api.siliconflow.cn/*',
+      'https://open.bigmodel.cn/*',
+      'https://api.moonshot.cn/*',
+      'https://api.x.ai/*',
+      'https://*/*',
     ]);
     expect(resolved.externally_connectable).toBeUndefined();
     expect(resolved.web_accessible_resources).toBeUndefined();

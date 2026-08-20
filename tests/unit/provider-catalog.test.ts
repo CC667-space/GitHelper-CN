@@ -3,16 +3,20 @@ import { describe, expect, it } from 'vitest';
 import { PROVIDER_CATALOG, providerCatalogEntry } from '../../src/lib/provider-catalog';
 
 describe('Provider catalog', () => {
-  it('把八家常用服务作为同一组内置 Provider 暴露给调用方', () => {
+  it('暴露十家常用内置服务、一个受限 custom，并把 UUAPI 标记为 legacy', () => {
     expect(PROVIDER_CATALOG.map((provider) => provider.id)).toEqual([
       'deepseek',
-      'uuapi',
       'openrouter',
       'openai',
       'anthropic',
       'gemini',
       'qwen',
       'siliconflow',
+      'glm',
+      'kimi',
+      'grok',
+      'custom',
+      'uuapi',
     ]);
 
     expect(providerCatalogEntry('openai')).toMatchObject({
@@ -71,5 +75,20 @@ describe('Provider catalog', () => {
     });
 
     expect(providerCatalogEntry('deepseek').modelSuggestions.vision).toEqual([]);
+    expect(providerCatalogEntry('glm')).toMatchObject({
+      apiHost: 'https://open.bigmodel.cn',
+      apiPath: '/api/paas/v4/chat/completions',
+      hostPermission: 'optional',
+      visibility: 'common',
+    });
+    expect(providerCatalogEntry('kimi').apiHost).toBe('https://api.moonshot.cn');
+    expect(providerCatalogEntry('grok').apiHost).toBe('https://api.x.ai');
+    expect(providerCatalogEntry('custom')).toMatchObject({
+      apiHost: '',
+      apiPath: '',
+      hostPermission: 'dynamic',
+      visibility: 'common',
+    });
+    expect(providerCatalogEntry('uuapi').visibility).toBe('legacy');
   });
 });

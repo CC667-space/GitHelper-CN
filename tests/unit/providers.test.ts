@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { DeepSeekProvider } from '../../src/background/providers/deepseek';
 import { AnthropicProvider } from '../../src/background/providers/anthropic';
+import { CustomProvider } from '../../src/background/providers/custom';
 import { GeminiProvider } from '../../src/background/providers/gemini';
+import { GlmProvider } from '../../src/background/providers/glm';
+import { GrokProvider } from '../../src/background/providers/grok';
+import { KimiProvider } from '../../src/background/providers/kimi';
 import { OpenAIProvider } from '../../src/background/providers/openai';
 import { OpenRouterProvider } from '../../src/background/providers/openrouter';
 import { QwenProvider } from '../../src/background/providers/qwen';
@@ -13,6 +17,16 @@ import type {
   ProviderTransport,
 } from '../../src/background/providers/base';
 import { UuapiProvider } from '../../src/background/providers/uuapi';
+import { defaultProviderSettings } from '../../src/lib/provider-settings';
+
+function customProvider(transport: ProviderTransport): Provider {
+  const settings = defaultProviderSettings();
+  settings.providers.custom = {
+    baseUrl: 'https://gateway.example.com/v1',
+    textModel: 'account-model',
+  };
+  return new CustomProvider(transport, { read: async () => settings });
+}
 
 const factories = [
   {
@@ -62,6 +76,30 @@ const factories = [
     endpoint: 'https://api.siliconflow.cn/v1/chat/completions',
     model: 'Pro/zai-org/GLM-4.7',
     create: (transport: ProviderTransport): Provider => new SiliconFlowProvider(transport),
+  },
+  {
+    id: 'glm',
+    endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+    model: 'glm-5.2',
+    create: (transport: ProviderTransport): Provider => new GlmProvider(transport),
+  },
+  {
+    id: 'kimi',
+    endpoint: 'https://api.moonshot.cn/v1/chat/completions',
+    model: 'kimi-k3',
+    create: (transport: ProviderTransport): Provider => new KimiProvider(transport),
+  },
+  {
+    id: 'grok',
+    endpoint: 'https://api.x.ai/v1/chat/completions',
+    model: 'grok-4.5',
+    create: (transport: ProviderTransport): Provider => new GrokProvider(transport),
+  },
+  {
+    id: 'custom',
+    endpoint: 'https://gateway.example.com/v1/chat/completions',
+    model: 'account-model',
+    create: customProvider,
   },
 ] as const;
 

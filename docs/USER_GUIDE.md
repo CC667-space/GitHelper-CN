@@ -40,35 +40,44 @@ pnpm package:extension
 1. 在 `chrome://extensions/` 找到 GitHelper-CN。
 2. 打开“扩展程序选项”。
 3. “Provider 与 API Key”只有“文本 Model”和“视觉 Model”两张配置卡。先在卡内选择 Provider；DeepSeek 仅支持文本，不会出现在视觉列表中。
-4. 为所选 Provider 填写并保存 API Key。两张卡共用同一家 Provider 已保存的 Key；OpenAI、Anthropic、Gemini、Qwen、SiliconFlow 首次保存时，Chrome 只请求该 Provider 的精确 API Host 权限。拒绝授权则不会保存 Key；保存成功后输入框立即清空，页面只显示末 4 位掩码。
-5. 从对应角色的候选列表选择 Model，或选择“自行填写 Model ID”后输入账号实际可用的 ID，再点击“保存模型配置”。候选列表是 2026-08-17 核对的便捷预设，不代表账号一定有权限，也不替代真实能力探针；UUAPI 没有可长期依赖的公开模型目录，因此只提供手填入口。
+4. 为所选 Provider 填写并保存 API Key。两张卡共用同一家 Provider 已保存的 Key；除兼容保留的静态权限路线外，首次保存时 Chrome 只请求该 Provider 的精确 API Host 权限。拒绝授权则不会保存 Key；保存成功后输入框立即清空，页面只显示末 4 位掩码。
+5. 从对应角色的候选列表选择 Model，或选择“自行填写 Model ID”后输入账号实际可用的 ID，再点击“保存模型配置”。候选列表是 2026-08-20 依据官方目录核对的便捷预设，不代表账号一定有权限，也不替代真实能力探针。
 6. 点击卡内“测试 Key 与模型”只复测所选 Provider，或使用下方“运行真实能力探针”验证全部已配置 Provider。
 
 固定端点：
 
 - DeepSeek：`https://api.deepseek.com/chat/completions`
-- UUAPI：`https://uuapi.net/v1/chat/completions`
 - OpenRouter：`https://openrouter.ai/api/v1/chat/completions`
 - OpenAI：`https://api.openai.com/v1/chat/completions`
 - Anthropic：`https://api.anthropic.com/v1/chat/completions`（OpenAI SDK 兼容入口）
 - Google Gemini：`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`
 - 阿里云百炼 Qwen：`https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`（共享旧端点，避免额外 workspace 配置）
 - SiliconFlow：`https://api.siliconflow.cn/v1/chat/completions`
+- GLM：`https://open.bigmodel.cn/api/paas/v4/chat/completions`
+- Kimi：`https://api.moonshot.cn/v1/chat/completions`
+- Grok：`https://api.x.ai/v1/chat/completions`
+
+UUAPI 不再出现在新选择器中；旧配置、Key 与适配器仍保留兼容，不会在升级时被删除。
+
+自定 OpenAI-compatible Provider：
+
+1. 选择“自定 Provider（OpenAI-compatible）”。
+2. 输入 HTTPS API Base URL（例如 `https://api.example.com/v1`）或完整 Chat Completions URL，填写 Model ID并先保存模型配置。
+3. 配置保存后再填写 Key。Chrome 只请求该 URL 的精确 Host；localhost、私网/回环/链路本地/保留地址字面量、非 HTTPS、URL credentials/query/fragment 和非默认端口会被拒绝。
+4. custom 的协议与视觉能力必须用真实能力探针验证。更换 Host 会删除旧 custom Key并释放旧 Host 权限，避免把旧凭据发送给新端点。
 
 默认路线建议：
 
 - 文本：DeepSeek `deepseek-v4-flash`
 - 视觉：使用任何已配置并通过真实探针的视觉 Provider/model；加入目录不等于能力已验证
 
-Options 下方的“高级 Model 配置 JSON”只用于迁移 model 绑定：
+Options 下方的“高级 Model 配置 JSON”用于迁移 model 绑定和 custom 的非秘密 URL：
 
-1. 点击“导出设置 JSON”，得到不含 Key、URL、Host 的文本；
+1. 点击“导出设置 JSON”，得到不含 Key/token/Authorization 的文本；custom URL 会随配置导出，因此 URL 本身不得包含秘密；
 2. 可在另一安装中粘贴后点击“导入设置 JSON”；
-3. Key 仍须在对应角色卡的 password 输入框中单独填写，JSON 不能新增自定义 Provider 或 endpoint。
+3. Key 仍须在对应角色卡的 password 输入框中单独填写；JSON 不能增加白名单外 Provider，也不能覆盖内置 endpoint。
 
-内置目录固定为上述八家。GLM、Kimi 可在账号支持时作为 SiliconFlow 等现有聚合 Provider 的 Model ID 使用，但本版本不把 GLM、Kimi 或 Grok 建成新的独立 Provider；也不接受任意 Provider/Base URL JSON。
-
-不要把 Key 发到聊天、Issue、日志、截图或设置 JSON 中。建议使用专用、可撤销、设有额度上限的 Key。UUAPI、OpenRouter 与 SiliconFlow 是中转/聚合端点，可能把请求转交其上游模型供应商。
+不要把 Key 发到聊天、Issue、日志、截图、URL 或设置 JSON 中。建议使用专用、可撤销、设有额度上限的 Key。OpenRouter、SiliconFlow、旧 UUAPI 与 custom 服务可能把请求转交其上游模型供应商。
 
 ## 4. 打开 Side Panel
 
@@ -166,7 +175,7 @@ Options 提供三种相互独立的操作：
 ## 7. 安全与范围边界
 
 - 仅支持公开 GitHub 页面；检测到私有仓库、无权限或未找到页面时零出站。
-- 只申请 `sidePanel`、`storage`、`activeTab`、GitHub 与原三家 Provider 固定 Host；新增五家只在保存对应 Key 时申请该家的精确可选 Host。绝不申请 `<all_urls>`、`tabs` 或 `scripting`。
+- 核心权限只有 `sidePanel`、`storage`、`activeTab`；GitHub 与兼容保留的原三家 Provider 为固定 Host。其他内置 Provider 只在保存 Key 时申请自身精确 Host。custom 虽在 manifest 声明 `https://*/*` 为未授予的可选候选范围，但运行时只申请用户已保存并通过校验的精确 Host。扩展不申请 `<all_urls>`、`tabs` 或 `scripting`。
 - v1 不做评论、Star、Fork、Issue/PR 创建等 GitHub 写操作。
 - 页面文字全部按不可信数据处理，不能改写 System Prompt。
 - 外部链接必须逐次确认；非 HTTPS、伪 GitHub Host 和 URL 内嵌凭据会被拒绝。

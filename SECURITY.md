@@ -4,6 +4,7 @@
 > v1.1（2026-07-24）：按修订任务单 P0-1/2/4/5/7、C-3、P1-2/3 修订。
 > v1.2（2026-07-24）：细化 Key 录入/保存路径与模块导入边界（D-028）；openPage 限域与 Scheme 黑名单（D-013R）；三种数据清除（D-033）。
 > v1.3（2026-08-03）：八家固定 Provider、逐家精确可选 Host 权限与无密钥设置 JSON 边界（D-063）。
+> v1.4（2026-08-20）：新增受限 custom Provider 的 HTTPS 校验、精确动态 Host 授权与 JSON 非秘密配置边界（D-068）。
 
 ---
 
@@ -29,8 +30,8 @@
 
 ## 2. 数据流向的准确表述（v1.1，P0-2）
 
-- API Key 与请求数据（问题、必要上下文、选中内容、必要截图）**仅发送到用户明确选择并授权的 API 端点**。v1 只允许八家内置 Provider 的固定 Host，不接受用户提供的 URL。
-- UUAPI、OpenRouter、SiliconFlow 属于**中转/聚合服务**，它们可能把数据转交其上游模型供应商。**本扩展无法控制、也不承诺控制第三方端点后续如何处理数据**。
+- API Key 与请求数据（问题、必要上下文、选中内容、必要截图）**仅发送到用户明确选择并授权的 API 端点**。内置 Provider 使用固定 Host；唯一 custom 只接受经校验并精确授权的 HTTPS Host。
+- 旧 UUAPI、OpenRouter、SiliconFlow 属于**中转/聚合服务**；用户选择的 custom 服务也可能是中转。它们可能把数据转交其上游模型供应商。**本扩展无法控制、也不承诺控制第三方端点后续如何处理数据**。
 - 设置页/隐私说明必须展示：当前 Provider、当前 API Host、当前模型、页面数据将发往哪里、该端点是否为中转聚合服务、用户更换端点时的风险提示。
 - 文档与 UI 中**禁止**出现"Key 绝不发往任何第三方服务器"这类与 BYOK 直连相矛盾的绝对化表述。
 
@@ -69,12 +70,12 @@
 - BYOK 模式适用于**个人原型**。
 - 建议使用**专用、可撤销、设置了额度限制**的 API Key。
 
-### 3.5 Provider Host 授权与设置 JSON（v1.3，D-063）
-- DeepSeek / UUAPI / OpenRouter 沿用既有静态 Host 权限；OpenAI / Anthropic / Gemini / Qwen / SiliconFlow 只在用户保存对应 Key 时请求该家的**单一精确 origin**。拒绝授权时 Key 不写入。
-- Background 在读取并注入 Key 前再次确认可选 Host 权限；权限缺失时不得读取 Key、不得发请求。删除新增 Provider 的 Key 后同步释放该 Host 权限。
-- Provider 设置 JSON 只允许 `schemaVersion`、Provider ID、`textModel` / `visionModel`。解析器以 strict Schema 拒绝 `apiKey`、`token`、`Authorization`、`baseUrl`、`apiHost`、`url`、`endpoint` 和未知字段；错误不得回显原 JSON。
-- 导出使用字段白名单重建 JSON，不序列化 storage 原对象；凭据和 Host 永远不进入导入/导出文件。
-- 任意 Base URL、自定义 Host 和凭据导入继续禁止；若未来需要，仍是独立基线变更。
+### 3.5 Provider Host 授权与设置 JSON（v1.4，D-063 / D-068）
+- DeepSeek / UUAPI / OpenRouter 沿用静态 Host 权限；其余固定 Provider 保存 Key 时只请求该家的**单一精确 Host**。拒绝授权时 Key 不写入。
+- custom 拒绝 URL credentials、query、fragment、非默认端口、localhost、私网/回环/链路本地/保留地址字面量。manifest 的 `https://*/*` 只是未授予候选范围；Options 必须先保存 URL/model，再在保存 Key 的用户手势中申请该精确 Host。
+- Background 读取 Key 前再次读取并校验 custom 配置，确认实际请求 origin 完全一致且权限存在；custom fetch 使用 `credentials: omit` 并拒绝重定向。权限缺失、配置变化或 origin 不一致时不得读取 Key、不得发请求。
+- 设置 JSON 只允许白名单 Provider ID、model；仅 custom 可额外含非秘密 URL。strict Schema 拒绝 `apiKey`、`token`、`Authorization`、未知字段和内置 endpoint 覆盖；错误不得回显原 JSON。导出以字段白名单重建，凭据永不进入 JSON。
+- 删除 custom Key 后释放当前 Host 权限；更换 Host 或导入不同 custom URL 时删除旧 custom Key并释放旧权限，避免旧凭据发送给新端点。
 
 ---
 

@@ -40,7 +40,7 @@ export function OptionsApp({
   );
   const [keys, setKeys] = useState<Partial<Record<ProviderId, string>>>({});
   const [models, setModels] = useState<
-    Partial<Record<ProviderId, { textModel: string; visionModel: string }>>
+    Partial<Record<ProviderId, { textModel: string; visionModel: string; baseUrl?: string }>>
   >({});
   const [preferences, setPreferences] = useState<UserPreferences>(defaultUserPreferences);
   const [storageUsage, setStorageUsage] = useState<StorageUsage>();
@@ -58,6 +58,7 @@ export function OptionsApp({
           {
             textModel: provider.textModel,
             visionModel: provider.visionModel ?? '',
+            ...(provider.baseUrl ? { baseUrl: provider.baseUrl } : {}),
           },
         ]),
       ),
@@ -80,13 +81,17 @@ export function OptionsApp({
     );
   }, []);
 
-  async function saveKey(providerId: ProviderId): Promise<void> {
+  async function saveKey(providerId: ProviderId, baseUrl?: string): Promise<void> {
     const apiKey = keys[providerId]?.trim() ?? '';
     if (!apiKey) {
       setStatus('请输入 API Key');
       return;
     }
-    await services.saveKey(providerId, apiKey);
+    if (baseUrl === undefined) {
+      await services.saveKey(providerId, apiKey);
+    } else {
+      await services.saveKey(providerId, apiKey, baseUrl);
+    }
     setKeys((current) => ({ ...current, [providerId]: '' }));
     setStatus(`${providerId} Key 已保存，输入框已清空`);
     await refreshProviders();
@@ -103,8 +108,13 @@ export function OptionsApp({
     await services.saveModels(providerId, {
       textModel: current.textModel,
       visionModel: current.visionModel || undefined,
+      ...(providerId === 'custom' ? { baseUrl: current.baseUrl ?? '' } : {}),
     });
-    setStatus(`${providerId} 模型配置已保存`);
+    setStatus(
+      providerId === 'custom'
+        ? '自定 Provider URL 与模型配置已保存；如更换 Host，旧 Key 已安全删除'
+        : `${providerId} 模型配置已保存`,
+    );
     await refreshProviders();
   }
 
@@ -181,6 +191,7 @@ export function OptionsApp({
     const current = models[providerId] ?? {
       textModel: catalog.defaultTextModel,
       visionModel: catalog.defaultVisionModel ?? '',
+      ...(providerId === 'custom' ? { baseUrl: '' } : {}),
     };
     setModels((allModels) => ({
       ...allModels,
@@ -200,14 +211,15 @@ export function OptionsApp({
     const model = models[providerId] ?? {
       textModel: catalog.defaultTextModel,
       visionModel: catalog.defaultVisionModel ?? '',
+      ...(providerId === 'custom' ? { baseUrl: provider?.baseUrl ?? '' } : {}),
     };
     const modelValue = role === 'text' ? model.textModel : model.visionModel;
     const suggestions = catalog.modelSuggestions[role];
     const selectedModel = suggestions.includes(modelValue) ? modelValue : CUSTOM_MODEL_ID;
-    const selectableProviders =
-      role === 'text'
-        ? PROVIDER_CATALOG
-        : PROVIDER_CATALOG.filter((entry) => entry.id !== 'deepseek');
+    const selectableProviders = PROVIDER_CATALOG.filter(
+      (entry) =>
+        entry.visibility === 'common' && (role === 'text' || entry.supportsVisionSelection),
+    );
 
     return (
       <article
@@ -249,8 +261,9 @@ export function OptionsApp({
         <div className="mt-3 rounded-md bg-slate-50 p-3">
           <p className="font-medium text-slate-800">{displayLabel}</p>
           <p className="mt-1 break-all text-xs text-slate-500">
-            {catalog.apiHost}
-            {catalog.apiPath}
+            {providerId === 'custom'
+              ? model.baseUrl || '尚未配置 API URL'
+              : `${catalog.apiHost}${catalog.apiPath}`}
           </p>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
             <span>文本：{provider?.availability === 'available' ? '已验证' : '未验证/不可用'}</span>
@@ -267,6 +280,33 @@ export function OptionsApp({
             </p>
           ) : null}
         </div>
+
+        {providerId === 'custom' ? (
+          <label className="mt-4 block text-sm font-medium" htmlFor={`${role}-custom-base-url`}>
+            API Base URL 或 Chat Completions URL
+            <input
+              className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm"
+              id={`${role}-custom-base-url`}
+              maxLength={2048}
+              onChange={(event) =>
+                setModels((current) => ({
+                  ...current,
+                  custom: {
+                    textModel: current.custom?.textModel ?? '',
+                    visionModel: current.custom?.visionModel ?? '',
+                    baseUrl: event.target.value,
+                  },
+                }))
+              }
+              placeholder="https://api.example.com/v1"
+              type="url"
+              value={model.baseUrl ?? ''}
+            />
+            <span className="mt-1 block text-xs font-normal text-slate-500">
+              仅允许公网 HTTPS；保存配置后再保存 Key，Chrome 只授权该 Host。
+            </span>
+          </label>
+        ) : null}
 
         <label className="mt-4 block text-sm font-medium" htmlFor={`${role}-${providerId}-key`}>
           {displayLabel} API Key
@@ -287,9 +327,10 @@ export function OptionsApp({
           value={keys[providerId] ?? ''}
         />
         <p className="mt-1 text-xs text-slate-500">已存：{provider?.keyMask ?? '无'}</p>
-        {catalog.hostPermission === 'optional' ? (
+        {catalog.hostPermission !== 'required' ? (
           <p className="mt-1 text-xs text-slate-500">
-            首次保存时，Chrome 仅请求访问 {catalog.apiHost}。
+            首次保存时，Chrome 仅请求访问
+            {providerId === 'custom' ? '已保存 URL 的精确 Host' : ` ${catalog.apiHost}`}。
           </p>
         ) : null}
         {catalog.connectionNote ? (
@@ -299,8 +340,14 @@ export function OptionsApp({
         <div className="mt-2 flex flex-wrap gap-2">
           <button
             className="rounded bg-slate-900 px-3 py-2 text-sm text-white"
+            disabled={
+              providerId === 'custom' && (!provider?.baseUrl || model.baseUrl !== provider.baseUrl)
+            }
             onClick={() =>
-              void saveKey(providerId).catch((error: unknown) =>
+              void saveKey(
+                providerId,
+                providerId === 'custom' ? provider?.baseUrl : undefined,
+              ).catch((error: unknown) =>
                 setStatus(error instanceof Error ? error.message : String(error)),
               )
             }
@@ -362,7 +409,7 @@ export function OptionsApp({
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             className="rounded border border-slate-300 px-3 py-2 text-sm"
-            disabled={!modelValue.trim()}
+            disabled={!modelValue.trim() || (providerId === 'custom' && !model.baseUrl?.trim())}
             onClick={() =>
               void saveModels(providerId).catch((error: unknown) =>
                 setStatus(error instanceof Error ? error.message : String(error)),
@@ -420,7 +467,8 @@ export function OptionsApp({
       <section className="rounded-lg border border-slate-200 p-4">
         <h2 className="font-medium">高级 Model 配置 JSON</h2>
         <p className="mt-1 text-sm text-slate-600">
-          仅迁移八家内置 Provider 的 Model ID。JSON 不得包含 API Key、自定义 Provider 或自定义端点。
+          可迁移内置 Provider 的 Model ID 与单个 custom 的非秘密 URL/model。JSON 不得包含 API
+          Key、token 或 Authorization。
         </p>
         <label className="mt-3 block text-sm" htmlFor="provider-settings-json">
           Provider 设置 JSON
@@ -429,7 +477,7 @@ export function OptionsApp({
           className="mt-1 min-h-40 w-full rounded-md border border-slate-300 p-2 font-mono text-xs"
           id="provider-settings-json"
           onChange={(event) => setProviderSettingsJson(event.target.value)}
-          placeholder='{"schemaVersion":1,"providers":{"openai":{"textModel":"gpt-5.6-terra"}}}'
+          placeholder='{"schemaVersion":2,"providers":{"custom":{"baseUrl":"https://api.example.com/v1","textModel":"model-id"}}}'
           spellCheck={false}
           value={providerSettingsJson}
         />
@@ -690,10 +738,12 @@ export function OptionsApp({
       <section className="rounded-lg border border-slate-200 p-4">
         <h2 className="font-medium">数据流向披露</h2>
         <dl className="mt-3 grid grid-cols-[7rem_1fr] gap-2 text-sm">
-          <dt className="text-slate-500">固定端点</dt>
-          <dd>仅限内置 Provider 预设 Host，不允许自定义 Base URL；新增 Host 按家单独授权</dd>
+          <dt className="text-slate-500">API 端点</dt>
+          <dd>内置 Provider 使用预设 Host；custom 仅接受经校验的公网 HTTPS，并逐次精确授权</dd>
           <dt className="text-slate-500">中转服务</dt>
-          <dd>UUAPI、OpenRouter、SiliconFlow 可能把数据交由其平台或上游模型处理</dd>
+          <dd>
+            OpenRouter、SiliconFlow、旧版 UUAPI 与自定兼容端点可能把数据交由其平台或上游模型处理
+          </dd>
           <dt className="text-slate-500">发送内容</dt>
           <dd>仅在用户明确提交后，发送最小必要上下文</dd>
           <dt className="text-slate-500">第三方处理</dt>

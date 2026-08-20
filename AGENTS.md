@@ -5,6 +5,7 @@
 > v1.1（2026-07-24）：新增 Git 治理与每轮检查（P0-8）、权威文件裁决顺序（C-1）、移除私有仓库/Token 相关节点（P0-7）、技术备忘更新。
 > v1.2（2026-07-24）：凭据录入路径与 import 边界（D-028）、坐标换算探针定稿（D-029）、Provider 适配器与失败降级（D-030/D-031）、限流分桶（D-032）、工具限域（D-013R）、数据清除三分（D-033）、DeepSeek 模型策略（D-034）、minimum_chrome_version（D-035）。
 > v1.3（2026-08-03）：固定 Provider 目录扩展为八家；新增五家使用逐家精确可选 Host 权限；无密钥设置 JSON 只允许 model 绑定（D-063）。
+> v1.4（2026-08-20）：新增 GLM/Kimi/Grok 与受限 custom OpenAI-compatible Provider；UUAPI 降为旧配置兼容；动态 Host 使用精确运行时授权（D-068）。
 
 ---
 
@@ -97,8 +98,8 @@ STATUS.md 是断点续跑唯一依据：每完成任务即更新；遇阻塞写�
 ## 15. 关键技术备忘（避免踩坑）
 - MV3 Service Worker 随时休眠：状态必须落 chrome.storage，靠消息重建，勿假设常驻。
 - **凭据隔离（P0-1 / D-028）**：SW 启动即 `chrome.storage.local.setAccessLevel({accessLevel:'TRUSTED_CONTEXTS'})`；credential-store 仅可信上下文可导入（Options 只 write/delete，Background 只 read/inject，Content 禁止导入且有 lint 边界）；明文只允许短暂存在于录入用 password input，保存后立即清空；已存 Key 不回显明文。
-- **固定端点（P0-3 / D-063）**：v1 仅八个内置 Provider 的预设 Host；DeepSeek / UUAPI / OpenRouter 为既有静态权限，OpenAI / Anthropic / Gemini / Qwen / SiliconFlow 在保存该家 Key 时逐家申请精确可选 Host 权限。无自定义 Base URL/Host/endpoint。
-- **Provider 适配器（D-007R/D-030/D-031/D-063）**：公共协议骨架 + 每家独立适配器；八适配器代码+Mock 测试必须全做；真实端点 ≥1 文本 + ≥1 视觉可用即达 MVP；单家探针失败记录+禁用不阻塞，全路线失败才暂停。
+- **Provider Host（P0-3 / D-063 / D-068）**：常用内置 Provider 使用预设 Host；GLM/Kimi/Grok 与 v1.3 新增路线逐家申请精确可选 Host。唯一 `custom` 条目只接受经校验的 HTTPS URL；manifest 的 `https://*/*` 只是未授予候选范围，运行时只申请精确 Host，Background 必须复核配置、权限和请求 origin。UUAPI 仅保留旧配置兼容。
+- **Provider 适配器（D-007R/D-030/D-031/D-063/D-068）**：公共协议骨架 + 每家独立适配器；新增路线必须有 Mock/安全测试；真实能力只认探针。单家探针失败记录+禁用不阻塞，全路线失败才暂停。
 - **能力探针（P0-6/D-021）**：Provider 能力必须经 Phase 4 探针验证后才可当事实使用；未探针能力降级处理。
 - **DeepSeek 模型（D-034）**：`deepseek-chat`/`deepseek-reasoner` 别名 2026-07-24 15:59 UTC 起停用，**不得使用**；推荐预填 `deepseek-v4-flash`，保留 `deepseek-v4-pro` 可选；模型名非冻结常量，不可用时提示改选，不阻塞。
 - **截图职责与坐标（P0-4/D-029）**：Content 只上报选区视口坐标+视口 CSS 尺寸+滚动+缩放+dpr；截图由 SW `captureVisibleTab` + 裁剪；**换算公式由 Phase 0 探针 B 实测定稿**（首选截图像素/视口 CSS 比例法；getBoundingClientRect 是视口坐标，勿默认扣 scroll）。

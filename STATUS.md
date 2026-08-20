@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 11 — 测试、打包与 MVP 验收已完成：自动门禁、真实 Chrome、单 Provider 与 S1–S5 批量体验复核全部通过，v1 MVP 达标。**
+**Phase 12 — Provider 目录扩展与受限 custom OpenAI-compatible 端点已完成。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -275,10 +275,17 @@
   - 使用既有已保存 Key 完成单 Provider 真实复测，DeepSeek 显示 `available`；未读取、回显或重新写入真实 Key
   - D-066 四分段 Panel UI、D-065 中文搜索降级、D-064 Panel Port 生命周期均通过真实 Chrome 复核；关闭/重开 Panel 与切换标签页后未新增 disconnected-port 错误
   - 强制确认节点 ② 的 S1–S5 批量体验复核全部通过；结合 53 files / 267 tests、typecheck、lint、build、安全扫描、隔离 Chrome 149 E2E 与可加载本地包证据，Phase 11 和 v1 MVP 正式完成
+- [x] **Phase 12 — Provider 目录扩展与受限 custom 端点（2026-08-20）完成自动验收**：
+  - 常用目录新增 GLM、Kimi、Grok 三条官方 OpenAI-compatible 路线及一个受限 custom 条目；UUAPI 从 Options/Panel 新候选隐藏，但旧配置、Key 与适配器仍兼容
+  - custom 只接受一个公网 HTTPS Base URL 或完整 Chat Completions URL；Key 继续独立存储，设置 JSON 仅迁移非秘密 URL/model，内置端点不可覆盖
+  - custom 保存 Key 前先保存 URL/model，并只请求该 URL 的精确 Host；Background 在读取 Key 和 fetch 前复核配置、权限与请求 origin，拒绝凭据 URL、query/fragment、非默认端口、危险地址字面量和重定向
+  - Provider 设置 schema v2 向后兼容 v1；更换 custom Host 会删除旧 Key 并释放旧权限；默认视觉路线改为 OpenRouter，不再让 legacy UUAPI 参与新选择与默认路由
+  - 自动门禁：Vitest 54 files / 301 tests 全过（另 1 file / 1 Phase 9 live test 默认跳过）；typecheck、lint、本轮 TS/TSX 格式和 `git diff --check` 均通过
+  - build 转换 419 modules；构建安全扫描、manifest 权限断言与隔离 Chrome 149 E2E 通过，Provider 请求 0、页面异常 0；本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `2054da14de9641e205dbde22899bc96b1f66bab95689cb00e11f4968235421b3`
 
 ## 下一任务
-**v1.4 Provider 扩展的基线修订与实现准备（尚未开始）**。
-项目负责人已授权下一轮加入 GLM、Kimi、Grok 和自定义 OpenAI-compatible Provider，并将 UUAPI 从常用候选列表移出。第一步须在现有唯一权威规划文件中明确 Provider Catalog、精确/动态 Host 权限、自定义 HTTPS endpoint 校验、凭据隔离、旧配置兼容和验收门槛；随后再实现适配器、Options 交互、测试与真实探针。Git Remote、Push、远程仓库、Chrome Web Store 上架仍是后续独立强制确认节点，本轮不执行。
+**等待项目负责人选择并授权下一项外部发布工作。**
+Phase 12 已完成。推荐下一项先处理 GitHub 远程仓库与首次 Push；添加 Remote、创建远程仓库和 Push 均须单独明确授权。Chrome Web Store 上架在代码远程发布完成后另行确认，本轮未执行。
 
 ## 已登记的后续优化
 - [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；2026-08-17 完成调整台定稿的四分段导航、视觉 Token 与浅色问答/代码块（D-066）。后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
@@ -299,6 +306,7 @@
 | 9 一键仓库分析 | ✅ 已完成 |
 | 10 安全加固 + 红队测试 | ✅ 已完成 |
 | 11 测试 + 打包 + MVP 验收 | ✅ 已完成，v1 MVP 达标 |
+| 12 Provider 目录扩展 + 受限 custom 端点 | ✅ 已完成自动验收 |
 
 ## 待处理的强制确认节点
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
@@ -312,7 +320,7 @@
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-当前无阻塞。v1 MVP 已通过 Phase 11；下一轮 Provider 扩展已获功能方向授权，但必须先把自定义 endpoint 所需的权限与安全边界写入唯一权威规划文件。Git Remote、Push 与扩展上架未获本轮执行授权，仍须分别暂停确认。
+当前无内部实现阻塞。v1 MVP 与 Phase 12 均已通过；新增 Provider 在未配置对应 Key、未运行真实探针前只标记为未验证，不影响既有已验证路线。Git Remote、Push 与扩展上架未获执行授权，仍须分别暂停确认。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -363,3 +371,4 @@
 - 2026-08-17：Options 双角色 Provider 配置 UI 完成实现：保留八家固定目录，将配置收敛为文本/视觉两张卡，加入角色化模型候选、手填 ID 与单家测试；越界的独立 GLM/Kimi/Grok 和任意自定义 Provider JSON 已跳过。
 - 2026-08-20：Options 双角色 Provider 配置 UI 自动门禁完成：267 项常规测试及 typecheck、lint、格式、build、安全扫描、隔离 Chrome 149 E2E 与打包全过；确认此前 `spawn EPERM` 为沙箱执行限制，无需修改依赖。待用户在真实 Chrome 手动重新加载扩展后复核。
 - 2026-08-20：Options 六项真实 Chrome 复核、DeepSeek 单 Provider `available`、D-066/D-065/D-064 与 S1–S5 批量体验复核全部通过；Phase 11 与 v1 MVP 完成。下一轮已获授权规划 GLM/Kimi/Grok、自定义 OpenAI-compatible Provider 与 UUAPI 候选降级，远程 Push/上架仍未执行。
+- 2026-08-20：Phase 12 Provider 扩展完成：GLM/Kimi/Grok 官方路线、受限 custom、UUAPI legacy 兼容隐藏、动态精确 Host、设置 v1→v2 迁移和凭据隔离全部落地；301 项常规测试及完整静态/构建/安全/E2E/打包门禁通过。下一节点为需明确授权的 Git Remote/Push，未执行任何远程或上架操作。

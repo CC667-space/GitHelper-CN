@@ -1,26 +1,56 @@
 import { z } from 'zod';
 
+import { normalizeCustomProviderUrl } from './custom-provider-config';
 import { PROVIDER_CATALOG, providerIdSchema, type ProviderId } from './provider-catalog';
 
 const STORAGE_KEY = 'provider:settings:v1';
 
-const providerSettingSchema = z
+const modelSettingSchema = z
   .object({
     textModel: z.string().trim().max(300),
     visionModel: z.string().trim().max(300).optional(),
   })
   .strict();
 
-const storedProviderSettingsSchema = z
+const providerSettingSchema = z
   .object({
-    schemaVersion: z.literal(1),
-    providers: z.partialRecord(providerIdSchema, providerSettingSchema),
+    textModel: z.string().trim().max(300),
+    visionModel: z.string().trim().max(300).optional(),
+    baseUrl: z.string().trim().max(2_048).optional(),
   })
   .strict();
 
+const legacyProviderSettingsSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    providers: z.partialRecord(providerIdSchema, modelSettingSchema),
+  })
+  .strict();
+
+const storedProviderSettingsSchema = z
+  .object({
+    schemaVersion: z.literal(2),
+    providers: z.partialRecord(providerIdSchema, providerSettingSchema),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    for (const [providerId, setting] of Object.entries(value.providers)) {
+      if (providerId !== 'custom' && setting?.baseUrl !== undefined) {
+        context.addIssue({
+          code: 'custom',
+          message: '只有 custom Provider 可配置 baseUrl',
+          path: ['providers', providerId, 'baseUrl'],
+        });
+      }
+    }
+  });
+
+type StoredProviderSettings =
+  z.infer<typeof legacyProviderSettingsSchema> | z.infer<typeof storedProviderSettingsSchema>;
+
 export type ProviderSetting = z.infer<typeof providerSettingSchema>;
 export interface ProviderSettings {
-  schemaVersion: 1;
+  schemaVersion: 2;
   providers: Record<ProviderId, ProviderSetting>;
 }
 
@@ -29,32 +59,49 @@ export interface ProviderSettingsArea {
   set(items: Record<string, unknown>): Promise<void>;
 }
 
+function validateProviderSetting(
+  providerId: ProviderId,
+  setting: ProviderSetting,
+): ProviderSetting {
+  const validated = providerSettingSchema.parse(setting);
+  if (providerId !== 'custom' && validated.baseUrl !== undefined) {
+    throw new Error('只有 custom Provider 可配置 baseUrl');
+  }
+  if (providerId === 'custom' && validated.baseUrl) {
+    return { ...validated, baseUrl: normalizeCustomProviderUrl(validated.baseUrl).baseUrl };
+  }
+  return validated;
+}
+
 export function defaultProviderSettings(): ProviderSettings {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     providers: Object.fromEntries(
       PROVIDER_CATALOG.map((entry) => [
         entry.id,
         {
           textModel: entry.defaultTextModel,
-          visionModel: entry.defaultVisionModel,
+          ...(entry.defaultVisionModel === undefined
+            ? {}
+            : { visionModel: entry.defaultVisionModel }),
         },
       ]),
     ) as Record<ProviderId, ProviderSetting>,
   };
 }
 
-function mergeWithDefaultProviderSettings(
-  stored: z.infer<typeof storedProviderSettingsSchema>,
-): ProviderSettings {
+function mergeWithDefaultProviderSettings(stored: StoredProviderSettings): ProviderSettings {
   const defaults = defaultProviderSettings();
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     providers: Object.fromEntries(
-      PROVIDER_CATALOG.map((entry) => [
-        entry.id,
-        stored.providers[entry.id] ?? defaults.providers[entry.id],
-      ]),
+      PROVIDER_CATALOG.map((entry) => {
+        const candidate = stored.providers[entry.id];
+        return [
+          entry.id,
+          candidate ? validateProviderSetting(entry.id, candidate) : defaults.providers[entry.id],
+        ];
+      }),
     ) as Record<ProviderId, ProviderSetting>,
   };
 }
@@ -63,7 +110,7 @@ export class ProviderSettingsJsonError extends Error {
   readonly code = 'PROVIDER_SETTINGS_JSON_INVALID';
 
   constructor() {
-    super('Provider 配置 JSON 无效；只允许配置内置 Provider 的模型名称。');
+    super('Provider 配置 JSON 无效；只允许模型名称和 custom 的非秘密 HTTPS URL。');
     this.name = 'ProviderSettingsJsonError';
   }
 }
@@ -75,28 +122,33 @@ export function parseProviderSettingsJson(source: string): ProviderSettings {
   } catch {
     throw new ProviderSettingsJsonError();
   }
-
-  const parsed = storedProviderSettingsSchema.safeParse(decoded);
+  const parsed = z
+    .union([legacyProviderSettingsSchema, storedProviderSettingsSchema])
+    .safeParse(decoded);
   if (!parsed.success) {
     throw new ProviderSettingsJsonError();
   }
-  return mergeWithDefaultProviderSettings(parsed.data);
+  try {
+    return mergeWithDefaultProviderSettings(parsed.data);
+  } catch {
+    throw new ProviderSettingsJsonError();
+  }
 }
 
 export function serializeProviderSettingsJson(settings: ProviderSettings): string {
   try {
     const providers = Object.fromEntries(
       PROVIDER_CATALOG.map((entry) => {
-        const setting = providerSettingSchema.parse(settings.providers[entry.id]);
-        return [
-          entry.id,
-          setting.visionModel === undefined
-            ? { textModel: setting.textModel }
-            : { textModel: setting.textModel, visionModel: setting.visionModel },
-        ];
+        const setting = validateProviderSetting(entry.id, settings.providers[entry.id]);
+        const serialized: ProviderSetting = {
+          textModel: setting.textModel,
+          ...(setting.visionModel === undefined ? {} : { visionModel: setting.visionModel }),
+          ...(entry.id === 'custom' && setting.baseUrl ? { baseUrl: setting.baseUrl } : {}),
+        };
+        return [entry.id, serialized];
       }),
     );
-    return JSON.stringify({ schemaVersion: 1, providers }, null, 2);
+    return JSON.stringify({ schemaVersion: 2, providers }, null, 2);
   } catch {
     throw new ProviderSettingsJsonError();
   }
@@ -106,17 +158,24 @@ export function createProviderSettingsStore(area: ProviderSettingsArea) {
   return {
     async read(): Promise<ProviderSettings> {
       const result = await area.get(STORAGE_KEY);
-      const parsed = storedProviderSettingsSchema.safeParse(result[STORAGE_KEY]);
-      return parsed.success
-        ? mergeWithDefaultProviderSettings(parsed.data)
-        : defaultProviderSettings();
+      const parsed = z
+        .union([legacyProviderSettingsSchema, storedProviderSettingsSchema])
+        .safeParse(result[STORAGE_KEY]);
+      if (!parsed.success) {
+        return defaultProviderSettings();
+      }
+      try {
+        return mergeWithDefaultProviderSettings(parsed.data);
+      } catch {
+        return defaultProviderSettings();
+      }
     },
     async writeProvider(providerId: ProviderId, setting: ProviderSetting): Promise<void> {
       const current = await this.read();
-      const validated = providerSettingSchema.parse(setting);
+      const validated = validateProviderSetting(providerId, setting);
       await area.set({
         [STORAGE_KEY]: {
-          ...current,
+          schemaVersion: 2,
           providers: { ...current.providers, [providerId]: validated },
         },
       });

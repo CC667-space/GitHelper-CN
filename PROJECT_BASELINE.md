@@ -2,7 +2,7 @@
 
 > 本文件是全项目的**单一事实来源与最高约束**。任何执行阶段不得静默违反本文件。
 > 修改本文件 = 基线变更，必须由项目负责人（下称"你"）确认。
-> 状态：**已冻结 v1.3** ｜ 初次冻结：2026-07-23 ｜ 修订：2026-08-03（v1.1–v1.3 定向修订，见文末变更记录）
+> 状态：**已冻结 v1.4** ｜ 初次冻结：2026-07-23 ｜ 修订：2026-08-20（v1.1–v1.4 定向修订，见文末变更记录）
 
 ---
 
@@ -93,20 +93,21 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 
 ---
 
-## 6. AI 接入路线（已冻结，v1.3 修订）
+## 6. AI 接入路线（已冻结，v1.4 修订）
 
 - **BYOK**：用户自行提供 API Key，扩展**直接调用** AI API，v1 不做本地/远程代理（架构预留迁移空间）。
-- **固定 Provider 预设（D-020 / D-063）**：v1 只支持八个内置 Provider（DeepSeek / UUAPI / OpenRouter / OpenAI / Anthropic / Google Gemini / 阿里云百炼 Qwen / SiliconFlow）及各自**预定义 API Host**。用户只需填写 Key，并可选择 model；**不能自由修改 Base URL、Host 或 endpoint**。原三家 Host 保留静态权限以兼容既有安装；新增五家只在用户保存该家 Key 时请求对应的精确 `optional_host_permissions`，拒绝授权则不保存 Key。
-- **无密钥设置 JSON（D-063）**：允许导入/导出 Provider model 绑定，Schema 只接受 `schemaVersion`、Provider ID、`textModel` / `visionModel`；严禁包含 API Key、Authorization、token、Base URL、Host、URL 或 endpoint。JSON 不得成为自定义 Provider 或凭据导入通道。
+- **Provider 目录（D-020 / D-063 / D-068）**：常用候选包括 DeepSeek / OpenRouter / OpenAI / Anthropic / Google Gemini / 阿里云百炼 Qwen / SiliconFlow / GLM / Kimi / Grok，以及一个用户显式配置的 OpenAI-compatible 自定 Provider。GLM / Kimi / Grok 使用各自预定义官方 HTTPS Host；UUAPI 仅保留旧配置兼容，不再出现在新选择器中。
+- **自定 Provider（D-068）**：用户可填写一个 HTTPS API Base URL 或完整 `chat/completions` URL、独立 Key 与文本/视觉 Model ID。拒绝 URL 凭据、query/fragment、非默认端口、localhost、私网/回环/链路本地/保留地址字面量和跨 origin 重定向。manifest 的 `https://*/*` 只是未授予的可选 Host 候选范围；保存时仅申请经校验的精确 Host，Background 请求前再次核对配置、权限与实际请求 origin。Content/Panel 不得提供任意 fetch URL。
+- **无密钥设置 JSON（D-063 / D-068）**：允许导入/导出 Provider model 绑定及 custom 的非秘密 URL 配置；严禁包含 API Key、Authorization、token 或其他凭据。内置 Provider 的 Host/endpoint 仍不可修改，JSON 不能创建白名单外 Provider。
 - **统一适配器 + 能力模型**：Provider 抽象走 OpenAI 兼容 `chat/completions`，但每个 Provider 必须声明显式 **Capability 模型**（streaming/vision/toolCalls/structuredOutput/usage/abort 等），未经能力探针验证的能力不得当作既定事实（D-021）。
 - **Provider 路由与模型策略（v1.2 修订，D-034；基于 2026-07-24 联网核实）**：
   - **文本默认：DeepSeek**（成本最低）。**关键事实**：`deepseek-chat` / `deepseek-reasoner` 两个别名于 **2026-07-24 15:59 UTC 起完全停用**（官方 Change Log），此后请求即报错。**DeepSeek Provider 不得依赖这两个别名**。
   - DeepSeek 官方端点推荐预填模型：**`deepseek-v4-flash`**（成本/速度/简单 Agent 任务表现均衡）；保留 **`deepseek-v4-pro`** 供复杂任务选择。**模型名不是冻结常量**——实际可用模型经 Provider 配置、模型列表接口（若可用）或能力探针确认；推荐模型不可用时提示用户改选其他模型，**不得阻塞整个扩展**。
-  - **既有高质量 / 视觉默认：UUAPI**（`https://uuapi.net/v1`，OpenAI 兼容中转，聚合视觉模型）；**既有兜底：OpenRouter**。
+  - **视觉默认与兜底：OpenRouter**。UUAPI 仅保留旧配置兼容，不参与新的默认路由或选择器。
   - OpenAI、Anthropic、Gemini、Qwen、SiliconFlow 是可选路线，不因加入目录而自动获得可用状态；具体文本/视觉能力必须由该 Key、该 model 的真实探针确认。
   - **关键约束**：**DeepSeek API 目前不支持图像输入**。视觉请求只能路由到已配置且真实探针确认支持图像的 Provider。文本/视觉 Provider 可分别配置，Side Panel 支持手动切换（手动优先）。
-- **MVP 可用性判定（D-031 / D-063）**：八个 Provider 适配器 + Mock 测试必须全部完成；但真实端点只强制**至少一个文本 Provider + 一个视觉 Provider 可用**。单个外部 Provider 探针失败 → 记录并禁用该 Provider，不阻塞 MVP；**所有**文本路线或**所有**视觉路线均失败才暂停找用户。
-- **数据流向的准确表述**：API Key 与请求数据（问题、必要上下文、选中内容）**仅发送到用户明确选择并授权的 API 端点**；中转/聚合类端点（UUAPI、OpenRouter、SiliconFlow）可能将数据转交其上游模型供应商。**本扩展无法控制第三方端点后续如何处理数据**。设置页须展示：当前 Provider / API Host / 模型 / 数据将发往哪里 / 是否中转聚合 / 兼容层或共享端点提示。
+- **可用性判定（D-031 / D-063 / D-068）**：已完成的 v1 MVP 门槛不因目录扩展重新打开。Phase 12 新增路线必须通过 Mock、安全和权限测试；真实能力仍只认实际探针。单个外部 Provider 探针失败只记录并禁用；**所有**现有文本路线或**所有**现有视觉路线均失败才暂停。
+- **数据流向的准确表述**：API Key 与请求数据（问题、必要上下文、选中内容）**仅发送到用户明确选择并授权的 API 端点**；旧 UUAPI、OpenRouter、SiliconFlow 和用户选择的 custom 服务可能将数据转交其上游模型供应商。**本扩展无法控制第三方端点后续如何处理数据**。设置页须展示：当前 Provider / API Host / 模型 / 数据将发往哪里 / 是否中转聚合 / 兼容层或共享端点提示。
 - 视觉调用前提示"将消耗视觉额度"，设置可全局关闭视觉。
 
 ---
@@ -172,7 +173,7 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 
 - 运行环境：Windows 11 + VS Code + PowerShell + Node.js LTS + pnpm。
 - 你能运行命令、复制报错、协助手工体验验收，但不逐行手写全部代码。
-- 你已持有 DeepSeek / UUAPI / OpenRouter 三家 Key；新增五家不假设已有 Key，也不要求为了验收而购买或填写。
+- 你已持有部分 Provider Key；新增 GLM/Kimi/Grok/custom 不假设已有 Key，也不要求为了自动验收而购买或填写。
 - GitHub 前端为 SPA，页面切换不整页刷新；MV3 Service Worker 会被浏览器随时休眠。
 - GitHub 匿名 API 限额按 resource 分桶（core 60 次/小时；search 独立且更低，D-032）；v1 仅匿名 + 缓存 + 分桶节流降级（不用 Token，见 D-022）。
 
@@ -181,7 +182,7 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 ## 13. 已由我（架构师）代为作出的决策（摘要，详见 DECISIONS.md）
 
 - 普通技术选型（UI/构建/状态/测试/目录/日志/依赖）全部代定，执行阶段不再询问。
-- Provider 路由：文本 DeepSeek 默认、视觉 UUAPI、兜底 OpenRouter；八个固定端点预设 + Capability 探针 + 手动切换优先；新增五家按 Provider 精确授权。
+- Provider 路由：文本 DeepSeek 默认、视觉/兜底 OpenRouter；十家常用内置候选 + 一个受限 custom + Capability 探针 + 手动切换优先；UUAPI 仅保留兼容。
 - GitHub API：v1 仅匿名 + 缓存 + Rate Limit 节流降级，不引入 Token（D-022）。
 - Git 治理：本地 Git 仓库 + 阶段提交 + 回滚规则（D-023，详见 AGENTS.md / EXECUTION_PLAN.md）。
 
@@ -191,7 +192,7 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 
 - 首次填入任何真实 API Key（凭据）
 - 任何会产生新增付费成本的选择
-- 扩大到本轮已授权八家预设之外的 Chrome Host 权限，或引入任意/自定义 Host
+- 扩大到 D-068 已授权固定 Provider 与受限 custom 规则之外的 Chrome Host 权限，或放宽 custom URL/精确授权边界
 - 发送敏感数据 / 不可逆数据删除
 - 添加 Git Remote / Push / 建远程仓库 / 上架 / 公开发布
 - 若匿名 GitHub API 限额被证实阻塞 MVP → 评估引入细粒度 Token（基线变更）
@@ -217,3 +218,4 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 - **v1.1（2026-07-24）**：定向修订（依据《AI GitHub 助手执行方案修订任务单》）——冻结唯一根目录 `C:\AI_GitHelper-CN`；API Key 限可信上下文（setAccessLevel）；修正第三方端点数据流向表述；v1 固定 Provider 端点、禁自定义 Base URL；引入 Provider Capability 模型；**移除** GitHub Token 与私有仓库支持；operationPolicy 收紧（downloads 逐次确认、accountChanges 固定 deny）；新增 Git 基线/阶段提交/回滚规则；`Claude_Prompt.md` 降级为 `references/` 历史追溯文件。产品定位、MVP 功能范围、非目标**未变**。
 - **v1.2（2026-07-24）**：最终定点修订——明确 Key 录入/保存路径与模块导入边界（D-028）；删除提前写死的截图坐标换算公式，改由 Phase 0 探针 B 实测决定（D-029）；D-007 修订为公共协议骨架+独立适配器+能力探针（D-030）；Phase 4 单 Provider 失败不阻塞 MVP（D-031）；GitHub API 限流按 resource 分桶+禁持续指数重试（D-032）；openPage 拆分限域+Scheme 黑名单（D-013 v1.2 修订）；三种数据清除操作明确化（D-033）；manifest 增加 `minimum_chrome_version: "114"`（D-035）；DeepSeek 模型策略精确化（别名 2026-07-24 15:59 UTC 停用，推荐 `deepseek-v4-flash`，D-034）。产品定位、MVP 功能范围、非目标**未变**。
 - **v1.3（2026-08-03）**：经项目负责人明确授权，将固定 Provider 目录由三家扩展为八家；原三家保留静态 Host 权限，OpenAI / Anthropic / Gemini / Qwen / SiliconFlow 使用保存 Key 时逐家申请的精确可选 Host 权限；加入只含 model 绑定的无密钥设置 JSON。继续禁止任意 Base URL、自定义 Host、凭据导入导出和未经探针声明能力（D-063）。既有功能、默认路由、MVP 可用性门槛与安全边界**未变**。
+- **v1.4（2026-08-20）**：经项目负责人明确授权，加入 GLM / Kimi / Grok 官方端点和一个受限 custom OpenAI-compatible Provider；UUAPI 降为旧配置兼容并移出常用选择器。custom 只允许经校验的 HTTPS URL，使用未授予的可选 Host 候选声明和用户手势中的精确 Host 授权；Key 仍独立存储且不进入 JSON。既有 GitHub 功能、写操作禁令、默认文本路线与 MVP 可用性门槛**未变**（D-068）。

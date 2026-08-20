@@ -22,18 +22,22 @@ export function createProviderTransport(
     } satisfies ProviderTransportDependencies);
   return {
     async request(providerId: ProviderId, url, init, signal) {
-      await resolved.hostAccess.assertGranted(providerId);
+      await resolved.hostAccess.assertGranted(providerId, url);
       const headers = await resolved.injectAuthorization(providerId, init.headers);
+      const customOrigin = providerId === 'custom' ? new URL(url).origin : undefined;
       return resolved.fetch(
         url,
         {
           ...init,
+          credentials: 'omit',
           headers,
+          ...(providerId === 'custom' ? { redirect: 'error' as const } : {}),
           signal,
         },
         {
           timeoutMs: 60_000,
           maxRequestBytes: 2 * 1024 * 1024,
+          ...(customOrigin ? { additionalAllowedOrigins: [customOrigin] } : {}),
         },
       );
     },

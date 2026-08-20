@@ -5,6 +5,7 @@
 > v1.1（2026-07-24）：新增 Phase 1.5 安全地基、Phase 0 技术探针扩充、Git 治理、移除 Token/私有仓库相关内容。
 > v1.2（2026-07-24）：探针 B 改为实测定稿坐标换算（D-029）；Phase 4 单 Provider 失败不阻塞（D-031）；限流分桶（D-032）；数据清除三分（D-033）；DeepSeek 模型策略（D-034）；minimum_chrome_version 114（D-035）。
 > v1.3（2026-08-03）：固定 Provider 扩展为八家；新增五家采用逐家精确可选 Host 权限；设置 JSON 只绑定 model（D-063）。
+> v1.4（2026-08-20）：新增 GLM/Kimi/Grok 与受限 custom OpenAI-compatible Provider；UUAPI 降为兼容项；新增 Phase 12（D-068）。
 
 ---
 
@@ -34,6 +35,8 @@ Phase 9 (一键仓库分析)   ← 依赖 3/4，可与 6-8 并行
 Phase 10 (安全加固 + 红队测试)
    │
 Phase 11 (测试/打包/MVP 验收)  ← 汇聚，含唯一批量体验复核
+   │
+Phase 12 (Provider 目录扩展与受限 custom 端点) ← v1 MVP 后定向增强
 ```
 
 **关键路径**：0 → 1 → 1.5 → 2 → 3 → 4 → 9 → 11。
@@ -201,6 +204,18 @@ Phase 11 (测试/打包/MVP 验收)  ← 汇聚，含唯一批量体验复核
 - **任务**：补齐单元/组件/集成/E2E（Playwright 加载扩展）；`pnpm build` 产出可加载包（`dist/`）；跑通成功标准 S1-S5；整理使用说明（放 `docs/`，属派生文档）。
 - **验收**：ACCEPTANCE 全绿；打包可加载；S1-S5 每条有证据。
 - **强制确认节点 ②（批量体验复核）**：交用户在真实 Chrome 手工体验 S1-S5 闭环，确认 MVP 达标。这是**唯一的人工体验验收节点**。
+
+## Phase 12 — Provider 目录扩展与受限 custom 端点
+- **目标**：不改变既有 GitHub 功能，加入 GLM / Kimi / Grok 官方端点和一个受限 OpenAI-compatible custom Provider；UUAPI 仅保留旧配置兼容。
+- **任务**：
+  1. Catalog 加入三家固定官方 endpoint、已核对 model 候选和独立适配器；逐家使用精确可选 Host。
+  2. custom 非秘密配置只含 HTTPS Base URL/完整 Chat Completions URL 与 model；Key 仍走 credential-store，禁止导入导出凭据。
+  3. custom URL 拒绝 credentials/query/fragment、非默认端口、localhost、私网/回环/链路本地/保留地址字面量；权限只申请精确 Host；Background 复核配置、权限与请求 origin，并拒绝重定向。
+  4. Options/Panel 加入新候选；custom 先保存 URL/model 再保存 Key。UUAPI 从新选择器隐藏，但旧配置、凭据和适配器不删除。
+  5. 设置 JSON 升级并兼容 v1；内置条目只允许 model，custom 可含非秘密 URL/model；导出白名单重建，错误不回显输入。
+  6. 更新披露、权限表、测试与本地包；不读取已有 Key，不主动调用没有 Key 的新 Provider。
+- **验收**：新增四条适配路线 Mock 全过；固定/动态 Host 权限、URL 拒绝矩阵、跨 origin/重定向阻断、JSON 凭据拒绝、v1 迁移、UUAPI 隐藏兼容、Options/Panel 和构建 manifest 均有自动测试；typecheck、lint、全量测试、build、安全扫描与隔离 Chrome E2E 通过。
+- **真实验证**：没有新 Key 不阻塞自动验收。若需填写新 Key或产生真实请求费用则暂停。
 
 ---
 
