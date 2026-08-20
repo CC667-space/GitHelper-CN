@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 13 — GitHub 公开开源发布准备中。**
+**Phase 13 — GitHub 公开开源发布已完成。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -282,13 +282,16 @@
   - Provider 设置 schema v2 向后兼容 v1；更换 custom Host 会删除旧 Key 并释放旧权限；默认视觉路线改为 OpenRouter，不再让 legacy UUAPI 参与新选择与默认路由
   - 自动门禁：Vitest 54 files / 301 tests 全过（另 1 file / 1 Phase 9 live test 默认跳过）；typecheck、lint、本轮 TS/TSX 格式和 `git diff --check` 均通过
   - build 转换 419 modules；构建安全扫描、manifest 权限断言与隔离 Chrome 149 E2E 通过，Provider 请求 0、页面异常 0；本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `2054da14de9641e205dbde22899bc96b1f66bab95689cb00e11f4968235421b3`
-- [ ] **Phase 13 — GitHub 公开开源发布（2026-08-20）**：
+- [x] **Phase 13 — GitHub 公开开源发布（2026-08-20）完成**：
   - 项目负责人已明确授权采用 MIT License、把全部历史提交邮箱改为 GitHub noreply、创建公开仓库 `CC667-space/GitHelper-CN`、添加 `origin` 并首次 Push
-  - 已补充根目录 README 与 MIT License；公开前质量门禁、历史邮箱改写和最终凭据审计仍在执行
+  - 已补充根目录 README 与 MIT License；34 个历史提交的 author/committer email 已统一为 GitHub noreply，提交数量及分支树在改写前后保持一致，旧历史引用已删除
+  - Push 前凭据审计覆盖 `main` 全部历史快照：已知密钥模式在非测试位置命中 0，历史禁止路径 0；工作区、`dist` 与 13 条目安装包均未发现凭据文件或已知密钥形态
+  - 发布门禁通过：typecheck、lint、Vitest 54 files / 301 tests（另 1 live test 跳过）、build（419 modules）、构建安全扫描与隔离 Chrome 149 E2E；E2E Provider 请求 0、敏感哨兵未持久化
+  - 公开仓库已创建并完成首次 Push：`https://github.com/CC667-space/GitHelper-CN`；本地 `main` 跟踪 `origin/main`
 
 ## 下一任务
-**完成 GitHub 首次公开 Push 前的质量门禁、历史邮箱改写与最终凭据审计。**
-只有最终审计确认没有泄露真实 Key 后才创建公开远程仓库并 Push。Chrome Web Store 上架仍是后续独立确认节点，本轮不执行。
+**等待项目负责人决定是否进入 Chrome Web Store 上架准备。**
+公开源码、Remote 和首次 Push 已完成。Chrome Web Store 上架、公开 Release 与扩展安装包发布仍是独立外部操作，本轮均未执行。
 
 ## 已登记的后续优化
 - [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；2026-08-17 完成调整台定稿的四分段导航、视觉 Token 与浅色问答/代码块（D-066）。后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
@@ -310,7 +313,7 @@
 | 10 安全加固 + 红队测试 | ✅ 已完成 |
 | 11 测试 + 打包 + MVP 验收 | ✅ 已完成，v1 MVP 达标 |
 | 12 Provider 目录扩展 + 受限 custom 端点 | ✅ 已完成自动验收 |
-| 13 GitHub 公开开源发布 | 🚧 准备中 |
+| 13 GitHub 公开开源发布 | ✅ 已完成 |
 
 ## 待处理的强制确认节点
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
@@ -325,7 +328,7 @@
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-当前无内部实现阻塞。v1 MVP 与 Phase 12 均已通过；GitHub 公开发布已获授权并在执行。Chrome Web Store 上架未获执行授权，仍须另行暂停确认。
+当前无内部实现阻塞。v1 MVP、Phase 12 与 GitHub 公开开源发布均已完成。Chrome Web Store 上架、GitHub Release 和扩展安装包公开发布未获执行授权，仍须分别确认。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -378,3 +381,4 @@
 - 2026-08-20：Options 六项真实 Chrome 复核、DeepSeek 单 Provider `available`、D-066/D-065/D-064 与 S1–S5 批量体验复核全部通过；Phase 11 与 v1 MVP 完成。下一轮已获授权规划 GLM/Kimi/Grok、自定义 OpenAI-compatible Provider 与 UUAPI 候选降级，远程 Push/上架仍未执行。
 - 2026-08-20：Phase 12 Provider 扩展完成：GLM/Kimi/Grok 官方路线、受限 custom、UUAPI legacy 兼容隐藏、动态精确 Host、设置 v1→v2 迁移和凭据隔离全部落地；301 项常规测试及完整静态/构建/安全/E2E/打包门禁通过。下一节点为需明确授权的 Git Remote/Push，未执行任何远程或上架操作。
 - 2026-08-20：项目负责人授权以 MIT License 公开 `CC667-space/GitHelper-CN`，并授权在首次 Push 前将全部历史提交邮箱改为 GitHub noreply；Phase 13 发布准备开始，Chrome Web Store 上架不在本轮范围。
+- 2026-08-20：Phase 13 完成；README/MIT License、34 个提交邮箱隐私改写、完整质量门禁和 Push 前凭据审计通过，公开仓库 `https://github.com/CC667-space/GitHelper-CN` 已创建并完成首次 Push。Chrome Web Store、GitHub Release 与安装包公开发布均未执行。

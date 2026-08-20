@@ -575,6 +575,6 @@
   - 创建 GitHub 公开仓库、添加 `origin` 和 Push 只在完整质量门禁及最终凭据审计通过后执行。只 Push `main`，不上传本地构建产物、浏览器数据、环境文件或备份引用。
   - 本次公开源码不等于发布 Chrome Web Store、GitHub Release 或扩展安装包；这些外部发布行为仍须分别确认。
 - **理由**：MIT 以最小许可文本明确第三方使用、修改和分发权；首次 Push 前改写邮箱可避免把个人邮箱永久公开。把凭据审计设置为 Push 的最后硬门槛，可在不扩大产品范围的前提下降低公开仓库泄露风险。
-- **证据**：待 Phase 13 完成后记录质量门禁、历史邮箱唯一值、最终凭据审计、远程可见性与 Push 验证结果。
+- **证据**：34 个提交改写后 author/committer email 唯一值为 `283176701+CC667-space@users.noreply.github.com`，提交数量及分支树与改写前一致，`refs/original` 为空。Push 前审计覆盖 `main` 全部历史快照：已知密钥模式在非测试/E2E 哨兵位置命中 0、历史禁止路径 0，工作区、`dist` 和 13 条目安装包均未发现凭据文件或已知密钥形态。typecheck、lint、301 项常规测试、build、安全扫描及隔离 Chrome 149 E2E 通过。GitHub 仓库 `CC667-space/GitHelper-CN` 已验证为 PUBLIC，`main` 首次 Push 成功。
 - **范围**：只处理源码公开、许可证和 Git 历史身份；不改变产品功能、Chrome 权限、安全边界、Provider/GitHub 请求或 Chrome Web Store 状态。
-- 状态：已授权，执行中 ｜ 2026-08-20
+- 状态：Phase 13 已完成，公开仓库与首次 Push 已验证 ｜ 2026-08-20
