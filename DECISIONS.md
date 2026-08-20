@@ -521,7 +521,7 @@
 - **理由**：Provider 状态初始化、Session hydration 和消息分发都是异步的。Panel 因关闭、标签切换或扩展重载而断开时，这些 Promise 仍可能完成；直接发送会在 Service Worker 形成 `Uncaught (in promise) Error: Attempting to use a disconnected port object`。仅依赖 `onDisconnect` 标志还不能覆盖内部断开与事件回调之间的窄竞态。
 - **证据**：集成红测稳定复现断开后迟到的 `PROVIDER_STATE`；修复后该用例与显式断开、事件前竞态、非断开错误不吞掉共 4 项回归通过。全量 Vitest 253 项通过（另 1 项 live test 默认跳过），typecheck、lint、变更文件格式、build、安全扫描和隔离 Chrome 149 E2E 全过；E2E 页面异常为 0。
 - **范围**：Phase 11 Service Worker 稳定性补丁；不改变重连策略、请求内容、Session 语义、Provider/GitHub 调用、权限、Host、持久数据或 MVP 范围。
-- 状态：代码与隔离 Chrome 已验证，待真实 Chrome 扩展错误页复核 ｜ 2026-08-03
+- 状态：代码、隔离 Chrome 与真实 Chrome 均已验证；关闭/重开 Panel 与切换标签页后未新增 disconnected-port 错误 ｜ 2026-08-20
 
 ## D-065 中文搜索对异常远端字段与 AI 降级实施有界恢复
 - **决策**：
@@ -532,7 +532,7 @@
 - **理由**：真实 GitHub 公开结果可包含数万字符的异常仓库描述，展示长度约束若直接用于拒绝原始响应，会把可恢复的单字段异常升级为整体故障。AI 错误全部抹平又无法区分配置、请求与格式问题；本地降级若保留中文请求套话，则会形成过度收窄甚至零结果的 query。
 - **证据**：红测以 55,700 字符描述稳定复现两条 `description too_big`，并以用户两条原句复现 `找一些声音克隆` / `找一些声音克隆 完整功能`；修复后 48 项定向回归通过。全量 Vitest 264 项通过（另 1 项 live test 默认跳过），typecheck、lint、变更文件格式、build、安全扫描及隔离 Chrome 149 E2E 全过；E2E Provider 请求 0、页面异常 0。
 - **范围**：Phase 11 中文搜索可靠性补丁；不新增 Provider 调用、重试、权限、Host、GitHub Token/写操作、翻译服务、持久数据或 MVP 功能。
-- 状态：代码与隔离 Chrome 已验证，待真实 Chrome 复测截图原句 ｜ 2026-08-17
+- 状态：代码、隔离 Chrome 与真实 Chrome 均已验证；截图原句及 AI 失败本地降级通过 ｜ 2026-08-20
 
 ## D-066 Panel 采用四分段导航与定稿视觉 Token
 - **决策**：
@@ -543,7 +543,7 @@
 - **理由**：调整台定稿选择 C“分段导航”。四个长区块同时纵向堆叠会增加滚动和视觉噪声；固定分段能在不改变功能的前提下缩短单屏路径，并使状态、按钮和内容层级更清楚。
 - **证据**：分段导航先以失败测试锁定四个 tab 的顺序、默认区和问答整体收起移除；浅色问题气泡、浅色代码块及 session 间隙均有 UI 回归断言。全量 Vitest 265 项通过（另 1 项 live test 默认跳过），typecheck、lint、变更文件格式、build、安全扫描及隔离 Chrome 149 E2E 全过；E2E 覆盖中文搜索、仓库分析、问答、Panel 重载和页面切换，Provider 请求 0、页面异常 0。
 - **范围**：Phase 11 Panel UI 迭代；只改变布局与视觉，不改变消息协议、Provider/GitHub 请求、会话语义、权限、Host、持久数据或 MVP 功能。
-- 状态：正式代码与隔离 Chrome 已验证，待真实 Chrome 视觉复核 ｜ 2026-08-17
+- 状态：正式代码、隔离 Chrome 与真实 Chrome 均已验证；四分段导航与定稿视觉复核通过 ｜ 2026-08-20
 
 ## D-067 Options 以文本/视觉两张角色卡组织固定 Provider 配置
 - **决策**：
@@ -555,4 +555,4 @@
 - **理由**：按使用角色选择服务比同时展示八张完整卡更贴近“先决定文本/视觉路线，再填 Key 与 model”的操作顺序；把候选集中在 Catalog 可避免 Options 与 Runtime 出现两套 Provider 元数据，同时不把易变化的 model 名误当作能力事实。
 - **证据**：Catalog 与 Options 组件测试覆盖两张角色卡、8/7 家列表、DeepSeek 视觉排除、友好名称、Provider 切换、角色化候选、手填 Model ID、保存和边界项不出现；探针状态测试按真实 `<section>` 收紧范围，避免页面级重复状态文案造成误判。Vitest 267 项常规测试通过（另 1 项 live test 默认跳过），`pnpm typecheck`、`pnpm lint`、变更 TS/TSX 格式、`git diff --check`、build（414 modules）、构建安全扫描和隔离 Chrome 149 E2E 全过；本地包 13 个条目，SHA-256 `4969fb98d8f4235718addcd293c900a47145c7ebe510c8029bb8aa5e7588a27c`。沙箱内 `spawn EPERM` 在最小授权的沙箱外执行中消失，确认不是项目依赖或代码缺陷。
 - **范围**：Phase 11 Options 前端交互补丁；不新增 Provider ID、Host、权限、适配器、凭据路径、Provider 调用、GitHub 能力、持久数据类别或 MVP 功能。
-- 状态：代码与隔离 Chrome 已验证，待真实 Chrome 复核 ｜ 2026-08-20
+- 状态：代码、隔离 Chrome 与真实 Chrome 均已验证；Options 六项与 DeepSeek 单 Provider `available` 通过 ｜ 2026-08-20

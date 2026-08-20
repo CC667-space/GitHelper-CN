@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 11 — 测试、打包与 MVP 验收：Options 双角色 Provider 配置 UI 已完成自动验收，等待真实 Chrome 重载复核，再继续 S1–S5。**
+**Phase 11 — 测试、打包与 MVP 验收已完成：自动门禁、真实 Chrome、单 Provider 与 S1–S5 批量体验复核全部通过，v1 MVP 达标。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -270,10 +270,15 @@
   - 新增 Catalog 与 Options 组件回归测试；修正探针状态测试的 DOM 范围，避免页面级状态与探针卡状态同文案时产生误判
   - 自动门禁：Vitest 53 files / 267 tests 全过（另 1 个 Phase 9 live test 默认跳过）；typecheck、lint、变更 TS/TSX 格式、`git diff --check`、build（414 modules）与构建安全扫描通过
   - 隔离 Chrome 149 E2E 通过，Provider 请求 0、页面异常 0；本地包 `artifacts\GitHelper-CN-v0.1.0.zip` 含 13 个条目，SHA-256 `4969fb98d8f4235718addcd293c900a47145c7ebe510c8029bb8aa5e7588a27c`
+- [x] **Phase 11 — 真实 Chrome 与 MVP 批量体验复核（2026-08-20）完成**：
+  - 用户在真实 Chrome 重载最新 `dist/` 后确认 Options 仅有文本/视觉两张角色卡，文本八家、视觉七家且排除 DeepSeek；Provider 切换、Key 掩码、候选/手填 Model ID 与单家测试均通过
+  - 使用既有已保存 Key 完成单 Provider 真实复测，DeepSeek 显示 `available`；未读取、回显或重新写入真实 Key
+  - D-066 四分段 Panel UI、D-065 中文搜索降级、D-064 Panel Port 生命周期均通过真实 Chrome 复核；关闭/重开 Panel 与切换标签页后未新增 disconnected-port 错误
+  - 强制确认节点 ② 的 S1–S5 批量体验复核全部通过；结合 53 files / 267 tests、typecheck、lint、build、安全扫描、隔离 Chrome 149 E2E 与可加载本地包证据，Phase 11 和 v1 MVP 正式完成
 
 ## 下一任务
-**Options 真实 Chrome 复核 → D-066/D-065/D-064 既有复核 → 单 Provider 真实复测 → 强制确认节点 ② S1–S5 批量体验复核**。
-用户在 `chrome://extensions/` 对 GitHelper-CN 点击“重新加载”，然后打开“扩展程序选项”：确认只有文本/视觉两张角色卡，DeepSeek 不在视觉列表，Provider 切换会同步更换 Key/Model/端点，候选与手填 Model ID 均可保存，既有 Key 仍只显示掩码，单家测试不调用其他 Provider。随后按既有顺序复核 D-066、D-065、D-064 和 S1–S5；全部通过后才能标记 MVP 完成并创建 Phase 11 最终验收提交。
+**v1.4 Provider 扩展的基线修订与实现准备（尚未开始）**。
+项目负责人已授权下一轮加入 GLM、Kimi、Grok 和自定义 OpenAI-compatible Provider，并将 UUAPI 从常用候选列表移出。第一步须在现有唯一权威规划文件中明确 Provider Catalog、精确/动态 Host 权限、自定义 HTTPS endpoint 校验、凭据隔离、旧配置兼容和验收门槛；随后再实现适配器、Options 交互、测试与真实探针。Git Remote、Push、远程仓库、Chrome Web Store 上架仍是后续独立强制确认节点，本轮不执行。
 
 ## 已登记的后续优化
 - [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；2026-08-17 完成调整台定稿的四分段导航、视觉 Token 与浅色问答/代码块（D-066）。后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
@@ -293,7 +298,7 @@
 | 8 NL 搜索（MVP 必达） | ✅ 已完成 |
 | 9 一键仓库分析 | ✅ 已完成 |
 | 10 安全加固 + 红队测试 | ✅ 已完成 |
-| 11 测试 + 打包 + MVP 验收 | ⏸ Options 双角色配置自动门禁通过，待真实 Chrome、单 Provider 与 S1–S5 人工复核 |
+| 11 测试 + 打包 + MVP 验收 | ✅ 已完成，v1 MVP 达标 |
 
 ## 待处理的强制确认节点
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
@@ -301,13 +306,13 @@
 - ✅ 第二轮视觉仍失败后的第三轮 `openrouter/free` fallback 真实确认（已授权、执行并通过）
 - ✅ DeepSeek V4 非思考修复后的单 Provider 真实复测（只调用 DeepSeek，文本已验证）
 - ✅ 新增五家精确可选 Host 权限的基线变更（用户已授权，自动测试与构建 manifest 已验证）
-- ⏸ 最新构建使用既有已保存 Key 的单 Provider 真实复测（无需重填或读取 Key）
-- ⏸ D-064 真实 Chrome 错误页复核（重载最新 `dist/` 后关闭 Panel 或切换标签页，确认不再新增 disconnected-port 异常）
-- ⏸ Phase 11：MVP 批量体验复核（必需）
+- ✅ 最新构建使用既有已保存 Key 的单 Provider 真实复测（DeepSeek `available`，未读取 Key）
+- ✅ D-064 真实 Chrome 复核（关闭/重开 Panel 与切换标签页后未新增 disconnected-port 异常）
+- ✅ Phase 11：MVP 批量体验复核（S1–S5 全部通过）
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-仅等待用户在真实 Chrome 重新加载最新 `dist/` 后完成 Options、D-066、D-064 与单 Provider 复核，再继续 Phase 11 S1–S5。Chrome 自动化安全策略明确禁止执行 Agent 访问 `chrome://extensions`，也禁止绕过，因此无法代点“重新加载”；无其他实现、安全、权限或 Provider 阻塞。
+当前无阻塞。v1 MVP 已通过 Phase 11；下一轮 Provider 扩展已获功能方向授权，但必须先把自定义 endpoint 所需的权限与安全边界写入唯一权威规划文件。Git Remote、Push 与扩展上架未获本轮执行授权，仍须分别暂停确认。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -357,3 +362,4 @@
 - 2026-08-17：Phase 11 四分段 Panel UI 优化完成自动验收；调整台 C 版导航与定稿 Token 已吸收进正式界面，问答整体收起移除、session/会话间隙及浅色问题/代码块落地（D-066）；临时调整台删除，265 项常规测试及完整静态/构建/安全/E2E/打包门禁通过，待真实 Chrome 视觉复核。
 - 2026-08-17：Options 双角色 Provider 配置 UI 完成实现：保留八家固定目录，将配置收敛为文本/视觉两张卡，加入角色化模型候选、手填 ID 与单家测试；越界的独立 GLM/Kimi/Grok 和任意自定义 Provider JSON 已跳过。
 - 2026-08-20：Options 双角色 Provider 配置 UI 自动门禁完成：267 项常规测试及 typecheck、lint、格式、build、安全扫描、隔离 Chrome 149 E2E 与打包全过；确认此前 `spawn EPERM` 为沙箱执行限制，无需修改依赖。待用户在真实 Chrome 手动重新加载扩展后复核。
+- 2026-08-20：Options 六项真实 Chrome 复核、DeepSeek 单 Provider `available`、D-066/D-065/D-064 与 S1–S5 批量体验复核全部通过；Phase 11 与 v1 MVP 完成。下一轮已获授权规划 GLM/Kimi/Grok、自定义 OpenAI-compatible Provider 与 UUAPI 候选降级，远程 Push/上架仍未执行。
