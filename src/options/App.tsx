@@ -523,6 +523,23 @@ export function OptionsApp({
               value={preferences.operatingSystem}
             />
           </label>
+          <label className="text-sm">
+            Side Panel 字号
+            <select
+              className="mt-1 w-full rounded-md border border-slate-300 p-2"
+              onChange={(event) =>
+                setPreferences((current) => ({
+                  ...current,
+                  panelFontSize: Number(event.target.value) as UserPreferences['panelFontSize'],
+                }))
+              }
+              value={preferences.panelFontSize}
+            >
+              <option value={14}>紧凑（14px）</option>
+              <option value={16}>标准（16px）</option>
+              <option value={18}>大字（18px）</option>
+            </select>
+          </label>
         </div>
         <label className="mt-4 block text-sm">
           解释偏好

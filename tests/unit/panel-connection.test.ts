@@ -250,14 +250,26 @@ describe('Panel connection lifecycle', () => {
     );
     connection.search?.('开放的 bug issue', 'auto', 'deepseek');
     connection.openGitHubPage?.('https://github.com/search?q=bug&type=issues');
+    connection.openGitHubPage?.('https://github.com/search?q=bug&type=issues', 'background');
+    connection.clearSearch?.();
     expect(fake.postMessage.mock.calls.map(([message]) => message.type)).toEqual([
       'PANEL_SEARCH',
       'PANEL_OPEN_GITHUB_PAGE',
+      'PANEL_OPEN_GITHUB_PAGE',
+      'PANEL_SEARCH_CLEAR',
     ]);
     expect(fake.postMessage.mock.calls[0]?.[0].payload).toEqual({
       naturalLanguage: '开放的 bug issue',
       target: 'auto',
       providerId: 'deepseek',
+    });
+    expect(fake.postMessage.mock.calls[1]?.[0].payload).toEqual({
+      url: 'https://github.com/search?q=bug&type=issues',
+      disposition: 'foreground',
+    });
+    expect(fake.postMessage.mock.calls[2]?.[0].payload).toEqual({
+      url: 'https://github.com/search?q=bug&type=issues',
+      disposition: 'background',
     });
 
     fake.emitMessage(

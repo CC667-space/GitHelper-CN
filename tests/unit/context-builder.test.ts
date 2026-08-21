@@ -98,6 +98,7 @@ describe('context-builder and private outbound guard', () => {
       preferences: {
         schemaVersion: 1,
         language: 'zh-CN',
+        panelFontSize: 16,
         technicalLevel: 'beginner',
         operatingSystem: 'Windows 11',
         explanationPreference: '分步骤',

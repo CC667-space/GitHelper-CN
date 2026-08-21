@@ -9,6 +9,7 @@ export const userPreferencesSchema = z
   .object({
     schemaVersion: z.literal(CURRENT_SCHEMA_VERSION),
     language: z.literal('zh-CN'),
+    panelFontSize: z.union([z.literal(14), z.literal(16), z.literal(18)]).default(16),
     technicalLevel: z.enum(['beginner', 'intermediate', 'advanced']),
     operatingSystem: z.string().trim().min(1).max(100),
     explanationPreference: z.string().trim().min(1).max(500),
@@ -28,6 +29,7 @@ export function defaultUserPreferences(): UserPreferences {
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     language: 'zh-CN',
+    panelFontSize: 16,
     technicalLevel: 'beginner',
     operatingSystem: 'Windows 11',
     explanationPreference: '分步骤说明，并解释必要术语',

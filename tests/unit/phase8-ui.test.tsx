@@ -27,6 +27,7 @@ afterEach(() => {
     searchStatus: 'idle',
     searchError: undefined,
     searchResult: undefined,
+    searchRestored: false,
     sessionHistoryTruncated: false,
     sessionId: undefined,
     selectedTextProviderId: undefined,
@@ -115,7 +116,74 @@ describe('Phase 8 Panel GitHub search', () => {
     expect(screen.getByText('octocat/demo')).toBeTruthy();
     expect(screen.getByText(/1,234/)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '打开' }));
-    expect(openGitHubPage).toHaveBeenCalledWith('https://github.com/octocat/demo');
+    expect(openGitHubPage).toHaveBeenCalledWith('https://github.com/octocat/demo', 'foreground');
+    await user.click(screen.getByRole('button', { name: '后台打开' }));
+    expect(openGitHubPage).toHaveBeenLastCalledWith(
+      'https://github.com/octocat/demo',
+      'background',
+    );
+  });
+
+  it('恢复当前标签页最近搜索时不重复调用 API，并可显式清除', async () => {
+    const search = vi.fn();
+    const clearSearch = vi.fn();
+    let emitSearchState: ((state: PanelSearchState) => void) | undefined;
+    const connect = vi.fn(
+      (
+        _onEvent,
+        _onProviderState,
+        onConnectionChange,
+        _onSessionState,
+        _onPickState,
+        _onRegionState,
+        onSearchState,
+      ) => {
+        emitSearchState = onSearchState;
+        onConnectionChange(true);
+        return {
+          send: vi.fn(),
+          abort: vi.fn(),
+          search,
+          clearSearch,
+          disconnect: vi.fn(),
+        };
+      },
+    );
+    const user = userEvent.setup();
+    render(<PanelApp connect={connect} />);
+    await user.click(screen.getByRole('tab', { name: '中文搜索' }));
+
+    act(() =>
+      emitSearchState?.({
+        status: 'done',
+        requestId: 'search-restored',
+        naturalLanguage: '此前的中文搜索',
+        target: 'issues',
+        restored: true,
+        result: {
+          status: 'ok',
+          conversion: {
+            naturalLanguage: '此前的中文搜索',
+            target: 'issues',
+            query: 'is:issue 此前的中文搜索',
+            explanation: '搜索公开 Issue。',
+          },
+          totalCount: 0,
+          items: [],
+        },
+      }),
+    );
+
+    expect((screen.getByLabelText('描述要搜索的仓库或 Issue') as HTMLInputElement).value).toBe(
+      '此前的中文搜索',
+    );
+    expect((screen.getByLabelText('搜索类型') as HTMLSelectElement).value).toBe('issues');
+    expect(screen.getByText(/已恢复本标签页的上次结果/)).toBeTruthy();
+    expect(search).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: '清除本次结果' }));
+    expect(clearSearch).toHaveBeenCalledOnce();
+    expect(screen.queryByText('is:issue 此前的中文搜索')).toBeNull();
   });
 
   it('限流降级显示可读原因和 GitHub 网页搜索入口', async () => {

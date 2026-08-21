@@ -43,6 +43,7 @@ interface PanelState {
   searchStatus: 'idle' | 'searching' | 'done' | 'error';
   searchError?: string;
   searchResult?: GitHubSearchResult;
+  searchRestored: boolean;
   analysisStatus: 'idle' | 'analyzing' | 'done' | 'error';
   analysisError?: string;
   analysisCard?: RepositoryAnalysisCard;
@@ -81,6 +82,7 @@ export const usePanelStore = create<PanelState>((set) => ({
   searchDraft: '',
   searchTarget: 'auto',
   searchStatus: 'idle',
+  searchRestored: false,
   analysisStatus: 'idle',
   pageLabel: '等待读取当前 GitHub 页面',
   providers: [],
@@ -210,24 +212,36 @@ export const usePanelStore = create<PanelState>((set) => ({
   setSearchDraft: (searchDraft) => set({ searchDraft }),
   setSearchTarget: (searchTarget) => set({ searchTarget }),
   applySearchState: (state) =>
-    set(
-      state.status === 'searching'
+    set((current) =>
+      state.status === 'idle'
         ? {
-            searchStatus: 'searching',
+            searchStatus: 'idle',
             searchError: undefined,
             searchResult: undefined,
+            searchRestored: false,
           }
-        : state.status === 'done'
+        : state.status === 'searching'
           ? {
-              searchStatus: 'done',
+              searchStatus: 'searching',
               searchError: undefined,
-              searchResult: state.result,
-            }
-          : {
-              searchStatus: 'error',
-              searchError: state.error,
               searchResult: undefined,
-            },
+              searchRestored: false,
+            }
+          : state.status === 'done'
+            ? {
+                searchStatus: 'done',
+                searchError: undefined,
+                searchResult: state.result,
+                searchDraft: state.naturalLanguage ?? current.searchDraft,
+                searchTarget: state.target ?? current.searchTarget,
+                searchRestored: state.restored ?? false,
+              }
+            : {
+                searchStatus: 'error',
+                searchError: state.error,
+                searchResult: undefined,
+                searchRestored: false,
+              },
     ),
   applyRepositoryAnalysisState: (state) =>
     set(

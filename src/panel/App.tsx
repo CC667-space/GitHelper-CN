@@ -172,6 +172,7 @@ export function PanelApp({
     searchStatus,
     searchError,
     searchResult,
+    searchRestored,
     analysisStatus,
     analysisError,
     analysisCard,
@@ -968,6 +969,26 @@ export function PanelApp({
         ) : null}
         {searchResult ? (
           <div className="mt-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              {searchRestored ? (
+                <p className="text-xs text-[#176b87]">
+                  已恢复本标签页的上次结果；未再次调用 Provider 或 GitHub API。
+                </p>
+              ) : (
+                <span />
+              )}
+              <button
+                className="shrink-0 text-xs text-[#65738a] underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-[#aab3c0] disabled:no-underline"
+                disabled={!connected}
+                onClick={() => {
+                  applySearchState({ status: 'idle' });
+                  connection.current?.clearSearch?.();
+                }}
+                type="button"
+              >
+                清除本次结果
+              </button>
+            </div>
             <div className="rounded-lg border border-[#d5dce7] bg-[#eef2f6] p-2.5 text-xs text-[#334155]">
               <p>{searchResult.conversion.explanation}</p>
               <code className="mt-1 block break-all text-blue-800">
@@ -1007,13 +1028,22 @@ export function PanelApp({
                       </p>
                     )}
                   </div>
-                  <button
-                    className={`${secondaryButtonClass} shrink-0`}
-                    onClick={() => connection.current?.openGitHubPage?.(item.url)}
-                    type="button"
-                  >
-                    打开
-                  </button>
+                  <div className="flex shrink-0 flex-col gap-1">
+                    <button
+                      className={secondaryButtonClass}
+                      onClick={() => connection.current?.openGitHubPage?.(item.url, 'foreground')}
+                      type="button"
+                    >
+                      打开
+                    </button>
+                    <button
+                      className={secondaryButtonClass}
+                      onClick={() => connection.current?.openGitHubPage?.(item.url, 'background')}
+                      type="button"
+                    >
+                      后台打开
+                    </button>
+                  </div>
                 </div>
               </article>
             ))}

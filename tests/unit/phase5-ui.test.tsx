@@ -446,11 +446,13 @@ describe('Phase 5 UI', () => {
       'deny',
     ]);
     await user.selectOptions(screen.getByLabelText('技术水平'), 'advanced');
+    await user.selectOptions(screen.getByLabelText('Side Panel 字号'), '18');
     await user.selectOptions(downloads, 'deny');
     await user.click(screen.getByRole('button', { name: '保存偏好' }));
     await waitFor(() =>
       expect(savePreferences).toHaveBeenCalledWith(
         expect.objectContaining({
+          panelFontSize: 18,
           technicalLevel: 'advanced',
           operationPolicy: expect.objectContaining({
             downloads: 'deny',

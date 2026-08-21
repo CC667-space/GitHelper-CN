@@ -70,6 +70,8 @@ API Key 由用户自行向 Provider 获取，可能产生 Provider 侧费用。�
    - “中文搜索”：把自然语言转换为受限 GitHub 搜索；
    - “问答”：围绕当前页面继续中文对话和管理本地会话。
 
+若默认文字仍偏小，可在扩展 Options 的“回答与操作偏好”中把 Side Panel 字号改为“紧凑（14px）/标准（16px）/大字（18px）”；新安装默认使用 16px。
+
 如果发送按钮为灰色，请先等待顶部状态点变绿，并确认当前标签页是公开 GitHub 页面、输入框非空且没有正在执行的选择或回答。
 
 ## 更新已安装的 Release
@@ -88,7 +90,7 @@ API Key 由用户自行向 Provider 获取，可能产生 Provider 侧费用。�
 
 - 对当前公开 GitHub 页面进行中文问答，并在本地保存有限会话
 - 点击页面元素或框选区域后提问；结构化信息不足时可按需使用视觉模型
-- 把中文搜索描述转换为受限的 GitHub 仓库或 Issue 查询，AI 不可用时自动用本地规则降级
+- 把中文搜索描述转换为受限的 GitHub 仓库或 Issue 查询，AI 不可用时自动用本地规则降级；结果可前台或后台打开，重开原标签页的 Panel 时可恢复最近一次结果而不重复调用 API
 - 读取有限的 README、配置和实现文件片段，生成“总结速览 / 详细介绍 / 原项目文件摘要”三层仓库分析
 - 支持 DeepSeek、OpenRouter、OpenAI、Anthropic、Gemini、Qwen、SiliconFlow、GLM、Kimi、Grok，以及受限的 OpenAI-compatible 自定 Provider
 - 支持本地 Session 新建、恢复、收展和二次确认删除

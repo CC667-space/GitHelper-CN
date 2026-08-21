@@ -84,7 +84,8 @@
 | `background/tools` | bg | 工具白名单注册 + zod 参数校验 + 执行分发 |
 | `background/session-store` | bg | 会话 CRUD、摘要、上下文长度控制、容量淘汰 |
 | `background/prefs-store` | bg | 长期偏好读写 |
-| `panel/*` | panel | React UI（可信上下文）：会话、消息流、Provider 下拉、分析面板、确认弹窗 |
+| `background/search-snapshot-store` | bg | 按活动标签页保存最近一次成功搜索的短期 session 快照、过期与清除 |
+| `panel/*` | panel | React UI（可信上下文）：会话、消息流、Provider 下拉、分析面板、搜索恢复、字号应用与确认弹窗 |
 | `options/*` | options | 以“文本 Model / 视觉 Model”两张角色卡选择内置 Provider，录入 Key、选择或手填 model、单家探针；另含偏好/数据清除/数据流向披露 |
 | `lib/storage` | shared | chrome.storage 封装 + schemaVersion + 迁移 + 容量检查 |
 | `lib/messaging` | shared | 类型化消息协议（版本/请求ID/Schema/最大载荷/超时/错误类型） |
@@ -229,6 +230,12 @@ Provider 只接收用户主动填写的搜索描述、目标类型和当前日�
 `github:rate-limits:v1` 持久化 `core/search/code_search` 三桶的 remaining/reset/blockedUntil，
 同桶限流后到点前直接降级且不重试。API 与网页 URL 都由 Background 固定构造，Panel 不能要求
 Background fetch 任意 URL；结果打开只接受 `https://github.com/*`。
+
+**Phase 14 后续搜索连续性（D-072）**：成功搜索把脱敏后的搜索描述、目标类型和有限结果按 `tabId`
+写入 `chrome.storage.session`；每标签页只保留最近一项，全局最多 10 项，2 小时后过期。Panel 重开时只读取
+当前活动 GitHub 标签页对应快照并推送 `restored` 状态，不执行 Provider 或 GitHub API；显式点击“搜索”才会
+发起新请求。结果导航仍只接受 GitHub HTTPS URL；`foreground` 创建活动标签页，`background` 使用
+`chrome.tabs.create({active:false})`，两者都不新增权限。该机制不是长期搜索历史、云同步或标签页自动重开。
 
 **Phase 9 仓库分析实现（D-048）**：
 ```
@@ -553,7 +560,7 @@ interface OperationConfirmation {
 ## 8. 存储容量与淘汰策略（v1.1，P1-1）
 
 **存储分区**：
-- `chrome.storage.session`：即时页面状态（pick/框选临时态、版本化活动会话 ID 指针；不含 PageContext 或消息正文）。
+- `chrome.storage.session`：即时页面状态（pick/框选临时态、版本化活动会话 ID 指针、按标签页的最近一次成功搜索快照；不含 PageContext、对话消息正文或凭据）。搜索快照最多 10 项并在 2 小时后过期。
 - `chrome.storage.local`（TRUSTED_CONTEXTS）：偏好、Provider 非敏感配置、会话索引、摘要、凭据（独立 key 前缀，经 credential-store 访问）。
 - IndexedDB：**启用条件** = 单会话消息体或总量逼近 storage.local 配额（见硬上限）时启用，存长会话正文；v1 先不启用，封装层预留。
 - 截图：**只在内存/请求生命周期内使用，不持久保存**。

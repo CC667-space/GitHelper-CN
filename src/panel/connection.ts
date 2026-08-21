@@ -38,7 +38,8 @@ export interface PanelConnection {
   startRegion?(): void;
   cancelRegion?(): void;
   search?(naturalLanguage: string, target: SearchTarget, providerId?: ProviderId): void;
-  openGitHubPage?(url: string): void;
+  clearSearch?(): void;
+  openGitHubPage?(url: string, disposition?: 'foreground' | 'background'): void;
   analyzeRepository?(providerId?: ProviderId): void;
   disconnect(): void;
 }
@@ -208,8 +209,11 @@ export function connectPanel(
         }),
       );
     },
-    openGitHubPage(url) {
-      activePort?.postMessage(createEnvelope('PANEL_OPEN_GITHUB_PAGE', { url }));
+    clearSearch() {
+      activePort?.postMessage(createEnvelope('PANEL_SEARCH_CLEAR', {}));
+    },
+    openGitHubPage(url, disposition = 'foreground') {
+      activePort?.postMessage(createEnvelope('PANEL_OPEN_GITHUB_PAGE', { url, disposition }));
     },
     analyzeRepository(providerId) {
       activePort?.postMessage(createEnvelope('PANEL_ANALYZE_REPOSITORY', { providerId }));

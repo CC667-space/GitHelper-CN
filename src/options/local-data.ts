@@ -3,6 +3,7 @@ import {
   type CredentialStorageArea,
 } from '../background/credential-store';
 import { ACTIVE_PANEL_SESSION_KEY } from '../background/active-session-store';
+import { SEARCH_SNAPSHOT_STORAGE_KEY } from '../background/search-snapshot-store';
 import { PreferencesStore } from '../background/prefs-store';
 import { SessionStore } from '../background/session-store';
 import type { StorageAreaLike } from '../lib/storage';
@@ -16,12 +17,12 @@ export function createLocalDataManager(area: LocalDataArea, sessionArea?: Storag
   return {
     async clearSessionsAndPreferences(): Promise<void> {
       await Promise.all([sessions.clear(), preferences.clear()]);
-      await sessionArea?.remove(ACTIVE_PANEL_SESSION_KEY);
+      await sessionArea?.remove([ACTIVE_PANEL_SESSION_KEY, SEARCH_SNAPSHOT_STORAGE_KEY]);
     },
     async clearAllLocalData(): Promise<void> {
       await credentials.deleteAll();
       await area.clear();
-      await sessionArea?.remove(ACTIVE_PANEL_SESSION_KEY);
+      await sessionArea?.clear();
     },
   };
 }

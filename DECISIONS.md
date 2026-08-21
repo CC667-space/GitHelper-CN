@@ -600,3 +600,13 @@
 - **证据**：诊断红测记录初载 PageContext、DOM 更新后的直接 parser、重新提问 PageContext 与 Provider user message；真实 Chrome 对照确认初载无 README、滚动到 `scrollY=1800` 后出现 `article.markdown-body` 而 `#readme` 仍为 0。固定仓库 README 归一化后约 3,687 字符，安装与 License 均在 8,000 字限制内。修复后的定向 parser/context-builder/往返测试 19/19 通过；完整门禁结果记录于 STATUS。
 - **范围**：Phase 14 后续内部维护补丁；不新增 Chrome 权限、Host、GitHub API/Provider 调用、完整仓库读取、持久数据类别、远程 Push 或新 Release 授权。
 - 状态：已完成；309 项常规测试、typecheck、lint、build、安全扫描与隔离 Chrome 149 E2E 均通过 ｜ 2026-08-21
+
+## D-072 Side Panel 字号三档与按标签页的短期搜索连续性
+- **决策**：
+  - `UserPreferences` 增加 `panelFontSize: 14 | 16 | 18`，新安装默认 16px；旧偏好读取时只补入 16px，不重置技术水平、解释偏好或操作策略。Options 保存后，已打开 Panel 通过可信 `storage.onChanged` 立即应用。
+  - 中文搜索只在成功后，把脱敏搜索描述、目标类型和有限结果按活动 `tabId` 写入 `chrome.storage.session`。每个标签页只保留最近一次，全局最多 10 项，2 小时后过期；Panel 重开只恢复快照，不调用 Provider 或 GitHub API。显式“清除本次结果”、清除会话/偏好或清除全部数据都会删除相应快照。
+  - 搜索结果保留“打开”前台标签页行为，并增加 `chrome.tabs.create({active:false})` 的“后台打开”；两种路径继续经过 GitHub HTTPS URL Schema，不新增 `tabs` 权限或 Host。
+- **理由**：固定 14px 对部分用户过小，三档字号能以一个偏好字段覆盖可读性差异。后台打开直接避免离开搜索页；按标签页的短期快照则覆盖仍选择前台打开后返回原页的场景，同时避免重复 Provider/API 成本。完整搜索历史会新增长期数据、列表与淘汰责任，不符合当前最小变化原则。
+- **范围**：Phase 14 后续 UI/交互维护；不改变 D-062 的标签页切换自动关闭规则，不自动重开 Panel，不保存长期搜索历史，不做云同步，不新增 Chrome 权限、Provider 调用、GitHub 写操作、Push 或 Release。
+- **证据**：字号默认值、旧偏好迁移、Options 保存与 Panel 实时应用均有单测；搜索快照覆盖按标签页隔离、覆盖、过期、恢复零 Provider 调用与清除；前台/后台消息协议和 UI 行为有回归。完整门禁记录于 STATUS。
+- 状态：本地实现与自动验收完成，待长期真实使用反馈 ｜ 2026-08-21

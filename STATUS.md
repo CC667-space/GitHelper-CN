@@ -303,13 +303,19 @@
   - 普通问答边界保持不变：README 最多 8,000 字符、整体上下文 32KB；不另行打开完整 README、`LICENSE` 或 Contents API，License/安装说明只认当前片段或用户选区中的实际文字
   - 门禁通过：定向回归 19/19；Vitest 56 files / 309 tests（另 1 file / 1 live test 跳过）；typecheck、lint、build（419 modules）、构建安全扫描与隔离 Chrome 149 E2E 通过；Provider 请求 0、页面异常 0
   - 本轮源码与测试文件定向 Prettier 检查通过；仓库级 `format:check` 仍报告 23 个历史文件格式差异，其中包含本轮未修改文件，未借本补丁扩大为全仓格式化
+- [x] **Phase 14 后续维护优化 — 字号与中文搜索连续性（2026-08-21，D-072）完成自动验收**：
+  - Options 增加 Side Panel 字号三档（14/16/18px），默认 16px；旧偏好只补默认字号且不丢失已有设置，保存后已打开 Panel 立即应用
+  - 成功搜索按原 GitHub `tabId` 在 `chrome.storage.session` 保存最近一次有限快照；每标签页一项、全局最多 10 项、2 小时过期，Panel 重开直接恢复且不重复调用 Provider/GitHub API
+  - 搜索结果保留前台“打开”并新增“后台打开”；显式清除本次结果、清除会话/偏好和全清均覆盖短期快照；未新增 Chrome 权限、Host、长期搜索历史或自动重开 Panel
+  - 自动门禁：Vitest 59 files / 316 tests 全过（另 1 file / 1 live test 跳过）；typecheck、lint、本轮改动文件 Prettier check、`git diff --check`、build（421 modules）与构建安全扫描通过
+  - 隔离 Chrome 149 E2E 通过，原生 Panel 打开/标签切换关闭、S1/S3/SPA/Session/S5 均无回归；Provider 请求 0、页面异常 0
 
 ## 下一任务
-**等待长期真实使用反馈；D-071 已在本地完成，Chrome Web Store 上架继续暂停。**
-Phase 0–14、公开源码与首个可安装 Release 均已完成；本地 `dist/` 已包含本次修复。若要把补丁发布为 `v0.1.1`，仍需单独授权 Push、tag 与 Release。
+**等待长期真实使用反馈；D-071 已由用户初步验收，D-072 已在本地完成自动验收，Chrome Web Store 上架继续暂停。**
+Phase 0–14、公开源码与首个可安装 Release 均已完成；本地 `dist/` 已包含两项后续维护。若要把补丁发布为 `v0.1.1`，仍需单独授权 Push、tag 与 Release。
 
 ## 已登记的后续优化
-- [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；2026-08-17 完成调整台定稿的四分段导航、视觉 Token 与浅色问答/代码块（D-066）。后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
+- [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；2026-08-17 完成调整台定稿的四分段导航、视觉 Token 与浅色问答/代码块（D-066）；2026-08-21 完成 14/16/18px 字号三档与默认 16px（D-072）。后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
 
 ## 阶段进度表
 | Phase | 状态 |
@@ -345,7 +351,7 @@ Phase 0–14、公开源码与首个可安装 Release 均已完成；本地 `dis
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-当前无阻塞。Phase 0–14 与 D-071 本地维护补丁均已完成；Chrome Web Store 上架是明确暂停的后续路线，不是当前阻塞项。
+当前无阻塞。Phase 0–14 与 D-071/D-072 本地维护均已完成；Chrome Web Store 上架是明确暂停的后续路线，不是当前阻塞项。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -402,3 +408,4 @@ Phase 0–14、公开源码与首个可安装 Release 均已完成；本地 `dis
 - 2026-08-21：Phase 14 本地发布验收完成；正式运行时移除 Phase 0/批量探针入口，加入四档图标、版本化 ZIP/SHA-256、README Release 快速上手及发布边界记录；303 项常规测试与完整静态/构建/安全/E2E/凭据审计通过，待按既有授权创建并核验远程 `v0.1.0`。
 - 2026-08-21：Phase 14 完成；`763063e` 已 Push，tag `v0.1.0` 指向该提交，公开 Release 与 ZIP/SHA-256 两项资产已上传；远程名称、大小和 digest 均与本地一致。Chrome Web Store 继续暂停。
 - 2026-08-21：D-071 普通问答 PageContext 补丁完成；修复当前 GitHub README 容器、同 URL 延迟内容的提问时刷新及简介/README 证据混淆，309 项常规测试与完整静态/构建/安全/E2E 门禁通过。仅创建本地补丁，不 Push、不发布新 Release。
+- 2026-08-21：Phase 14 后续 D-072 自动验收完成；Side Panel 默认字号改为可选 14/16/18px（默认 16px），中文搜索增加按标签页的两小时 session 快照、显式清除与后台打开；316 项常规测试及完整静态/构建/安全/E2E 门禁通过，未 Push 或发布新 Release。

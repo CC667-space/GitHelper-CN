@@ -14,6 +14,7 @@ import {
   panelRegionCancelSchema,
   panelRegionStartSchema,
   panelRegionStateSchema,
+  panelSearchClearSchema,
   panelSearchRequestSchema,
   panelSearchStateSchema,
   panelOpenGitHubPageSchema,
@@ -63,6 +64,7 @@ import { RepositoryAnalysisExecutor } from './repository-analysis';
 import { GitHubApiClient } from './github-api';
 import { activePanelSessionStore } from './active-session-store';
 import { createPortMessenger } from './port-messenger';
+import { SearchSnapshotStore, type SearchSnapshotInput } from './search-snapshot-store';
 
 interface PreparedPanelSession {
   sessionId: string;
@@ -114,13 +116,16 @@ export interface PanelBridgeDependencies {
     requestId: string;
     signal: AbortSignal;
   }): Promise<GitHubSearchResult>;
+  activeTabId?(): Promise<number>;
+  saveSearchSnapshot?(snapshot: SearchSnapshotInput): Promise<unknown>;
+  clearSearchSnapshot?(tabId: number): Promise<void>;
   analyzeRepository?(input: {
     page: PageInfo;
     providerId?: ProviderId;
     requestId: string;
     signal: AbortSignal;
   }): Promise<RepositoryAnalysisCard>;
-  openGitHubPage?(url: string): Promise<void>;
+  openGitHubPage?(url: string, disposition: 'foreground' | 'background'): Promise<void>;
   abort(requestId: string): boolean;
   providerViews?(): Promise<ProviderRuntimeView[]>;
   emit(event: Envelope<StreamEvent>): void;
@@ -227,6 +232,23 @@ export class PanelBridge {
           payloadSchema: panelSearchRequestSchema,
           handler: (payload, context) => this.handleSearch(payload, context),
         },
+        PANEL_SEARCH_CLEAR: {
+          source: 'extension',
+          payloadSchema: panelSearchClearSchema,
+          handler: async () => {
+            if (
+              !this.dependencies.activeTabId ||
+              !this.dependencies.clearSearchSnapshot ||
+              !this.dependencies.emitSearchState
+            ) {
+              throw new Error('搜索快照清除能力尚未注册');
+            }
+            const tabId = await this.dependencies.activeTabId();
+            await this.dependencies.clearSearchSnapshot(tabId);
+            this.dependencies.emitSearchState({ status: 'idle' });
+            return { cleared: true };
+          },
+        },
         PANEL_OPEN_GITHUB_PAGE: {
           source: 'extension',
           payloadSchema: panelOpenGitHubPageSchema,
@@ -234,8 +256,8 @@ export class PanelBridge {
             if (!this.dependencies.openGitHubPage) {
               throw new Error('GitHub 页面打开能力尚未注册');
             }
-            const { url } = panelOpenGitHubPageSchema.parse(payload);
-            await this.dependencies.openGitHubPage(url);
+            const { url, disposition } = panelOpenGitHubPageSchema.parse(payload);
+            await this.dependencies.openGitHubPage(url, disposition);
             return { opened: true };
           },
         },
@@ -423,6 +445,12 @@ export class PanelBridge {
       requestId: context.requestId,
     });
     try {
+      let tabId: number | undefined;
+      try {
+        tabId = await this.dependencies.activeTabId?.();
+      } catch {
+        // 搜索仍可执行；仅放弃本次标签页快照。
+      }
       let page: PageInfo | undefined;
       let currentPage: PageInfo | undefined;
       try {
@@ -437,13 +465,26 @@ export class PanelBridge {
         page = currentPage;
       }
       const result = await this.dependencies.search({
-        naturalLanguage: request.naturalLanguage,
+        naturalLanguage: sanitizeText(request.naturalLanguage).value,
         target: request.target,
         manualProviderId: request.providerId,
         requestId: context.requestId,
         page,
         signal: context.signal,
       });
+      if (tabId !== undefined && this.dependencies.saveSearchSnapshot) {
+        try {
+          await this.dependencies.saveSearchSnapshot({
+            tabId,
+            requestId: context.requestId,
+            naturalLanguage: sanitizeText(request.naturalLanguage).value,
+            target: request.target,
+            result,
+          });
+        } catch {
+          // 快照属于便利功能；写入失败不能把已完成的搜索改判为失败。
+        }
+      }
       this.dependencies.emitSearchState({
         status: 'done',
         requestId: context.requestId,
@@ -639,6 +680,7 @@ export function registerPanelPortBridge(
         signal,
       }),
   );
+  const searchSnapshots = new SearchSnapshotStore(chrome.storage.session);
   chrome.runtime.onConnect.addListener((port) => {
     if (port.name !== PANEL_PORT_NAME) {
       port.disconnect();
@@ -729,6 +771,9 @@ export function registerPanelPortBridge(
           signal,
         });
       },
+      activeTabId: async () => (await activeGitHubTab()).id!,
+      saveSearchSnapshot: (snapshot) => searchSnapshots.save(snapshot),
+      clearSearchSnapshot: (tabId) => searchSnapshots.clear(tabId),
       analyzeRepository: async ({ page, providerId, requestId, signal }) => {
         if (!page.pageContext) {
           throw new Error('当前页面上下文尚未就绪');
@@ -741,8 +786,8 @@ export function registerPanelPortBridge(
           signal,
         });
       },
-      openGitHubPage: async (url) => {
-        await chrome.tabs.create({ url });
+      openGitHubPage: async (url, disposition) => {
+        await chrome.tabs.create({ url, active: disposition === 'foreground' });
       },
       streamAnswer: async function* (input) {
         if (!input.page.pageContext) {
@@ -784,7 +829,7 @@ export function registerPanelPortBridge(
           ),
         ),
     });
-    const hydration = requestActivePageInfo(hydrationController.signal)
+    const sessionHydration = requestActivePageInfo(hydrationController.signal)
       .then(async (page) => {
         const activeSessionId = await activeSession.read();
         const active = activeSessionId ? await sessions.get(activeSessionId) : undefined;
@@ -796,6 +841,27 @@ export function registerPanelPortBridge(
         messenger.post(createEnvelope('SESSION_STATE', await panelState(session, 'hydrate')));
       })
       .catch(() => undefined);
+    const searchHydration = activeGitHubTab()
+      .then(async (tab) => {
+        const snapshot = await searchSnapshots.read(tab.id!);
+        if (snapshot) {
+          messenger.post(
+            createEnvelope(
+              'SEARCH_STATE',
+              panelSearchStateSchema.parse({
+                status: 'done',
+                requestId: snapshot.requestId,
+                result: snapshot.result,
+                naturalLanguage: snapshot.naturalLanguage,
+                target: snapshot.target,
+                restored: true,
+              }),
+            ),
+          );
+        }
+      })
+      .catch(() => undefined);
+    const hydration = Promise.all([sessionHydration, searchHydration]).then(() => undefined);
     port.onDisconnect.addListener(() => {
       messenger.markDisconnected();
       hydrationController.abort(new DOMException('Panel Port 已断开', 'AbortError'));

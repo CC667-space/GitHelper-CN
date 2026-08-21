@@ -7,6 +7,7 @@ import {
 import { ACTIVE_PANEL_SESSION_KEY } from '../../src/background/active-session-store';
 import { PREFERENCES_STORAGE_KEY } from '../../src/background/prefs-store';
 import { SESSION_STORAGE_KEY } from '../../src/background/session-store';
+import { SEARCH_SNAPSHOT_STORAGE_KEY } from '../../src/background/search-snapshot-store';
 import type { StorageAreaLike } from '../../src/lib/storage';
 import { createLocalDataManager } from '../../src/options/local-data';
 
@@ -60,11 +61,16 @@ describe('D-033 local data clearing', () => {
       schemaVersion: 1,
       sessionId: 'active-session',
     };
+    sessionArea.values[SEARCH_SNAPSHOT_STORAGE_KEY] = {
+      schemaVersion: 1,
+      items: [],
+    };
     await createLocalDataManager(area, sessionArea).clearSessionsAndPreferences();
 
     expect(area.values[SESSION_STORAGE_KEY]).toBeUndefined();
     expect(area.values[PREFERENCES_STORAGE_KEY]).toBeUndefined();
     expect(sessionArea.values[ACTIVE_PANEL_SESSION_KEY]).toBeUndefined();
+    expect(sessionArea.values[SEARCH_SNAPSHOT_STORAGE_KEY]).toBeUndefined();
     expect(area.values['credential:provider:deepseek']).toBeDefined();
     expect(area.values['credential:provider:uuapi']).toBeDefined();
     expect(area.values['provider:settings:v1']).toBeDefined();

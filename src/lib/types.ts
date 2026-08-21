@@ -86,6 +86,7 @@ export interface OperationPolicy {
 export interface UserPreferences {
   schemaVersion: number;
   language: 'zh-CN';
+  panelFontSize: 14 | 16 | 18;
   technicalLevel: 'beginner' | 'intermediate' | 'advanced';
   operatingSystem: string;
   explanationPreference: string;

@@ -537,6 +537,7 @@ describe('Panel → Background → Content → Panel', () => {
 
   it('中文搜索经安全路由自动执行并把查询解释与结果推回 Panel', async () => {
     const emitSearchState = vi.fn();
+    const saveSearchSnapshot = vi.fn();
     const search = vi.fn(async () => ({
       status: 'ok' as const,
       conversion: {
@@ -575,6 +576,8 @@ describe('Panel → Background → Content → Panel', () => {
       })),
       streamAnswer: vi.fn(),
       search,
+      activeTabId: vi.fn(async () => 42),
+      saveSearchSnapshot,
       abort: vi.fn(() => false),
       emit: vi.fn(),
       emitSearchState,
@@ -612,6 +615,69 @@ describe('Panel → Background → Content → Panel', () => {
         requestId: 'search-roundtrip',
         result: expect.objectContaining({ totalCount: 1 }),
       }),
+    );
+    expect(saveSearchSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tabId: 42,
+        requestId: 'search-roundtrip',
+        naturalLanguage: 'Star 超过 1000 的 Python 项目',
+        target: 'auto',
+      }),
+    );
+  });
+
+  it('清除当前标签页搜索快照后把 Panel 恢复为空闲态', async () => {
+    const clearSearchSnapshot = vi.fn();
+    const emitSearchState = vi.fn();
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(),
+      streamAnswer: vi.fn(),
+      activeTabId: vi.fn(async () => 42),
+      clearSearchSnapshot,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitSearchState,
+    });
+
+    await bridge.dispatch(createEnvelope('PANEL_SEARCH_CLEAR', {}), panelSender);
+
+    expect(clearSearchSnapshot).toHaveBeenCalledWith(42);
+    expect(emitSearchState).toHaveBeenCalledWith({ status: 'idle' });
+  });
+
+  it('GitHub 结果导航区分前台与后台，旧消息默认前台打开', async () => {
+    const openGitHubPage = vi.fn();
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(),
+      streamAnswer: vi.fn(),
+      openGitHubPage,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+    });
+
+    await bridge.dispatch(
+      createEnvelope('PANEL_OPEN_GITHUB_PAGE', {
+        url: 'https://github.com/octocat/demo',
+        disposition: 'background',
+      }),
+      panelSender,
+    );
+    await bridge.dispatch(
+      createEnvelope('PANEL_OPEN_GITHUB_PAGE', {
+        url: 'https://github.com/octocat/legacy',
+      }),
+      panelSender,
+    );
+
+    expect(openGitHubPage).toHaveBeenNthCalledWith(
+      1,
+      'https://github.com/octocat/demo',
+      'background',
+    );
+    expect(openGitHubPage).toHaveBeenNthCalledWith(
+      2,
+      'https://github.com/octocat/legacy',
+      'foreground',
     );
   });
 

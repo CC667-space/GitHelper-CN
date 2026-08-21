@@ -128,9 +128,11 @@ export const panelSearchRequestSchema = z
     providerId: providerIdSchema.optional(),
   })
   .strict();
+export const panelSearchClearSchema = z.object({}).strict();
 export const panelOpenGitHubPageSchema = z
   .object({
     url: githubWebUrlSchema,
+    disposition: z.enum(['foreground', 'background']).default('foreground'),
   })
   .strict();
 
@@ -141,6 +143,7 @@ export const panelAnalyzeRepositoryRequestSchema = z
   .strict();
 
 export const panelSearchStateSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('idle') }).strict(),
   z
     .object({
       status: z.literal('searching'),
@@ -152,6 +155,9 @@ export const panelSearchStateSchema = z.discriminatedUnion('status', [
       status: z.literal('done'),
       requestId: z.string().min(1).max(128),
       result: githubSearchResultSchema,
+      naturalLanguage: z.string().min(1).max(500).optional(),
+      target: searchTargetSchema.optional(),
+      restored: z.boolean().optional(),
     })
     .strict(),
   z

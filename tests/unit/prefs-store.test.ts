@@ -41,6 +41,7 @@ describe('PreferencesStore', () => {
     const area = new MemoryArea();
     const store = new PreferencesStore(area);
     const defaults = await store.read();
+    expect(defaults.panelFontSize).toBe(16);
     expect(defaults.operationPolicy).toEqual({
       navigation: 'auto',
       search: 'auto',
@@ -73,5 +74,22 @@ describe('PreferencesStore', () => {
         },
       } as unknown as UserPreferences),
     ).rejects.toThrow();
+  });
+
+  it('读取旧版偏好时补入标准字号且保留已有设置', async () => {
+    const area = new MemoryArea();
+    const legacyPreferences: Partial<UserPreferences> = {
+      ...defaultUserPreferences(),
+      technicalLevel: 'advanced' as const,
+      explanationPreference: '先给结论',
+    };
+    delete legacyPreferences.panelFontSize;
+    area.values[PREFERENCES_STORAGE_KEY] = legacyPreferences;
+
+    await expect(new PreferencesStore(area).read()).resolves.toMatchObject({
+      panelFontSize: 16,
+      technicalLevel: 'advanced',
+      explanationPreference: '先给结论',
+    });
   });
 });
