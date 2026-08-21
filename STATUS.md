@@ -297,10 +297,16 @@
   - 发布前凭据审计：生产工作区、现有 Git 历史、禁止路径、`dist` 与 ZIP 的已知真实凭据模式命中 0；测试目录仅保留显式虚构的脱敏哨兵
   - 提交 `763063e` 已 fast-forward 合并并 Push 到 `origin/main`；注释 tag `v0.1.0` 指向该提交，公开 Release 已创建且不是 draft/prerelease
   - 远程仅有两项已审计资产：ZIP 189,257 bytes、SHA-256 文件 97 bytes；GitHub 返回的两项 digest 均与本地一致，Release：`https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.0`
+- [x] **Phase 14 后续维护补丁 — 普通问答 PageContext（2026-08-21，D-071）完成**：
+  - 固定仓库 `CC667-space/GitHelper-CN` 实况确认：README 延迟进入 DOM 后使用 `article.markdown-body`，旧 `#readme` 不存在；同 URL mutation 不刷新旧缓存，重新提问曾继续返回初载 PageContext
+  - `PAGE_INFO_REQUEST` 改为每次实时解析当前 DOM；repo parser 兼容当前 README 容器；仓库简介与 README 证据隔离，缺失只能表述为“当前未读取到”
+  - 普通问答边界保持不变：README 最多 8,000 字符、整体上下文 32KB；不另行打开完整 README、`LICENSE` 或 Contents API，License/安装说明只认当前片段或用户选区中的实际文字
+  - 门禁通过：定向回归 19/19；Vitest 56 files / 309 tests（另 1 file / 1 live test 跳过）；typecheck、lint、build（419 modules）、构建安全扫描与隔离 Chrome 149 E2E 通过；Provider 请求 0、页面异常 0
+  - 本轮源码与测试文件定向 Prettier 检查通过；仓库级 `format:check` 仍报告 23 个历史文件格式差异，其中包含本轮未修改文件，未借本补丁扩大为全仓格式化
 
 ## 下一任务
-**等待长期真实使用反馈；Chrome Web Store 上架继续暂停。**
-Phase 0–14、公开源码与首个可安装 Release 均已完成，当前没有必须继续的开发任务。后续新版本 Release、Chrome Web Store 或产品范围变化仍需单独授权。
+**等待长期真实使用反馈；D-071 已在本地完成，Chrome Web Store 上架继续暂停。**
+Phase 0–14、公开源码与首个可安装 Release 均已完成；本地 `dist/` 已包含本次修复。若要把补丁发布为 `v0.1.1`，仍需单独授权 Push、tag 与 Release。
 
 ## 已登记的后续优化
 - [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；2026-08-17 完成调整台定稿的四分段导航、视觉 Token 与浅色问答/代码块（D-066）。后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
@@ -339,7 +345,7 @@ Phase 0–14、公开源码与首个可安装 Release 均已完成，当前没�
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-当前无阻塞。Phase 0–14 均已完成；Chrome Web Store 上架是明确暂停的后续路线，不是当前阻塞项。
+当前无阻塞。Phase 0–14 与 D-071 本地维护补丁均已完成；Chrome Web Store 上架是明确暂停的后续路线，不是当前阻塞项。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -395,3 +401,4 @@ Phase 0–14、公开源码与首个可安装 Release 均已完成，当前没�
 - 2026-08-20：Phase 13 完成；README/MIT License、34 个提交邮箱隐私改写、完整质量门禁和 Push 前凭据审计通过，公开仓库 `https://github.com/CC667-space/GitHelper-CN` 已创建并完成首次 Push。Chrome Web Store、GitHub Release 与安装包公开发布均未执行。
 - 2026-08-21：Phase 14 本地发布验收完成；正式运行时移除 Phase 0/批量探针入口，加入四档图标、版本化 ZIP/SHA-256、README Release 快速上手及发布边界记录；303 项常规测试与完整静态/构建/安全/E2E/凭据审计通过，待按既有授权创建并核验远程 `v0.1.0`。
 - 2026-08-21：Phase 14 完成；`763063e` 已 Push，tag `v0.1.0` 指向该提交，公开 Release 与 ZIP/SHA-256 两项资产已上传；远程名称、大小和 digest 均与本地一致。Chrome Web Store 继续暂停。
+- 2026-08-21：D-071 普通问答 PageContext 补丁完成；修复当前 GitHub README 容器、同 URL 延迟内容的提问时刷新及简介/README 证据混淆，309 项常规测试与完整静态/构建/安全/E2E 门禁通过。仅创建本地补丁，不 Push、不发布新 Release。

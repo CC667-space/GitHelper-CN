@@ -7,6 +7,7 @@
 > v1.3（2026-08-03）：固定 Provider 扩展为八家；新增五家采用逐家精确可选 Host 权限；设置 JSON 只绑定 model（D-063）。
 > v1.4（2026-08-20）：新增 GLM/Kimi/Grok 与受限 custom OpenAI-compatible Provider；UUAPI 降为兼容项；新增 Phase 12（D-068）。
 > v1.5（2026-08-21）：记录 Phase 13 公开源码与 Phase 14 GitHub Release 加固/发布；Chrome Web Store 继续暂停（D-069/D-070）。
+> v1.6（2026-08-21）：记录 Phase 14 后续的普通问答 PageContext 定向维护补丁，不改变 Release 或 Chrome Web Store 状态（D-071）。
 
 ---
 
@@ -41,7 +42,7 @@ Phase 12 (Provider 目录扩展与受限 custom 端点) ← v1 MVP 后定向增�
    │
 Phase 13 (GitHub 公开源码) ← 已完成
    │
-Phase 14 (GitHub Release 加固与发布) ← 当前阶段；不含 Chrome Web Store
+Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不含 Chrome Web Store
 ```
 
 **关键路径**：0 → 1 → 1.5 → 2 → 3 → 4 → 9 → 11。
@@ -240,6 +241,12 @@ Phase 14 (GitHub Release 加固与发布) ← 当前阶段；不含 Chrome Web S
 - **验收**：正式 bundle 不含 Phase 0 入口；Options 无开发专用区且单 Provider 测试仍可用；manifest 与 ZIP 图标完整；所有质量门禁通过；凭据审计零真实 Key；公开 Release/tag/两项资产存在，校验值与本地一致；README 安装路径可照做。
 - **范围**：不调用真实 Provider、不读取已保存 Key、不修改 Chrome 权限/Host/核心功能；不推进 Chrome Web Store，不生成或声称一键 CRX。
 - **授权**：项目负责人已明确授权 Phase 14 的既有 `origin` Push、tag、GitHub Release 与安装资产公开发布。其他发布渠道仍须另行确认。
+
+### Phase 14 后续维护补丁 — 当前页面问答上下文（D-071）
+- **目标**：修复同一仓库页面 README 延迟渲染后普通问答仍使用旧 PageContext，以及项目简介被误当成 README 的问题。
+- **实现边界**：每次 `PAGE_INFO_REQUEST` 重读当前 DOM；兼容当前 `article.markdown-body` README 容器；为 Provider 标注简介/README/License/安装说明的证据状态。
+- **验收**：固定仓库初载、滚动后、重新提问三个时点有可重复测试；README 8,000 字与整体 32KB 限制有断言；未读取到时只能说明当前证据缺失。
+- **范围**：不新增 Chrome 权限、GitHub API/Provider 调用、完整仓库读取、持久数据或发布授权。
 
 ---
 

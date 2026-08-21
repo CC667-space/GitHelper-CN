@@ -7,6 +7,7 @@
 > v1.3（2026-08-03）：八家固定适配器、五个精确可选 Host 权限及无密钥设置 JSON 验收（D-063）。
 > v1.4（2026-08-20）：新增 Phase 12 的 GLM/Kimi/Grok、受限 custom、UUAPI legacy 与动态精确 Host 验收（D-068）。
 > v1.5（2026-08-21）：新增 Phase 14 GitHub Release 运行时清理、图标、版本化 ZIP、校验文件、README 快速上手与公开资产验收（D-070）。
+> v1.6（2026-08-21）：新增普通问答实时 PageContext、README 当前 DOM、证据来源与读取边界回归（D-071）。
 
 ---
 
@@ -27,7 +28,7 @@
 ## 二、测试层次
 
 ### 1. 单元测试（Vitest）
-- parsers：各页面类型对 fixtures 的识别与字段提取
+- parsers：各页面类型对 fixtures 的识别与字段提取；仓库页同时覆盖旧 `#readme` 与当前 `main article.markdown-body` 容器
 - sanitizer：各类凭据正/反/边界/组合用例
 - provider：mock HTTP，断言请求组装、apiHost 固定预设、model、错误映射（**八个适配器全部有 mock 测试，D-031/D-063**）
 - provider-host-access：固定可选 Provider 只请求各自精确 Host；custom 只请求已保存 URL 的精确 Host；拒绝授权时 Key 零写入；Background 在 Key 读取前断言权限；删除 Key 后释放权限
@@ -44,7 +45,7 @@
 - selection/pick：进入/退出、悬停叠层、捕获阶段点击拦截、嵌套逻辑元素归一、SelectedElement 字段、password value 不提取、SPA 失效清理
 - selection/region：正向/反向 drag、结构化字段边界、统一充分性判定、needsVision 一致性、rect/viewport/scroll/dpr/zoom/sourceUrl
 - capture：Phase 0 比例坐标、边界 clamp、结构充分时零调用、临时 JPEG/bitmap 释放、取消与错页拒绝
-- context-builder：只含允许字段、不含整页；普通回答的简练/无废话风格契约在 System Prompt 中固定，且明确准确性优先
+- context-builder：只含允许字段、不含整页；普通回答的简练/无废话风格契约在 System Prompt 中固定，且明确准确性优先；项目简介不得作为 README 证据，缺失只能表述为“当前未读取到”
 - messaging：信封版本/请求 ID、Schema 校验、超载荷拒绝、超时
 - release-hardening：正式 Background/Content/Options 不含 Phase 0 原始入口、页面调试触发器或开发专用区；Options 保留单 Provider 测试；manifest/action 引用 16/32/48/128 四档本地图标
 
@@ -66,6 +67,7 @@
 
 ### 3. 扩展集成测试
 - Panel→BG→Content→Panel 消息往返（经来源+Schema 校验）
+- 同一仓库 URL 初载无 README、随后 DOM 延迟出现 README 时，下次 `PAGE_INFO_REQUEST` 必须返回新的 `capturedAt` 与 README 内容；Provider user message 同步包含新证据，不需刷新扩展
 - 非法来源消息被拒；白名单外域名 fetch 被拒
 - 点击选择数据结构、框选坐标/dpr/滚动上报结构
 - 点击选择集成链断言 SelectedElement 经 Content→Background→Panel 后作为不可信数据进入 AI 请求，且 SPA 后旧 `sourceUrl` 不出站
@@ -78,6 +80,7 @@
 ### 4. E2E（Playwright，加载扩展，Phase 11）
 - 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片；默认仅显示新手总结，详细介绍、原项目文件摘要和仓库事实均关闭；展开原项目文件摘要后，中英文 README 共存且含 banner HTML/功能表时应记录实际选择的中文 README 与章节，不显示 README 原文，并包含配置与实际实现文件证据；展开事实区后数字可见
 - SPA 导航后上下文刷新且无重复初始化
+- 仓库快照先移除 README、再以 `article.markdown-body` 延迟插入；下一次 PageContext 包含边界内的安装与 License 文字，简介不被当成 README
 - 四分段可切换且点击/框选下一步自动进入问答；会话恢复、切换 GitHub 页面后活动会话仍保留，Panel 重载后继续恢复；逐轮收展及两类确认删除可操作
 - Release 构建在初始页面和 SPA 导航后都不创建 `#git-helper-phase0-run-button`，且既有 Panel/分析/搜索/会话闭环不回归
 

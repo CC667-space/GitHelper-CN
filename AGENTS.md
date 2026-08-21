@@ -7,6 +7,7 @@
 > v1.3（2026-08-03）：固定 Provider 目录扩展为八家；新增五家使用逐家精确可选 Host 权限；无密钥设置 JSON 只允许 model 绑定（D-063）。
 > v1.4（2026-08-20）：新增 GLM/Kimi/Grok 与受限 custom OpenAI-compatible Provider；UUAPI 降为旧配置兼容；动态 Host 使用精确运行时授权（D-068）。
 > v1.5（2026-08-21）：GitHub Release `v0.1.0` 获定向授权；正式运行时移除 Phase 0 调试入口，发布物为可校验 ZIP，Chrome Web Store 继续暂停（D-070）。
+> v1.6（2026-08-21）：普通问答改为每次 PAGE_INFO_REQUEST 实时解析 DOM，明确 README/仓库简介证据边界（D-071）。
 
 ---
 
@@ -105,6 +106,7 @@ STATUS.md 是断点续跑唯一依据：每完成任务即更新；遇阻塞写�
 - **DeepSeek 模型（D-034）**：`deepseek-chat`/`deepseek-reasoner` 别名 2026-07-24 15:59 UTC 起停用，**不得使用**；推荐预填 `deepseek-v4-flash`，保留 `deepseek-v4-pro` 可选；模型名非冻结常量，不可用时提示改选，不阻塞。
 - **截图职责与坐标（P0-4/D-029）**：Content 只上报选区视口坐标+视口 CSS 尺寸+滚动+缩放+dpr；截图由 SW `captureVisibleTab` + 裁剪；**换算公式由 Phase 0 探针 B 实测定稿**（首选截图像素/视口 CSS 比例法；getBoundingClientRect 是视口坐标，勿默认扣 scroll）。
 - GitHub 是 SPA（turbo 导航）：用 spa-watcher 监听路由变化 + 去抖 + 幂等入口，勿只在加载时解析一次。
+- 普通问答的 `PAGE_INFO_REQUEST` 必须实时解析当前 DOM，不得复用启动时 PageContext；repo 的 `pageSummary`/description 不是 README 证据，缺失只能说“当前未读取到”（D-071）。
 - **GitHub API 匿名限流（P0-7/D-032）**：按 resource 分桶（core/search/code_search），读 `X-RateLimit-Resource/Remaining/Reset` 与 `Retry-After`；限流后**禁止持续指数重试**，等 Reset 恢复；search 受限降级网页搜索/DOM；v1 无 Token、无私有仓库支持。
 - DeepSeek API 不支持图像：视觉请求必须路由到已配置且探针确认支持图像的 Provider，provider-manager 有 Capability 护栏。
 - Provider 手动切换优先级高于默认路由（用户明确要求）。

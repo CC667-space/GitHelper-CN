@@ -93,6 +93,10 @@ API Key 由用户自行向 Provider 获取，可能产生 Provider 侧费用。�
 - 支持 DeepSeek、OpenRouter、OpenAI、Anthropic、Gemini、Qwen、SiliconFlow、GLM、Kimi、Grok，以及受限的 OpenAI-compatible 自定 Provider
 - 支持本地 Session 新建、恢复、收展和二次确认删除
 
+“问答”会在每次发送时重新读取当前页面的有限 DOM 内容。仓库页可读取当前已渲染 README 的
+前 8,000 字符；整体上下文最多 32KB。普通问答不会另行打开完整 README 或 `LICENSE` 文件，
+所以“当前未读取到”不等于文件不存在。需要读取完整仓库文件证据时，请使用“一键仓库分析”。
+
 更完整的操作说明、Provider 配置、自定端点限制和故障排查见 [用户指南](docs/USER_GUIDE.md)。
 
 ## 安全、隐私与权限边界

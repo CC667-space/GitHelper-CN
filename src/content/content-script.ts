@@ -1,7 +1,5 @@
 import { handlePageInfoRequest } from './page-info';
-import { parseGitHubPage } from './parsers';
 import { startGitHubSpaWatcher } from './spa-watcher';
-import type { PageContext } from '../lib/types';
 import { initializeOnce } from './bootstrap';
 import {
   contentPickCancelSchema,
@@ -28,7 +26,6 @@ function initializeContentScript(): void {
   const INJECTED_ATTR = 'data-git-helper-injected';
 
   document.documentElement.setAttribute(INJECTED_ATTR, 'true');
-  let currentPageContext: PageContext | undefined;
   const picker = new PickController(document, () => window.location.href);
   const regionSelector = new RegionController(document, () => window.location.href);
 
@@ -43,11 +40,10 @@ function initializeContentScript(): void {
 
   startGitHubSpaWatcher({
     onInvalidate() {
-      currentPageContext = undefined;
       clearTransientSelectionState();
     },
     onRefresh() {
-      currentPageContext = parseGitHubPage(document, window.location.href);
+      // PAGE_INFO_REQUEST 会实时解析当前 DOM；watcher 仅负责路由刷新与选择态清理。
     },
   });
 
@@ -143,14 +139,7 @@ function initializeContentScript(): void {
       }
       try {
         sendResponse(
-          handlePageInfoRequest(
-            message,
-            document,
-            window.location,
-            document.title,
-            new Date(),
-            currentPageContext,
-          ),
+          handlePageInfoRequest(message, document, window.location, document.title, new Date()),
         );
       } catch {
         return false;

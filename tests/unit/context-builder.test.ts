@@ -26,6 +26,46 @@ describe('context-builder and private outbound guard', () => {
     expect(SYSTEM_PROMPT).toContain('不得为了简短牺牲准确性');
   });
 
+  it('仓库简介不作为 README 证据，缺失时只能表述为当前未读取到', () => {
+    const built = buildMinimalContext(
+      '这个仓库有 README、License 和安装说明吗？',
+      page({
+        pageSummary: '面向中文 GitHub 新手的本地 Side Panel 助手。',
+        extracted: {
+          description: '面向中文 GitHub 新手的本地 Side Panel 助手。',
+          accessState: 'public',
+        },
+      }),
+    );
+
+    expect(SYSTEM_PROMPT).toContain('仓库简介');
+    expect(SYSTEM_PROMPT).toContain('不是 README 内容');
+    expect(SYSTEM_PROMPT).toContain('当前未读取到');
+    expect(built.messages[1]?.content).toContain(
+      '当前未读取到 README 内容；不能据此断言 README 文件存在或不存在。',
+    );
+    expect(built.messages[1]?.content).toContain(
+      '当前未读取到 README 中的 License 或安装说明；不能断言项目没有这些内容。',
+    );
+  });
+
+  it('只在实际 README 片段中确认 License 与安装说明证据', () => {
+    const built = buildMinimalContext(
+      '如何安装，许可证是什么？',
+      page({
+        pageSummary: '仓库简介，不是 README。',
+        extracted: {
+          readme: '快速上手：加载已解压的扩展程序。License：MIT。',
+          accessState: 'public',
+        },
+      }),
+    );
+
+    expect(built.messages[1]?.content).toContain('已读取当前仓库页面呈现的 README 片段');
+    expect(built.messages[1]?.content).toContain('快速上手：加载已解压的扩展程序');
+    expect(built.messages[1]?.content).toContain('License：MIT');
+  });
+
   it('System 只含固定规则，页面文字只进入带不可信标记的 user 角色', () => {
     const built = buildMinimalContext('请解释', page());
 

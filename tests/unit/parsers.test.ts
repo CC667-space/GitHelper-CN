@@ -116,4 +116,17 @@ describe('GitHub page parsers', () => {
     expect(context.extracted.degraded).toBe(true);
     expect(context.extracted.text).toContain('fallback text');
   });
+
+  it('识别固定仓库当前 article.markdown-body README 容器', () => {
+    const input = fixture('repo-current', 'https://github.com/CC667-space/GitHelper-CN');
+    const context = parseGitHubPage(
+      input.document,
+      input.url,
+      new Date('2026-08-21T10:10:00.000Z'),
+    );
+
+    expect(context.pageSummary).toBe('面向中文 GitHub 新手的本地 Side Panel 助手。');
+    expect(context.extracted.readme).toContain('快速上手：安装扩展');
+    expect(context.extracted.readme).toContain('License：MIT');
+  });
 });

@@ -589,3 +589,14 @@
 - **范围**：只做 Release 运行时清理、品牌图标、打包/校验和用户文档；不修改核心功能、Provider 能力、Key 存储方式、Chrome 权限/Host、GitHub 读写边界或 Chrome Web Store 状态。
 - **证据**：提交 `763063e` 通过 typecheck、lint、变更源文件格式、303 项常规测试、build、安全扫描、隔离 Chrome 149 E2E、打包及发布前凭据审计。tag `v0.1.0` 指向该提交；公开 Release 非 draft/prerelease，仅含版本化 ZIP 与 SHA-256 文件，GitHub 返回的资产 digest 与本地一致。
 - 状态：Phase 14 与 GitHub Release `v0.1.0` 已完成并核验 ｜ 2026-08-21
+
+## D-071 普通问答实时解析当前 DOM，并隔离 README 与仓库简介证据
+- **决策**：
+  - `PAGE_INFO_REQUEST` 每次直接解析当前 DOM，不再优先使用 Content Script 启动或 SPA watcher 刷新时生成的 `currentPageContext`。SPA watcher 继续负责 URL 变化与选择态清理，但同 URL 动态内容的新鲜度由用户提问时的实时解析保证。
+  - repo parser 在既有 `#readme article` / `#readme` 后增加仓库根页限定的 `main article.markdown-body`，兼容 2026-08-21 实际 GitHub 仓库页的 README 容器；读取上限仍为 8,000 字符。
+  - 普通问答 System Prompt 与 user context 增加本地证据状态：`pageSummary` / `extracted.description` 只代表仓库简介，不得证明 README 存在；只有 `extracted.readme` 表示当前已读取 README 片段。字段缺失时只能说“当前未读取到”，不得断言文件不存在。
+  - License 与安装说明只有在 README 片段或用户选区中实际出现时才可确认。普通问答不打开独立 `LICENSE`、完整 README 或 GitHub Contents API；整体出站上下文继续受 32KB UTF-8 上限控制。
+- **理由**：固定仓库 `CC667-space/GitHelper-CN` 初载时 README 尚未进入 DOM，滚动后出现的容器又不再具有旧 `#readme` ID；同 URL mutation 被 watcher 忽略，显式提问又复用旧缓存，最终 Provider 只收到来自 `og:description` 的项目简介并把它误判成 README。显式提问时重读 DOM 是最小、确定且低频的正确性接缝，不需要让所有 GitHub mutation 触发高频解析。
+- **证据**：诊断红测记录初载 PageContext、DOM 更新后的直接 parser、重新提问 PageContext 与 Provider user message；真实 Chrome 对照确认初载无 README、滚动到 `scrollY=1800` 后出现 `article.markdown-body` 而 `#readme` 仍为 0。固定仓库 README 归一化后约 3,687 字符，安装与 License 均在 8,000 字限制内。修复后的定向 parser/context-builder/往返测试 19/19 通过；完整门禁结果记录于 STATUS。
+- **范围**：Phase 14 后续内部维护补丁；不新增 Chrome 权限、Host、GitHub API/Provider 调用、完整仓库读取、持久数据类别、远程 Push 或新 Release 授权。
+- 状态：已完成；309 项常规测试、typecheck、lint、build、安全扫描与隔离 Chrome 149 E2E 均通过 ｜ 2026-08-21

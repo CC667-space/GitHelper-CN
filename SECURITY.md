@@ -6,6 +6,7 @@
 > v1.3（2026-08-03）：八家固定 Provider、逐家精确可选 Host 权限与无密钥设置 JSON 边界（D-063）。
 > v1.4（2026-08-20）：新增受限 custom Provider 的 HTTPS 校验、精确动态 Host 授权与 JSON 非秘密配置边界（D-068）。
 > v1.5（2026-08-21）：GitHub Release 清除 Phase 0 可触发调试入口，版本化 ZIP 只含 `dist/` 并附 SHA-256；Chrome Web Store 继续暂停（D-070）。
+> v1.6（2026-08-21）：明确普通问答实时 DOM 读取、README/简介证据隔离及 License/安装说明的有限可见边界（D-071）。
 
 ---
 
@@ -26,6 +27,12 @@
 - 把完整聊天历史无限拼接进请求
 
 `ContextBuilder` 是唯一组装出站上下文的地方，便于审计。
+
+**普通问答的仓库页边界（D-071）**：每次提问重新解析当前 DOM；只发送当前已渲染 README
+的前 8,000 字符，整体 user context 仍受 32KB UTF-8 上限约束。普通问答不会另行打开
+`LICENSE`、README 文件页或 GitHub Contents API；License 与安装说明只有在这段 README、
+用户选区或其他已明确读取的局部内容中实际出现时才可确认。项目简介不是 README 证据；未取得字段
+只能表述为“当前未读取到”，不得断言文件不存在。
 
 ---
 

@@ -384,6 +384,30 @@ try {
     'Release 构建不应向 GitHub 页面暴露 Phase 0 调试入口',
   );
 
+  await githubPage.locator('#readme').evaluate((element) => element.remove());
+  const beforeDelayedReadme = await requestActivePageInfo(serviceWorker);
+  assert(
+    beforeDelayedReadme?.payload?.pageContext?.extracted?.readme === undefined,
+    'E2E 初载上下文不应提前包含尚未进入 DOM 的 README',
+  );
+  await githubPage.locator('main').evaluate((main) => {
+    const container = document.createElement('div');
+    container.innerHTML =
+      '<article class="markdown-body entry-content container-lg">E2E_DELAYED_README_SENTINEL。快速安装：加载已解压扩展。License：MIT。</article>';
+    main.append(container);
+  });
+  const afterDelayedReadme = await requestActivePageInfo(serviceWorker);
+  assert(
+    afterDelayedReadme?.payload?.pageContext?.extracted?.readme?.includes(
+      'E2E_DELAYED_README_SENTINEL',
+    ),
+    'E2E 同 URL 延迟出现的 README 未在下次 PAGE_INFO_REQUEST 中刷新',
+  );
+  assert(
+    afterDelayedReadme?.payload?.pageContext?.extracted?.readme?.includes('License：MIT'),
+    'E2E README 边界内的 License/安装说明未进入普通问答上下文',
+  );
+
   const optionsPage = await context.newPage();
   optionsPage.on('pageerror', (error) => pageErrors.push(`Options: ${error.message}`));
   await optionsPage.goto(`chrome-extension://${extensionId}/src/options/index.html`);
@@ -597,6 +621,17 @@ try {
         defaultVisible: ['overview'],
         defaultCollapsed: ['details', 'sourceSummary', 'facts'],
         factsDefaultExpanded: false,
+      },
+      pageContextRefresh: {
+        initialReadmeMissing:
+          beforeDelayedReadme?.payload?.pageContext?.extracted?.readme === undefined,
+        delayedReadmeDetected:
+          afterDelayedReadme?.payload?.pageContext?.extracted?.readme?.includes(
+            'E2E_DELAYED_README_SENTINEL',
+          ) === true,
+        licenseAndInstallationInsideBoundary:
+          afterDelayedReadme?.payload?.pageContext?.extracted?.readme?.includes('License：MIT') ===
+          true,
       },
       s3ChineseSearch: {
         input: '最近两个月 Star 超过 1000 的 AI 相关项目',

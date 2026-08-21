@@ -6,6 +6,7 @@
 > v1.3（2026-08-03）：Provider Catalog 统一八家固定预设；新增五家逐家申请精确可选 Host 权限；设置 JSON 只绑定 model（D-063）。
 > v1.4（2026-08-20）：新增 GLM/Kimi/Grok 与受限 custom OpenAI-compatible 条目；UUAPI 降为兼容；动态 Host 使用精确运行时授权（D-068）。
 > v1.5（2026-08-21）：GitHub Release 构建移除 Phase 0 运行时调试入口与批量探针 UI；加入本地图标及版本化 ZIP/SHA-256 发布流水线（D-070）。
+> v1.6（2026-08-21）：普通问答的 PAGE_INFO_REQUEST 改为实时解析当前 DOM；补充 README 当前容器、证据来源与有限读取边界（D-071）。
 
 ---
 
@@ -132,6 +133,12 @@ interface Envelope<T> {
   → 若模型请求工具调用 → ToolExecutor 校验+执行 → 结果回灌模型
   → 完成后写入 SessionStore
 ```
+
+普通问答每次收到 `PAGE_INFO_REQUEST` 都直接对当下 DOM 运行页面 parser，不复用 Content Script
+启动时或 SPA watcher 产生的内存 PageContext。仓库页 README 只读取当前已渲染的
+`#readme` 或 `main article.markdown-body` 文本，最多 8,000 字符；项目简介来自
+`pageSummary` / `extracted.description`，不构成 README 存在性证据。缺失字段只能解释为
+“当前未读取到”，不能推断对应文件不存在（D-071）。
 
 ### 3.3 点击提问流
 ```
@@ -292,7 +299,8 @@ README 关键文件卡片的段落摘录。三文件选择在同一预算内优�
 - **检测**：拦截 `history.pushState/replaceState` + `popstate` + Turbo 事件（GitHub 用 turbo 导航）+ `MutationObserver` 兜底。
 - **去抖**：URL 变化后去抖（~300ms）再触发重新解析，避免连续导航重复解析。
 - **重复初始化保护**：content script 入口幂等（挂载前检查全局标记），SPA 导航不重复注入叠层。
-- **状态清理**：页面切换时清理旧选择状态（pick/框选叠层、已选元素）、使旧 PageContext 失效。
+- **状态清理**：URL 变化时清理旧选择状态（pick/框选叠层、已选元素）。
+- **提问时实时读取**：同 URL 的普通 DOM mutation 不依赖 watcher 更新缓存；用户下一次提问会重新解析当前 DOM，因此延迟渲染的 README 无需刷新扩展即可进入新 PageContext（D-071）。
 - **Session 关联**：页面切换只更新 PageContext，不自动替换 Panel 当前活动会话；用户可从最近会话列表显式切换或新建。Panel 完整重载时优先使用 `storage.session` 活动指针恢复，指针无效才按页面/仓库匹配。
 
 ---
@@ -371,7 +379,7 @@ interface PageContext {
   isPrivate: boolean;            // true → 零出站阻断(SECURITY §4)
   issueOrPrNumber?: number;
   extracted: Record<string, unknown>;
-  pageSummary?: string;
+  pageSummary?: string;           // repo 页通常为 meta 项目简介，不等于 README
   capturedAt: string;
 }
 
@@ -545,7 +553,7 @@ interface OperationConfirmation {
 ## 8. 存储容量与淘汰策略（v1.1，P1-1）
 
 **存储分区**：
-- `chrome.storage.session`：即时页面状态（当前 PageContext 缓存、pick/框选临时态、版本化活动会话 ID 指针；不含消息正文）。
+- `chrome.storage.session`：即时页面状态（pick/框选临时态、版本化活动会话 ID 指针；不含 PageContext 或消息正文）。
 - `chrome.storage.local`（TRUSTED_CONTEXTS）：偏好、Provider 非敏感配置、会话索引、摘要、凭据（独立 key 前缀，经 credential-store 访问）。
 - IndexedDB：**启用条件** = 单会话消息体或总量逼近 storage.local 配额（见硬上限）时启用，存长会话正文；v1 先不启用，封装层预留。
 - 截图：**只在内存/请求生命周期内使用，不持久保存**。

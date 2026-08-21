@@ -31,7 +31,11 @@ export function parseRepoPage(document: Document, url: string, now?: Date): Page
         '[data-testid="repository-languages"] li',
         'ol.list-style-none span[itemprop="programmingLanguage"]',
       ]),
-      readme: firstText(document, ['#readme article', '#readme'], 8_000),
+      readme: firstText(
+        document,
+        ['#readme article', '#readme', 'main article.markdown-body'],
+        8_000,
+      ),
     },
     now,
   );
