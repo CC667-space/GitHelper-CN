@@ -138,7 +138,7 @@ pnpm package:extension
 
 - Phase 0–12：MVP、真实体验复核和 Provider 扩展已完成
 - Phase 13：公开源码与首次 GitHub Push 已完成
-- Phase 14：GitHub Release 加固与发布
+- Phase 14：GitHub Release 加固与发布已完成，当前版本见 [`v0.1.0`](https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.0)
 - Chrome Web Store：明确暂停，不在 Phase 14 范围内
 
 ## License

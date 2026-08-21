@@ -46,4 +46,10 @@
 
 - 目标仓库：`https://github.com/CC667-space/GitHelper-CN`
 - 目标 Release：`https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.0`
-- 状态：本地发布验收通过，待创建并核验远程 tag、Release 与两项资产。
+- 提交：`763063edf56b40723ff9743271636661a1ebd4cc`
+- tag：`v0.1.0`，远程解引用后指向上述提交。
+- Release 状态：公开、非 draft、非 prerelease。
+- 远程资产：仅 `GitHelper-CN-v0.1.0-chrome.zip`（189,257 bytes）与 `GitHelper-CN-v0.1.0-SHA256SUMS.txt`（97 bytes）。
+- GitHub ZIP digest：`sha256:6d3e65fd8d95a654aa128c9d2ddc980aebe45a7e2cce6f61e1f7f724dd6070c3`，与本地一致。
+- GitHub 校验文件 digest：`sha256:758b7ff0c26ccf8a5ca706b48762b72d1fcf9ef50b228d374182105da1ffb24e`，与本地一致。
+- 状态：远程 tag、Release 与两项资产均已核验，Phase 14 完成。

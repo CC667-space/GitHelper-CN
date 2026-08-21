@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 14 — GitHub Release 本地发布验收已通过，待创建并核验远程 `v0.1.0`。**
+**Phase 14 — GitHub Release `v0.1.0` 已完成并通过远程核验。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -295,11 +295,12 @@
   - 门禁通过：typecheck、lint、变更源文件 Prettier check、`git diff --check`、PowerShell 语法、Vitest 55 files / 303 tests（另 1 live test 跳过）、build（419 modules）、构建安全扫描和隔离 Chrome 149 E2E
   - E2E 通过真实 `Alt+Shift+G` 触发原生 Side Panel，并验证 `onOpened`、标签切换 `onClosed`、Phase 0 页面入口为零、Provider 请求 0、页面异常 0
   - 发布前凭据审计：生产工作区、现有 Git 历史、禁止路径、`dist` 与 ZIP 的已知真实凭据模式命中 0；测试目录仅保留显式虚构的脱敏哨兵
-  - 待执行的远程步骤仅为已授权的既有 `origin` Push、tag 与 GitHub Release 创建/核验；Chrome Web Store 继续暂停
+  - 提交 `763063e` 已 fast-forward 合并并 Push 到 `origin/main`；注释 tag `v0.1.0` 指向该提交，公开 Release 已创建且不是 draft/prerelease
+  - 远程仅有两项已审计资产：ZIP 189,257 bytes、SHA-256 文件 97 bytes；GitHub 返回的两项 digest 均与本地一致，Release：`https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.0`
 
 ## 下一任务
-**创建并核验 GitHub Release `v0.1.0`。**
-本地安装资产与全部门禁已通过。按既有授权提交 Phase 14、合并并 Push `main`、创建 tag/Release、上传 ZIP 与 SHA-256 文件，随后核对远程资产与本地校验值。Chrome Web Store 继续暂停。
+**等待长期真实使用反馈；Chrome Web Store 上架继续暂停。**
+Phase 0–14、公开源码与首个可安装 Release 均已完成，当前没有必须继续的开发任务。后续新版本 Release、Chrome Web Store 或产品范围变化仍需单独授权。
 
 ## 已登记的后续优化
 - [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；2026-08-17 完成调整台定稿的四分段导航、视觉 Token 与浅色问答/代码块（D-066）。后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
@@ -322,7 +323,7 @@
 | 11 测试 + 打包 + MVP 验收 | ✅ 已完成，v1 MVP 达标 |
 | 12 Provider 目录扩展 + 受限 custom 端点 | ✅ 已完成自动验收 |
 | 13 GitHub 公开开源发布 | ✅ 已完成 |
-| 14 GitHub Release 加固与发布 | 🟡 本地验收完成，待远程发布核验 |
+| 14 GitHub Release 加固与发布 | ✅ 已完成，`v0.1.0` 已公开并核验 |
 
 ## 待处理的强制确认节点
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
@@ -333,12 +334,12 @@
 - ✅ 最新构建使用既有已保存 Key 的单 Provider 真实复测（DeepSeek `available`，未读取 Key）
 - ✅ D-064 真实 Chrome 复核（关闭/重开 Panel 与切换标签页后未新增 disconnected-port 异常）
 - ✅ Phase 11：MVP 批量体验复核（S1–S5 全部通过）
-- ✅ GitHub 公开仓库、Remote、首次 Push、MIT License 与历史邮箱隐私处理（用户已明确授权，执行中）
-- 🟡 GitHub Release `v0.1.0`、既有 `origin` Push 与 tag（用户已明确授权；本地发布验收完成，待执行远程发布）
+- ✅ GitHub 公开仓库、Remote、首次 Push、MIT License 与历史邮箱隐私处理（用户已明确授权并完成）
+- ✅ GitHub Release `v0.1.0`、既有 `origin` Push 与 tag（用户已明确授权；远程发布与资产 digest 核验完成）
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-当前无阻塞。Phase 14 远程发布已获定向授权并进入执行；Chrome Web Store 上架明确暂停，不是当前阻塞项。
+当前无阻塞。Phase 0–14 均已完成；Chrome Web Store 上架是明确暂停的后续路线，不是当前阻塞项。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -393,3 +394,4 @@
 - 2026-08-20：项目负责人授权以 MIT License 公开 `CC667-space/GitHelper-CN`，并授权在首次 Push 前将全部历史提交邮箱改为 GitHub noreply；Phase 13 发布准备开始，Chrome Web Store 上架不在本轮范围。
 - 2026-08-20：Phase 13 完成；README/MIT License、34 个提交邮箱隐私改写、完整质量门禁和 Push 前凭据审计通过，公开仓库 `https://github.com/CC667-space/GitHelper-CN` 已创建并完成首次 Push。Chrome Web Store、GitHub Release 与安装包公开发布均未执行。
 - 2026-08-21：Phase 14 本地发布验收完成；正式运行时移除 Phase 0/批量探针入口，加入四档图标、版本化 ZIP/SHA-256、README Release 快速上手及发布边界记录；303 项常规测试与完整静态/构建/安全/E2E/凭据审计通过，待按既有授权创建并核验远程 `v0.1.0`。
+- 2026-08-21：Phase 14 完成；`763063e` 已 Push，tag `v0.1.0` 指向该提交，公开 Release 与 ZIP/SHA-256 两项资产已上传；远程名称、大小和 digest 均与本地一致。Chrome Web Store 继续暂停。
