@@ -2,7 +2,7 @@
 
 面向中文 GitHub 新手的本地 Chrome Side Panel AI 助手。它在公开 GitHub 页面旁提供中文问答、页面内容提问、自然语言搜索和仓库速览，帮助用户理解项目；不会替用户执行 GitHub 写操作。
 
-> 当前版本：`0.1.0`。Chrome Web Store 上架仍暂停；GitHub Release 提供可下载 ZIP，解压后通过 Chrome 开发者模式加载。
+> 当前版本：`0.1.1`。Chrome Web Store 上架仍暂停；GitHub Release 提供可下载 ZIP，解压后通过 Chrome 开发者模式加载。
 
 ## 快速上手：安装 GitHub Release
 
@@ -12,8 +12,8 @@
 
 打开 [最新 GitHub Release](https://github.com/CC667-space/GitHelper-CN/releases/latest)，在 **Assets** 中下载：
 
-- `GitHelper-CN-v0.1.0-chrome.zip`：扩展安装包
-- `GitHelper-CN-v0.1.0-SHA256SUMS.txt`：可选的完整性校验值
+- `GitHelper-CN-v0.1.1-chrome.zip`：扩展安装包
+- `GitHelper-CN-v0.1.1-SHA256SUMS.txt`：可选的完整性校验值
 
 不要下载 GitHub 自动生成的 `Source code (zip)` 代替扩展包；源码压缩包不能直接加载为扩展。
 
@@ -22,10 +22,10 @@
 在 ZIP 所在目录打开 PowerShell：
 
 ```powershell
-Get-FileHash .\GitHelper-CN-v0.1.0-chrome.zip -Algorithm SHA256
+Get-FileHash .\GitHelper-CN-v0.1.1-chrome.zip -Algorithm SHA256
 ```
 
-输出的 Hash 应与 `GitHelper-CN-v0.1.0-SHA256SUMS.txt` 中的值一致。校验不一致时不要加载该文件，请重新从本仓库 Release 下载。
+输出的 Hash 应与 `GitHelper-CN-v0.1.1-SHA256SUMS.txt` 中的值一致。校验不一致时不要加载该文件，请重新从本仓库 Release 下载。
 
 ### 3. 解压到固定目录
 
@@ -144,7 +144,7 @@ pnpm package:extension
 
 - Phase 0–12：MVP、真实体验复核和 Provider 扩展已完成
 - Phase 13：公开源码与首次 GitHub Push 已完成
-- Phase 14：GitHub Release 加固与发布已完成，当前版本见 [`v0.1.0`](https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.0)
+- Phase 14：GitHub Release 与维护版发布已完成，当前版本见 [`v0.1.1`](https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.1)
 - Chrome Web Store：明确暂停，不在 Phase 14 范围内
 
 ## License

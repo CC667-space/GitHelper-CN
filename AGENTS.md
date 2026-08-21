@@ -8,6 +8,7 @@
 > v1.4（2026-08-20）：新增 GLM/Kimi/Grok 与受限 custom OpenAI-compatible Provider；UUAPI 降为旧配置兼容；动态 Host 使用精确运行时授权（D-068）。
 > v1.5（2026-08-21）：GitHub Release `v0.1.0` 获定向授权；正式运行时移除 Phase 0 调试入口，发布物为可校验 ZIP，Chrome Web Store 继续暂停（D-070）。
 > v1.6（2026-08-21）：普通问答改为每次 PAGE_INFO_REQUEST 实时解析 DOM，明确 README/仓库简介证据边界（D-071）。
+> v1.7（2026-08-21）：D-071/D-072 获授权作为 GitHub Release `v0.1.1` 发布；继续沿用可校验 ZIP，Chrome Web Store 暂停（D-073）。
 
 ---
 
@@ -39,7 +40,7 @@
 - **首轮初始化**（Phase 0）：若 `C:\AI_GitHelper-CN` 尚非 Git 仓库 → `git init` → 建 `.gitignore`（至少：`node_modules/`、`dist/`、`.env`、`.env.*`、任何密钥文件、临时截图、测试输出、构建缓存、浏览器本地数据副本）→ 将 8 份规划文件 + `references/` 作为**基线提交**。
 - **阶段提交**：每 Phase 通过验收 → 更新 STATUS.md → 记录测试证据 → 本地 commit，信息格式 `Phase N: <完成内容摘要>`。
 - **回滚**：阶段失败先修复；无法安全修复 → 回退到最近通过验收的阶段 commit，在 STATUS 记录回退原因；**禁止**删测试/降标准过关。
-- **未经用户明确授权，禁止**：添加 Remote、Push、Force Push、创建远程仓库、公开 Release、发布扩展、修改工作目录外文件、修改系统代理、修改全局 Chrome/Node 配置、安装来源不明脚本。
+- **未经用户明确授权，禁止**：添加 Remote、Push、Force Push、创建远程仓库、公开 Release、发布扩展、修改工作目录外文件、修改系统代理、修改全局 Chrome/Node 配置、安装来源不明脚本。Phase 14 的 `v0.1.0` 与 `v0.1.1` 已分别获得定向授权，不延伸到后续版本或其他渠道。
 
 ## 6. 执行顺序
 按 `EXECUTION_PLAN.md` 的 Phase 0 → 1 → 1.5 → 2 → 3 → 4 → 5 →（6/7/8）→ 9 → 10 → 11 → 12 → 13 → 14。功能阶段 6/7/8 相互独立（建议 6→7→8），**但均为冻结核心功能，必须在 Phase 11 前全部完成（C-2）**。每阶段：读该阶段定义 → 实现 → 自测 → 更新 STATUS → 阶段 commit → 满足验收即进入下一阶段。

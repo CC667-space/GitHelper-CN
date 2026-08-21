@@ -5,7 +5,7 @@
 ---
 
 ## 当前阶段
-**Phase 14 — GitHub Release `v0.1.0` 已完成并通过远程核验。**
+**Phase 14 — GitHub Release `v0.1.1` 本地发布验收已完成，待远程发布与核验。**
 
 ## 已完成
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
@@ -309,10 +309,16 @@
   - 搜索结果保留前台“打开”并新增“后台打开”；显式清除本次结果、清除会话/偏好和全清均覆盖短期快照；未新增 Chrome 权限、Host、长期搜索历史或自动重开 Panel
   - 自动门禁：Vitest 59 files / 316 tests 全过（另 1 file / 1 live test 跳过）；typecheck、lint、本轮改动文件 Prettier check、`git diff --check`、build（421 modules）与构建安全扫描通过
   - 隔离 Chrome 149 E2E 通过，原生 Panel 打开/标签切换关闭、S1/S3/SPA/Session/S5 均无回归；Provider 请求 0、页面异常 0
+- [x] **Phase 14 — GitHub Release `v0.1.1` 本地发布验收（2026-08-21，D-073）完成**：
+  - 用户已基本验收 D-071/D-072，并明确授权按既有流程更新版本与公开 GitHub 仓库；Chrome Web Store 继续暂停
+  - `package.json`、manifest、README、用户指南、发布说明和权威记录已同步到 `0.1.1`；未新增 Chrome 权限、Host 或产品功能
+  - 门禁通过：Vitest 58 files / 316 tests（另 1 file / 1 live test 跳过）、typecheck、lint、变更源码/发布文件 Prettier check、`git diff --check`、两份 PowerShell 脚本语法、build（421 modules）与构建安全扫描
+  - 隔离 Chrome 149 E2E 通过：原生 Panel 打开/标签切换关闭、README 延迟刷新、分析、搜索、SPA、Session 与 S5 均正常；Provider 请求 0、页面异常 0
+  - 打包通过：18 条目 `GitHelper-CN-v0.1.1-chrome.zip`（191,643 bytes），SHA-256 `eb6c12fb5c3554136e6958b3480a950ebfb1119c5bdf387102bfa6042e50b84b`；校验文件 97 bytes
+  - Push 前审计通过：生产工作区、全部 Git 历史、禁止路径、`dist` 与 ZIP 的意外凭据命中 0；E2E harness 唯一命中为已确认的显式虚构安全哨兵
 
 ## 下一任务
-**等待长期真实使用反馈；D-071 已由用户初步验收，D-072 已在本地完成自动验收，Chrome Web Store 上架继续暂停。**
-Phase 0–14、公开源码与首个可安装 Release 均已完成；本地 `dist/` 已包含两项后续维护。若要把补丁发布为 `v0.1.1`，仍需单独授权 Push、tag 与 Release。
+**按已获授权完成 `v0.1.1` 版本提交、`origin/main` Push、注释 tag、GitHub Release 与两项资产核验；Chrome Web Store 上架继续暂停。**
 
 ## 已登记的后续优化
 - [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；2026-08-17 完成调整台定稿的四分段导航、视觉 Token 与浅色问答/代码块（D-066）；2026-08-21 完成 14/16/18px 字号三档与默认 16px（D-072）。后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
@@ -335,7 +341,7 @@ Phase 0–14、公开源码与首个可安装 Release 均已完成；本地 `dis
 | 11 测试 + 打包 + MVP 验收 | ✅ 已完成，v1 MVP 达标 |
 | 12 Provider 目录扩展 + 受限 custom 端点 | ✅ 已完成自动验收 |
 | 13 GitHub 公开开源发布 | ✅ 已完成 |
-| 14 GitHub Release 加固与发布 | ✅ 已完成，`v0.1.0` 已公开并核验 |
+| 14 GitHub Release 加固与发布 | 🔄 `v0.1.1` 本地验收通过，待远程发布核验 |
 
 ## 待处理的强制确认节点
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
@@ -348,10 +354,11 @@ Phase 0–14、公开源码与首个可安装 Release 均已完成；本地 `dis
 - ✅ Phase 11：MVP 批量体验复核（S1–S5 全部通过）
 - ✅ GitHub 公开仓库、Remote、首次 Push、MIT License 与历史邮箱隐私处理（用户已明确授权并完成）
 - ✅ GitHub Release `v0.1.0`、既有 `origin` Push 与 tag（用户已明确授权；远程发布与资产 digest 核验完成）
+- ✅ GitHub Release `v0.1.1`、既有 `origin` Push 与 tag（用户已明确授权；本地发布验收通过，待执行并核验）
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-当前无阻塞。Phase 0–14 与 D-071/D-072 本地维护均已完成；Chrome Web Store 上架是明确暂停的后续路线，不是当前阻塞项。
+当前无阻塞。`v0.1.1` 本地发布验收已通过，正按授权推进远程 GitHub Release；Chrome Web Store 上架是明确暂停的后续路线，不是当前阻塞项。
 
 ## 变更记录
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
@@ -409,3 +416,4 @@ Phase 0–14、公开源码与首个可安装 Release 均已完成；本地 `dis
 - 2026-08-21：Phase 14 完成；`763063e` 已 Push，tag `v0.1.0` 指向该提交，公开 Release 与 ZIP/SHA-256 两项资产已上传；远程名称、大小和 digest 均与本地一致。Chrome Web Store 继续暂停。
 - 2026-08-21：D-071 普通问答 PageContext 补丁完成；修复当前 GitHub README 容器、同 URL 延迟内容的提问时刷新及简介/README 证据混淆，309 项常规测试与完整静态/构建/安全/E2E 门禁通过。仅创建本地补丁，不 Push、不发布新 Release。
 - 2026-08-21：Phase 14 后续 D-072 自动验收完成；Side Panel 默认字号改为可选 14/16/18px（默认 16px），中文搜索增加按标签页的两小时 session 快照、显式清除与后台打开；316 项常规测试及完整静态/构建/安全/E2E 门禁通过，未 Push 或发布新 Release。
+- 2026-08-21：用户基本验收 D-071/D-072 并授权发布 `v0.1.1`；版本、README/用户指南、发布说明和基线记录已更新，完整门禁、18 条目打包与 Push 前凭据审计通过，待远程 Push/tag/Release 核验。

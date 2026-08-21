@@ -7,6 +7,7 @@
 > v1.4（2026-08-20）：新增受限 custom Provider 的 HTTPS 校验、精确动态 Host 授权与 JSON 非秘密配置边界（D-068）。
 > v1.5（2026-08-21）：GitHub Release 清除 Phase 0 可触发调试入口，版本化 ZIP 只含 `dist/` 并附 SHA-256；Chrome Web Store 继续暂停（D-070）。
 > v1.6（2026-08-21）：明确普通问答实时 DOM 读取、README/简介证据隔离及 License/安装说明的有限可见边界（D-071）。
+> v1.7（2026-08-21）：`v0.1.1` 维护版继续复用既有 Release 安全边界；D-072 搜索快照仅存脱敏有限结果于 `storage.session`，不新增权限或长期数据（D-073）。
 
 ---
 
@@ -171,6 +172,7 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
 - 中文输入与生成 query 分别限制为 500/256 字符；工具参数 strict zod 校验，多余字段拒绝。
 - GitHub API 响应视为不可信远端数据，只投影最多 10 条有限字段；结果 URL 与降级 URL必须再次满足 `https://github.com/*` Schema，不能把 API 响应变成任意导航。
 - `core/search/code_search` 限流状态只保存数值配额与时间，不含页面内容或凭据；search 受限时不重复出站，本地 DOM 结果仅作为纯文本渲染。
+- D-072 的搜索连续性只在成功后把脱敏描述、目标类型和有限结果按 `tabId` 写入 `chrome.storage.session`；每标签页一项、最多 10 项、2 小时过期。恢复只读该快照，零 Provider/GitHub API 请求；显式清除、清除会话/偏好和全清都会移除对应快照。
 
 ### 8.3 仓库分析事实与 Provider 边界（D-048）
 - 私有/无权限 PageContext 在 GitHub API 与 Provider 之前统一零出站；仓库名必须通过 `owner/repository` 格式校验，API 路径由 Background 固定构造。

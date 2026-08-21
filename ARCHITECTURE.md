@@ -7,6 +7,7 @@
 > v1.4（2026-08-20）：新增 GLM/Kimi/Grok 与受限 custom OpenAI-compatible 条目；UUAPI 降为兼容；动态 Host 使用精确运行时授权（D-068）。
 > v1.5（2026-08-21）：GitHub Release 构建移除 Phase 0 运行时调试入口与批量探针 UI；加入本地图标及版本化 ZIP/SHA-256 发布流水线（D-070）。
 > v1.6（2026-08-21）：普通问答的 PAGE_INFO_REQUEST 改为实时解析当前 DOM；补充 README 当前容器、证据来源与有限读取边界（D-071）。
+> v1.7（2026-08-21）：记录 Side Panel 字号偏好、按标签页短期搜索快照与 `v0.1.1` 复用既有 Release 流水线（D-072/D-073）。
 
 ---
 
@@ -437,6 +438,7 @@ interface UserPreferences {
     accountChanges: 'deny';       // 固定 deny, v1 不实现账号写入
   };
   visionEnabled: boolean;         // 默认 true
+  panelFontSize: 14 | 16 | 18;    // 默认 16，Options 保存后 Panel 即时应用（D-072）
   // v1.1: 移除 allowPrivateRepos(v1 完全不支持私有仓库)
 }
 
@@ -599,7 +601,7 @@ strict zod payload 与 64KB 信封限制；UI 的垃圾桶只进入待确认态�
 
 ---
 
-## 9. GitHub Release 构建边界（v1.5，D-070）
+## 9. GitHub Release 构建边界（v1.7，D-070/D-073）
 
 ```
 提交源码 + public/icons

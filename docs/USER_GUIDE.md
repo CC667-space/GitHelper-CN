@@ -14,11 +14,11 @@
 不需要 Node.js 或源码构建：
 
 1. 打开 [最新 GitHub Release](https://github.com/CC667-space/GitHelper-CN/releases/latest)。
-2. 在 Assets 下载 `GitHelper-CN-v0.1.0-chrome.zip`。不要把 GitHub 自动生成的 `Source code (zip)` 当作扩展包。
-3. 可同时下载 `GitHelper-CN-v0.1.0-SHA256SUMS.txt`，并在 PowerShell 运行：
+2. 在 Assets 下载 `GitHelper-CN-v0.1.1-chrome.zip`。不要把 GitHub 自动生成的 `Source code (zip)` 当作扩展包。
+3. 可同时下载 `GitHelper-CN-v0.1.1-SHA256SUMS.txt`，并在 PowerShell 运行：
 
    ```powershell
-   Get-FileHash .\GitHelper-CN-v0.1.0-chrome.zip -Algorithm SHA256
+   Get-FileHash .\GitHelper-CN-v0.1.1-chrome.zip -Algorithm SHA256
    ```
 
    输出应与校验文件一致。
@@ -51,8 +51,8 @@ pnpm package:extension
 
 它会生成：
 
-- `artifacts\GitHelper-CN-v0.1.0-chrome.zip`
-- `artifacts\GitHelper-CN-v0.1.0-SHA256SUMS.txt`
+- `artifacts\GitHelper-CN-v0.1.1-chrome.zip`
+- `artifacts\GitHelper-CN-v0.1.1-SHA256SUMS.txt`
 
 使用前先解压，再让 Chrome 加载解压后的目录；不要把 ZIP 直接选作“已解压的扩展程序”。
 

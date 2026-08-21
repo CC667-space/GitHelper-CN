@@ -8,6 +8,7 @@
 > v1.4（2026-08-20）：新增 GLM/Kimi/Grok 与受限 custom OpenAI-compatible Provider；UUAPI 降为兼容项；新增 Phase 12（D-068）。
 > v1.5（2026-08-21）：记录 Phase 13 公开源码与 Phase 14 GitHub Release 加固/发布；Chrome Web Store 继续暂停（D-069/D-070）。
 > v1.6（2026-08-21）：记录 Phase 14 后续的普通问答 PageContext 定向维护补丁，不改变 Release 或 Chrome Web Store 状态（D-071）。
+> v1.7（2026-08-21）：记录 D-072 字号/搜索连续性维护与获授权的 `v0.1.1` GitHub Release；Chrome Web Store 继续暂停（D-073）。
 
 ---
 
@@ -248,14 +249,20 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **验收**：固定仓库初载、滚动后、重新提问三个时点有可重复测试；README 8,000 字与整体 32KB 限制有断言；未读取到时只能说明当前证据缺失。
 - **范围**：不新增 Chrome 权限、GitHub API/Provider 调用、完整仓库读取、持久数据或发布授权。
 
+### Phase 14 维护版 — 字号、搜索连续性与 `v0.1.1`（D-072/D-073）
+- **内容**：Side Panel 14/16/18px 字号；按 GitHub `tabId` 保存最近一次成功搜索的 2 小时 `storage.session` 快照；搜索结果前台/后台打开；把 D-071/D-072 发布为 `v0.1.1`。
+- **发布门禁**：复跑 typecheck、lint、变更文件格式、`git diff --check`、全量测试、build、安全扫描、隔离 Chrome E2E、版本化打包与源码/历史/`dist`/ZIP 凭据审计。
+- **远程验收**：`origin/main`、注释 tag `v0.1.1`、非 draft/prerelease Release，以及仅 ZIP/SHA-256 两项资产均存在且 digest 与本地一致。
+- **范围**：不新增 Chrome 权限/Host、Provider 请求、GitHub 写操作、长期搜索历史、自动重开 Panel 或 Chrome Web Store 发布。
+
 ---
 
-## 强制确认节点清单（v1.5）
+## 强制确认节点清单（v1.7）
 1. **Phase 4**：首次填入真实 AI Provider Key（凭据）—— 必需。
 2. **Phase 11**：MVP 批量体验复核（真实交互验收）—— 必需。
 3. **条件性**：匿名 GitHub API 限额被实测证明阻塞 MVP → 评估 Token（基线变更）；**所有**文本 Provider 或**所有**视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停。
 
-Phase 13 公开源码与 Phase 14 `v0.1.0` GitHub Release 已分别获得明确授权，不重复暂停；授权不覆盖 Chrome Web Store、Force Push、其他仓库或后续版本发布。
+Phase 13 公开源码与 Phase 14 `v0.1.0`/`v0.1.1` GitHub Release 已分别获得明确授权，不重复暂停；授权不覆盖 Chrome Web Store、Force Push、其他仓库或 `v0.1.1` 之后的版本发布。
 
 **注意（D-031）**：单个 Provider 探针失败**不是**暂停节点——记录、禁用、继续。
 

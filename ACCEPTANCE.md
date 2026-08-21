@@ -8,6 +8,7 @@
 > v1.4（2026-08-20）：新增 Phase 12 的 GLM/Kimi/Grok、受限 custom、UUAPI legacy 与动态精确 Host 验收（D-068）。
 > v1.5（2026-08-21）：新增 Phase 14 GitHub Release 运行时清理、图标、版本化 ZIP、校验文件、README 快速上手与公开资产验收（D-070）。
 > v1.6（2026-08-21）：新增普通问答实时 PageContext、README 当前 DOM、证据来源与读取边界回归（D-071）。
+> v1.7（2026-08-21）：补充 D-072 字号/搜索快照回归与 `v0.1.1` 版本化 Release 复核（D-073）。
 
 ---
 
@@ -41,7 +42,8 @@
 - repository-analysis：固定 Schema；`overview`（AI 新手总结）、`details`（详细解释）、`sourceSummary`（本地原文件证据）分层且互不覆盖；DOM/API 事实回填；3 文件配额内最多 1 份 README，根目录中文/默认 README 优先于嵌套说明并保留非 README 文件；README banner/替换字符不进入卡片，HTML 功能表可本地提取；README 安装优先；Provider 合法部分字段经白名单投影后与本地完整结果合并，未知字段丢弃，缺少新手总结、英文自然语言或畸形 JSON 最多重试一次；技术命令/路径不因英文字符误判；Provider 失败、缺 Release/许可证/语言和 core 限流均确定性降级；网络错误不重试；canonical 仓库重定向
 - storage：读写、schemaVersion、迁移、getBytesInUse 容量检查、淘汰顺序
 - session-store：CRUD、同页面/同仓库关联、30 天过期、50 会话上限、摘要触发、Provider/Panel 上下文长度控制、容量淘汰顺序
-- prefs-store：合法偏好持久化；运行时拒绝 `downloads:auto` 和非 `deny` 的 `accountChanges`
+- prefs-store：合法偏好持久化；旧偏好补入 16px 且不覆盖其他字段；字号只接受 14/16/18；运行时拒绝 `downloads:auto` 和非 `deny` 的 `accountChanges`
+- search-snapshot-store：成功结果按 `tabId` 隔离、覆盖、最多 10 项、2 小时过期；恢复与清除不调用 Provider/GitHub API，不保存未脱敏问题或长期历史
 - selection/pick：进入/退出、悬停叠层、捕获阶段点击拦截、嵌套逻辑元素归一、SelectedElement 字段、password value 不提取、SPA 失效清理
 - selection/region：正向/反向 drag、结构化字段边界、统一充分性判定、needsVision 一致性、rect/viewport/scroll/dpr/zoom/sourceUrl
 - capture：Phase 0 比例坐标、边界 clamp、结构充分时零调用、临时 JPEG/bitmap 释放、取消与错页拒绝
@@ -62,7 +64,7 @@
 - Panel 以“页面提问 / 仓库分析 / 中文搜索 / 问答”四分段导航切换且不丢失当前状态；分析内容仍可收起，问答不提供整体收起按钮但保留逐轮收展（D-066）
 - Panel 点击选择状态覆盖 active/selected/cancelled；已选元素随问题提交，旧页面选择被清除；选择成功后有可聚焦输入框的下一步操作
 - Panel 框选状态覆盖 active/selected/cancelled；结构充分提示“不截图”，不足时在提交前提示视觉 Provider 与可能费用；框选成功后有可聚焦输入框的下一步操作
-- Panel 中文搜索覆盖自动/仓库/Issue 目标、查询解释与语法、仓库/Issue 结果卡、限流提示、本地 DOM 结果与安全网页入口；混合转换每次最多调用 1 次当前文本 Provider，Provider 只输出受限意图并由本地编译，失败按脱敏类别自动使用本地规则；异常超长的可选仓库描述不得阻断整批结果，Schema 内部路径不得显示给用户（D-065）
+- Panel 中文搜索覆盖自动/仓库/Issue 目标、查询解释与语法、仓库/Issue 结果卡、限流提示、本地 DOM 结果与安全网页入口；混合转换每次最多调用 1 次当前文本 Provider，Provider 只输出受限意图并由本地编译，失败按脱敏类别自动使用本地规则；异常超长的可选仓库描述不得阻断整批结果，Schema 内部路径不得显示给用户；当前标签页快照可零请求恢复、清除，结果支持前台与后台打开（D-065/D-072）
 - Panel 一键仓库分析覆盖运行/完成/错误、固定字段卡片、数据源、缺字段与 degradedNotice；仅“总结速览”默认显示，“详细介绍”“原项目文件摘要”和 Star/语言/Release 等“仓库事实”均默认折叠并可展开
 
 ### 3. 扩展集成测试
@@ -136,7 +138,7 @@
 | 11 | 全测试绿、打包可加载、S1-S5 证据齐全（前置：Phase 6/7/8 已完成）｜ **人工：S1-S5 批量体验复核** |
 | 12 | GLM/Kimi/Grok/custom Mock、安全、动态 Host、迁移、UUAPI legacy、构建与 E2E 全过；无新 Key 不阻塞 |
 | 13 | MIT 公开源码、历史邮箱隐私处理、全历史凭据审计、公开仓库与首次 Push 通过 |
-| 14 | 正式运行时无开发探针入口；图标完整；README 快速上手完整；typecheck/lint/变更源文件 Prettier check/`git diff --check`/test/build/安全扫描/E2E/打包/凭据审计全过；`v0.1.0` Release 与 ZIP/SHA256 资产公开且可核对 |
+| 14 | 正式运行时无开发探针入口；图标完整；README 快速上手完整；typecheck/lint/变更源文件 Prettier check/`git diff --check`/test/build/安全扫描/E2E/打包/凭据审计全过；`v0.1.0` 与获授权的 `v0.1.1` Release 均只含可核对的 ZIP/SHA256 资产 |
 
 ---
 
