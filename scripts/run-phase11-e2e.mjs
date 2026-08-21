@@ -380,30 +380,44 @@ try {
   );
   await githubPage.waitForTimeout(500);
   assert(
-    (await githubPage.locator('#git-helper-phase0-run-button').count()) === 1,
-    'Content Script 初始实例数不是 1',
+    (await githubPage.locator('#git-helper-phase0-run-button').count()) === 0,
+    'Release 构建不应向 GitHub 页面暴露 Phase 0 调试入口',
   );
 
   const optionsPage = await context.newPage();
   optionsPage.on('pageerror', (error) => pageErrors.push(`Options: ${error.message}`));
   await optionsPage.goto(`chrome-extension://${extensionId}/src/options/index.html`);
+  const sidePanelOpenEvidenceKey = 'phase11:side-panel-open-evidence';
   const sidePanelCloseEvidenceKey = 'phase11:side-panel-close-evidence';
-  await optionsPage.evaluate(async (key) => {
-    await chrome.storage.local.remove(key);
-    chrome.sidePanel.onClosed.addListener((info) => {
-      void chrome.storage.local.set({
-        [key]: {
-          closedAt: new Date().toISOString(),
-          windowId: info.windowId,
-        },
+  await optionsPage.evaluate(
+    async ([openKey, closeKey]) => {
+      await chrome.storage.local.remove([openKey, closeKey]);
+      chrome.sidePanel.onOpened.addListener((info) => {
+        void chrome.storage.local.set({
+          [openKey]: {
+            openedAt: new Date().toISOString(),
+            windowId: info.windowId,
+          },
+        });
       });
-    });
-  }, sidePanelCloseEvidenceKey);
-  await optionsPage.locator('#phase0-open-side-panel').click();
-  await optionsPage
-    .getByTestId('phase0-side-panel-status')
-    .getByText('Side Panel 已打开')
-    .waitFor({ timeout: 10_000 });
+      chrome.sidePanel.onClosed.addListener((info) => {
+        void chrome.storage.local.set({
+          [closeKey]: {
+            closedAt: new Date().toISOString(),
+            windowId: info.windowId,
+          },
+        });
+      });
+    },
+    [sidePanelOpenEvidenceKey, sidePanelCloseEvidenceKey],
+  );
+  await githubPage.bringToFront();
+  await githubPage.keyboard.press('Alt+Shift+G');
+  await optionsPage.waitForFunction(
+    async (key) => Boolean((await chrome.storage.local.get(key))[key]),
+    sidePanelOpenEvidenceKey,
+    { timeout: 10_000 },
+  );
   let panel = await waitForPanel(context, extensionId, 2_000);
   const nativePanelExposedToPlaywright = panel !== undefined;
   if (!panel) {
@@ -411,14 +425,9 @@ try {
     await panel.goto(`chrome-extension://${extensionId}/src/panel/index.html`);
   }
   panel.on('pageerror', (error) => pageErrors.push(`Panel: ${error.message}`));
-  await githubPage.bringToFront();
-  await optionsPage.waitForFunction(
-    async (key) => Boolean((await chrome.storage.local.get(key))[key]),
-    sidePanelCloseEvidenceKey,
-    { timeout: 10_000 },
-  );
   await panel.getByTestId('side-panel').waitFor({ timeout: 10_000 });
   await panel.locator('[title="Background 已连接"]').waitFor({ timeout: 10_000 });
+  await githubPage.bringToFront();
 
   await panel.getByRole('tab', { name: '中文搜索' }).click();
   const githubSearch = panel.getByTestId('github-search');
@@ -505,8 +514,8 @@ try {
   assert(spaContext?.issueOrPrNumber === 42, 'SPA 后 Issue 编号不正确');
   assert(spaContext?.extracted?.title === 'Improve documentation', 'SPA 后 Issue 标题未刷新');
   assert(
-    (await githubPage.locator('#git-helper-phase0-run-button').count()) === 1,
-    'SPA 导航后 Content Script 出现重复初始化',
+    (await githubPage.locator('#git-helper-phase0-run-button').count()) === 0,
+    'SPA 导航后不应重新出现 Phase 0 调试入口',
   );
 
   await panel.getByRole('tab', { name: '问答' }).click();
@@ -562,6 +571,12 @@ try {
     !(await panel.getByTestId('conversation').innerText()).includes(sensitiveSentinel),
     'Panel 重载后显示敏感哨兵明文',
   );
+  await optionsPage.bringToFront();
+  await optionsPage.waitForFunction(
+    async (key) => Boolean((await chrome.storage.local.get(key))[key]),
+    sidePanelCloseEvidenceKey,
+    { timeout: 10_000 },
+  );
   assert(pageErrors.length === 0, `E2E 页面异常：${pageErrors.join(' | ')}`);
 
   console.log(
@@ -592,7 +607,8 @@ try {
       spa: {
         pageType: spaContext.pageType,
         issueOrPrNumber: spaContext.issueOrPrNumber,
-        contentScriptInstances: 1,
+        contentScriptInjected: true,
+        phase0RuntimeTriggerExposed: false,
       },
       sessionRestore: {
         persisted: true,

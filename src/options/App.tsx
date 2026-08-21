@@ -31,9 +31,7 @@ export function OptionsApp({
 }: {
   services?: OptionsServices;
 }): React.JSX.Element {
-  const [probeStatus, setProbeStatus] = useState('待验证');
   const [providerProbeTarget, setProviderProbeTarget] = useState<ProviderId | 'all'>();
-  const [providerProbeStatus, setProviderProbeStatus] = useState('尚未运行');
   const [providers, setProviders] = useState<ProviderRuntimeView[]>([]);
   const [selectedProviders, setSelectedProviders] = useState<Record<ModelRole, ProviderId>>(
     DEFAULT_PROVIDER_SELECTION,
@@ -135,35 +133,18 @@ export function OptionsApp({
         ? '全部已配置 Provider'
         : providerSettingsLabel(providerCatalogEntry(providerId));
     setProviderProbeTarget(providerId ?? 'all');
-    setProviderProbeStatus(`正在复测${targetLabel}；会消耗少量 Provider 额度…`);
     setStatus(`正在复测${targetLabel}；会消耗少量 Provider 额度…`);
     try {
       await services.runProbes(providerId);
       await refreshProviders();
-      setProviderProbeStatus(`${targetLabel}的能力探针已完成`);
       setStatus(`${targetLabel}的能力探针已完成；请查看对应 Provider 状态`);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      setProviderProbeStatus(`能力探针失败：${message}`);
+      setStatus(`能力探针失败：${message}`);
       throw error;
     } finally {
       setProviderProbeTarget(undefined);
     }
-  }
-
-  async function openProbeSidePanel(): Promise<void> {
-    const currentWindow = await chrome.windows.getCurrent();
-    if (currentWindow.id === undefined) {
-      throw new Error('无法确定当前 Chrome 窗口');
-    }
-    await chrome.sidePanel.open({ windowId: currentWindow.id });
-    await chrome.storage.local.set({
-      phase0SidePanel: {
-        status: 'opened',
-        openedAt: new Date().toISOString(),
-      },
-    });
-    setProbeStatus('Side Panel 已打开');
   }
 
   async function savePreferences(): Promise<void> {
@@ -508,31 +489,6 @@ export function OptionsApp({
         </div>
       </section>
 
-      <section className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-        <h2 className="font-medium text-amber-900">真实能力探针</h2>
-        <p className="mt-1 text-sm text-amber-800">
-          会向已配置 Provider
-          发送最小文本、流式、取消、工具、结构化输出及视觉测试请求，可能产生少量费用。
-        </p>
-        <button
-          className="mt-3 rounded bg-amber-900 px-3 py-2 text-sm text-white disabled:bg-amber-300"
-          disabled={
-            providerProbeTarget !== undefined || !providers.some((provider) => provider.keyMask)
-          }
-          onClick={() =>
-            void runProbes().catch((error: unknown) =>
-              setStatus(error instanceof Error ? error.message : String(error)),
-            )
-          }
-          type="button"
-        >
-          {providerProbeTarget === 'all' ? '探针运行中…' : '运行真实能力探针'}
-        </button>
-        <p aria-live="polite" className="mt-2 text-sm text-amber-900">
-          {providerProbeStatus}
-        </p>
-      </section>
-
       <section className="rounded-lg border border-slate-200 p-4">
         <h2 className="font-medium">回答与操作偏好</h2>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
@@ -751,21 +707,6 @@ export function OptionsApp({
           <dt className="text-slate-500">私有仓库</dt>
           <dd>禁止出站</dd>
         </dl>
-      </section>
-
-      <section className="rounded-lg border border-slate-200 p-4">
-        <h2 className="font-medium">本地技术验证</h2>
-        <button
-          id="phase0-open-side-panel"
-          className="mt-3 rounded bg-slate-900 px-3 py-2 text-sm text-white"
-          type="button"
-          onClick={() => void openProbeSidePanel()}
-        >
-          打开 Side Panel
-        </button>
-        <p className="mt-2 text-sm" data-testid="phase0-side-panel-status">
-          {probeStatus}
-        </p>
       </section>
     </main>
   );

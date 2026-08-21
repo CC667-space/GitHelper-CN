@@ -14,13 +14,13 @@
     "dev": "vite",
     "lint": "eslint .",
     "format:check": "prettier --check .",
+    "generate:icons": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-extension-icons.ps1",
     "scan:build": "node scripts/scan-build-safety.mjs",
     "test:e2e": "node scripts/run-phase11-e2e.mjs",
     "package:extension": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-extension.ps1",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "probe:phase0": "node scripts/run-phase0-probes.mjs"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "react": "18.3.1",

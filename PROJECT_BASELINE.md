@@ -2,7 +2,7 @@
 
 > 本文件是全项目的**单一事实来源与最高约束**。任何执行阶段不得静默违反本文件。
 > 修改本文件 = 基线变更，必须由项目负责人（下称"你"）确认。
-> 状态：**已冻结 v1.4** ｜ 初次冻结：2026-07-23 ｜ 修订：2026-08-20（v1.1–v1.4 定向修订，见文末变更记录）
+> 状态：**已冻结 v1.5** ｜ 初次冻结：2026-07-23 ｜ 修订：2026-08-21（v1.1–v1.5 定向修订，见文末变更记录）
 
 ---
 
@@ -150,9 +150,10 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 
 ## 10. 发布范围（已冻结）
 
-- v1 **不上架** Chrome Web Store，仅本地开发者模式加载。
+- v1 **不上架** Chrome Web Store；该路线继续暂停，不属于 GitHub Release。
+- 经项目负责人 2026-08-21 明确授权，v1 可在既有公开仓库发布版本化 GitHub Release。安装资产为根目录含 `manifest.json` 的 ZIP 与对应 SHA-256 校验文件；用户解压后通过 Chrome 开发者模式“加载已解压的扩展程序”。不得把它描述为稳定版 Chrome 可一键安装的 CRX。
 - 保持 MV3 通用；Chrome 为唯一主测试目标。
-- 上架 / 公开发布 / 建公开仓库 = 强制确认节点。
+- 后续新版本 Release、Chrome Web Store 上架、其他商店或新的公开发布渠道仍是独立确认节点；本次授权只覆盖 Phase 14 的 GitHub Release `v0.1.0`。
 
 ---
 
@@ -194,7 +195,7 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 - 任何会产生新增付费成本的选择
 - 扩大到 D-068 已授权固定 Provider 与受限 custom 规则之外的 Chrome Host 权限，或放宽 custom URL/精确授权边界
 - 发送敏感数据 / 不可逆数据删除
-- 添加 Git Remote / Push / 建远程仓库 / 上架 / 公开发布
+- 新增 Git Remote / Force Push / 新建远程仓库 / Chrome Web Store 上架 / Phase 14 `v0.1.0` 之外的公开发布；Phase 14 所需的既有 `origin` Push、tag 与 GitHub Release 已获本轮定向授权
 - 若匿名 GitHub API 限额被证实阻塞 MVP → 评估引入细粒度 Token（基线变更）
 - 若未来需要私有仓库支持 → 独立基线变更评估
 - 出现与本基线实质冲突、或多方向抉择无法按既有原则代决
@@ -219,3 +220,4 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 - **v1.2（2026-07-24）**：最终定点修订——明确 Key 录入/保存路径与模块导入边界（D-028）；删除提前写死的截图坐标换算公式，改由 Phase 0 探针 B 实测决定（D-029）；D-007 修订为公共协议骨架+独立适配器+能力探针（D-030）；Phase 4 单 Provider 失败不阻塞 MVP（D-031）；GitHub API 限流按 resource 分桶+禁持续指数重试（D-032）；openPage 拆分限域+Scheme 黑名单（D-013 v1.2 修订）；三种数据清除操作明确化（D-033）；manifest 增加 `minimum_chrome_version: "114"`（D-035）；DeepSeek 模型策略精确化（别名 2026-07-24 15:59 UTC 停用，推荐 `deepseek-v4-flash`，D-034）。产品定位、MVP 功能范围、非目标**未变**。
 - **v1.3（2026-08-03）**：经项目负责人明确授权，将固定 Provider 目录由三家扩展为八家；原三家保留静态 Host 权限，OpenAI / Anthropic / Gemini / Qwen / SiliconFlow 使用保存 Key 时逐家申请的精确可选 Host 权限；加入只含 model 绑定的无密钥设置 JSON。继续禁止任意 Base URL、自定义 Host、凭据导入导出和未经探针声明能力（D-063）。既有功能、默认路由、MVP 可用性门槛与安全边界**未变**。
 - **v1.4（2026-08-20）**：经项目负责人明确授权，加入 GLM / Kimi / Grok 官方端点和一个受限 custom OpenAI-compatible Provider；UUAPI 降为旧配置兼容并移出常用选择器。custom 只允许经校验的 HTTPS URL，使用未授予的可选 Host 候选声明和用户手势中的精确 Host 授权；Key 仍独立存储且不进入 JSON。既有 GitHub 功能、写操作禁令、默认文本路线与 MVP 可用性门槛**未变**（D-068）。
+- **v1.5（2026-08-21）**：经项目负责人明确授权，暂停 Chrome Web Store 上架并改为发布 GitHub Release `v0.1.0`。发布物限定为可校验的扩展 ZIP，用户解压后用开发者模式加载；Phase 14 同步清除正式运行时中的 Phase 0 调试入口与批量能力探针 UI，保留单 Provider“测试 Key 与模型”。产品功能、Provider/权限、安全边界与 BYOK 数据流**未变**（D-070）。

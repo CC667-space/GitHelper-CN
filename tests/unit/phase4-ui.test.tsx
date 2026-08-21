@@ -320,14 +320,8 @@ describe('Phase 4 trusted UI', () => {
     expect(document.body.textContent).toMatch(/JSON 不得包含 API Key、token 或 Authorization/);
   });
 
-  it('Options 点击真实探针后在按钮区域立即显示运行状态并阻止重复提交', async () => {
-    let finishProbe: (() => void) | undefined;
-    const runProbes = vi.fn(
-      async () =>
-        await new Promise<void>((resolve) => {
-          finishProbe = resolve;
-        }),
-    );
+  it('Release 设置页移除开发专用区，但保留单 Provider 测试入口', async () => {
+    const runProbes = vi.fn(async () => undefined);
     const services: OptionsServices = {
       ...phase5ServiceDefaults,
       loadProviders: vi.fn(async () => [
@@ -343,24 +337,13 @@ describe('Phase 4 trusted UI', () => {
     const user = userEvent.setup();
     render(<OptionsApp services={services} />);
 
-    const button = await screen.findByRole('button', { name: '运行真实能力探针' });
-    const probeCard = button.closest('section');
-    expect(probeCard).not.toBeNull();
-    expect((button as HTMLButtonElement).disabled).toBe(false);
+    const textCard = await screen.findByTestId('text-model-card');
+    expect(screen.queryByRole('heading', { name: '真实能力探针' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: '本地技术验证' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '运行真实能力探针' })).toBeNull();
 
-    await user.click(button);
-
-    expect(runProbes).toHaveBeenCalledTimes(1);
-    expect(
-      within(probeCard!).getByText('正在复测全部已配置 Provider；会消耗少量 Provider 额度…'),
-    ).toBeTruthy();
-    expect((button as HTMLButtonElement).disabled).toBe(true);
-    expect(button.textContent).toContain('探针运行中');
-
-    finishProbe?.();
-    await waitFor(() =>
-      expect(within(probeCard!).getByText('全部已配置 Provider的能力探针已完成')).toBeTruthy(),
-    );
+    await user.click(within(textCard).getByRole('button', { name: '测试 Key 与模型' }));
+    await waitFor(() => expect(runProbes).toHaveBeenCalledExactlyOnceWith('deepseek'));
   });
 
   it('Options 可只复测单个 Provider，避免调用其他已配置端点', async () => {

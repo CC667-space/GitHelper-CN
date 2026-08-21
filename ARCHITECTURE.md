@@ -5,6 +5,7 @@
 > v1.2（2026-07-24）：截图坐标换算改由 Phase 0 探针 B 实测决定（D-029）；工具白名单 openPage 拆分限域（D-013R）；GitHub API 限流按 resource 分桶（D-032）；manifest 增加 `minimum_chrome_version: "114"`（D-035）；数据清除三分（D-033）。
 > v1.3（2026-08-03）：Provider Catalog 统一八家固定预设；新增五家逐家申请精确可选 Host 权限；设置 JSON 只绑定 model（D-063）。
 > v1.4（2026-08-20）：新增 GLM/Kimi/Grok 与受限 custom OpenAI-compatible 条目；UUAPI 降为兼容；动态 Host 使用精确运行时授权（D-068）。
+> v1.5（2026-08-21）：GitHub Release 构建移除 Phase 0 运行时调试入口与批量探针 UI；加入本地图标及版本化 ZIP/SHA-256 发布流水线（D-070）。
 
 ---
 
@@ -349,7 +350,9 @@ C:\AI_GitHelper-CN\              ← 唯一项目根 = Git 仓库根
 │  ├─ fixtures/ (GitHub 页面 HTML 快照)
 │  └─ e2e/ (Playwright)
 ├─ scripts/                      # 构建/辅助脚本
+├─ public/icons/                 # manifest/action 的 16/32/48/128 本地图标
 ├─ dist/                         # 构建产物(gitignore)
+├─ artifacts/                    # 版本化 ZIP 与 SHA-256(gitignore，仅作 Release 资产)
 └─ docs/                         # (可选)仅面向使用者的派生文档, 不放规划文件副本
 ```
 
@@ -578,3 +581,23 @@ interface OperationConfirmation {
 **Phase 11 第二轮补丁（D-053）**：`PANEL_TURN_DELETE` 与 `PANEL_SESSION_DELETE` 均经来源校验、
 strict zod payload 与 64KB 信封限制；UI 的垃圾桶只进入待确认态，`✓` 才删除，`×` 不改变数据。
 删除活动会话后 Panel 收到 `cause: new`，删除非活动会话后当前上下文保持不变。
+
+---
+
+## 9. GitHub Release 构建边界（v1.5，D-070）
+
+```
+提交源码 + public/icons
+  → pnpm build
+  → dist/（根 manifest + 本地 bundle + 四档图标）
+  → pnpm scan:build
+  → pnpm package:extension
+  → artifacts/GitHelper-CN-v<version>-chrome.zip
+  → artifacts/GitHelper-CN-v<version>-SHA256SUMS.txt
+```
+
+- ZIP 只归档 `dist/` 内容；`manifest.json` 必须位于 ZIP 根目录，版本必须与 `package.json` 一致。
+- 打包阶段拒绝 `.env`、凭据命名、私钥/证书、source map 和日志类条目，并断言四档图标存在。
+- `artifacts/` 不进入 Git；仅在完整门禁与凭据审计通过后上传到对应 GitHub Release。
+- Phase 0 的截图/存储技术探针已完成并保留书面证据，但其 Background 原始消息入口、Content DOM 触发器和 Options 技术验证 UI 不进入正式 Release。Provider 的单卡“测试 Key 与模型”是用户必要配置能力，继续保留。
+- Chrome Web Store、CRX 签名和其他商店不属于该流水线。

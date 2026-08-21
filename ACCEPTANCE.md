@@ -6,6 +6,7 @@
 > v1.2（2026-07-24）：修正凭据"明文不出现于 DOM/状态"为可实现表述（D-028）；Phase 4 可用性判定（D-031）；限流分桶用例（D-032）；Scheme 拒绝用例（D-013R）；三种数据清除用例（D-033）。
 > v1.3（2026-08-03）：八家固定适配器、五个精确可选 Host 权限及无密钥设置 JSON 验收（D-063）。
 > v1.4（2026-08-20）：新增 Phase 12 的 GLM/Kimi/Grok、受限 custom、UUAPI legacy 与动态精确 Host 验收（D-068）。
+> v1.5（2026-08-21）：新增 Phase 14 GitHub Release 运行时清理、图标、版本化 ZIP、校验文件、README 快速上手与公开资产验收（D-070）。
 
 ---
 
@@ -45,6 +46,7 @@
 - capture：Phase 0 比例坐标、边界 clamp、结构充分时零调用、临时 JPEG/bitmap 释放、取消与错页拒绝
 - context-builder：只含允许字段、不含整页；普通回答的简练/无废话风格契约在 System Prompt 中固定，且明确准确性优先
 - messaging：信封版本/请求 ID、Schema 校验、超载荷拒绝、超时
+- release-hardening：正式 Background/Content/Options 不含 Phase 0 原始入口、页面调试触发器或开发专用区；Options 保留单 Provider 测试；manifest/action 引用 16/32/48/128 四档本地图标
 
 ### 2. 组件测试（Vitest + Testing Library）
 - Panel 消息流渲染、Provider 下拉切换（不可用 Provider 置灰）、确认弹窗（**断言无"始终允许"选项**）
@@ -77,6 +79,7 @@
 - 打开真实/快照 GitHub 页 → 开 Panel → 一键分析出卡片；默认仅显示新手总结，详细介绍、原项目文件摘要和仓库事实均关闭；展开原项目文件摘要后，中英文 README 共存且含 banner HTML/功能表时应记录实际选择的中文 README 与章节，不显示 README 原文，并包含配置与实际实现文件证据；展开事实区后数字可见
 - SPA 导航后上下文刷新且无重复初始化
 - 四分段可切换且点击/框选下一步自动进入问答；会话恢复、切换 GitHub 页面后活动会话仍保留，Panel 重载后继续恢复；逐轮收展及两类确认删除可操作
+- Release 构建在初始页面和 SPA 导航后都不创建 `#git-helper-phase0-run-button`，且既有 Panel/分析/搜索/会话闭环不回归
 
 ### 5. 专项安全测试（Phase 1.5 地基 + Phase 10 加固）
 
@@ -128,6 +131,9 @@
 | 9 | ≥3 个真实公开仓库完整卡片、数字来自 DOM/API 事实、显示受限关键文件证据、Provider structuredOutput 降级、缺字段与匿名 core 限额降级提示正常 |
 | 10 | 安全客观项全过（含 Scheme 拒绝、import 边界、三种清除）+ 红队记录 ≥10 样例 |
 | 11 | 全测试绿、打包可加载、S1-S5 证据齐全（前置：Phase 6/7/8 已完成）｜ **人工：S1-S5 批量体验复核** |
+| 12 | GLM/Kimi/Grok/custom Mock、安全、动态 Host、迁移、UUAPI legacy、构建与 E2E 全过；无新 Key 不阻塞 |
+| 13 | MIT 公开源码、历史邮箱隐私处理、全历史凭据审计、公开仓库与首次 Push 通过 |
+| 14 | 正式运行时无开发探针入口；图标完整；README 快速上手完整；typecheck/lint/变更源文件 Prettier check/`git diff --check`/test/build/安全扫描/E2E/打包/凭据审计全过；`v0.1.0` Release 与 ZIP/SHA256 资产公开且可核对 |
 
 ---
 

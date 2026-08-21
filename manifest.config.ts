@@ -1,13 +1,22 @@
 import { defineManifest } from '@crxjs/vite-plugin';
 
+const icons = {
+  16: 'icons/icon-16.png',
+  32: 'icons/icon-32.png',
+  48: 'icons/icon-48.png',
+  128: 'icons/icon-128.png',
+};
+
 export default defineManifest({
   manifest_version: 3,
   name: 'GitHelper-CN',
   description: '面向中文 GitHub 新手的本地 Side Panel AI 助手。',
   version: '0.1.0',
   minimum_chrome_version: '114',
+  icons,
   action: {
     default_title: '打开 GitHelper-CN',
+    default_icon: icons,
   },
   commands: {
     'open-side-panel': {

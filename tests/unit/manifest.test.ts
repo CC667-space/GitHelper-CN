@@ -4,6 +4,10 @@ import manifest from '../../manifest.config';
 
 interface ManifestLike {
   minimum_chrome_version?: string;
+  icons?: Record<string, string>;
+  action?: {
+    default_icon?: Record<string, string>;
+  };
   permissions?: string[];
   optional_permissions?: string[];
   host_permissions?: string[];
@@ -21,6 +25,13 @@ describe('Phase 0 manifest', () => {
     expect(typeof manifest).not.toBe('function');
     const resolved = await (manifest as ManifestLike | Promise<ManifestLike>);
     expect(resolved.minimum_chrome_version).toBe('114');
+    expect(resolved.icons).toEqual({
+      16: 'icons/icon-16.png',
+      32: 'icons/icon-32.png',
+      48: 'icons/icon-48.png',
+      128: 'icons/icon-128.png',
+    });
+    expect(resolved.action?.default_icon).toEqual(resolved.icons);
     expect(resolved.permissions).toEqual(['sidePanel', 'storage', 'activeTab']);
     expect(resolved.permissions).not.toContain('tabs');
     expect(resolved.permissions).not.toContain('scripting');

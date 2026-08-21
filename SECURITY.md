@@ -5,6 +5,7 @@
 > v1.2（2026-07-24）：细化 Key 录入/保存路径与模块导入边界（D-028）；openPage 限域与 Scheme 黑名单（D-013R）；三种数据清除（D-033）。
 > v1.3（2026-08-03）：八家固定 Provider、逐家精确可选 Host 权限与无密钥设置 JSON 边界（D-063）。
 > v1.4（2026-08-20）：新增受限 custom Provider 的 HTTPS 校验、精确动态 Host 授权与 JSON 非秘密配置边界（D-068）。
+> v1.5（2026-08-21）：GitHub Release 清除 Phase 0 可触发调试入口，版本化 ZIP 只含 `dist/` 并附 SHA-256；Chrome Web Store 继续暂停（D-070）。
 
 ---
 
@@ -195,6 +196,8 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
 - 所有运行时代码打包在扩展内；CSP 遵循 MV3 默认（不放宽）。
 - 截图由**可信上下文**（SW/Panel）调用 `captureVisibleTab` 完成，Content Script 只提供选区与坐标信息（见 ARCHITECTURE 3.5）。
 - 视觉截图压缩后约 1MB 上限，避免 base64 请求逼近 2MB Provider 负载边界；无论成功、失败或取消，解码 bitmap 都必须关闭。
+- 正式 Release 不包含 Phase 0 的原始 `PHASE0_*` 消息处理、GitHub 页面不可见触发按钮或 Options“本地技术验证/批量真实探针”入口；避免网页数据面触发已完成的截图校准流程。每个 Provider 卡内的显式“测试 Key 与模型”仍受可信 Options 来源、固定消息 Schema、精确 Host、凭据隔离和用户点击约束。
+- GitHub Release ZIP 仅包含 `dist/`，打包时校验根 `manifest.json`、版本、四档本地图标与禁止条目，并生成 SHA-256 文件。发布前仍须扫描工作区、Git 历史、`dist` 与 ZIP，不得把真实 Key、环境文件、浏览器 profile、日志或 source map 上传为资产。
 
 ---
 

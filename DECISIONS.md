@@ -578,3 +578,13 @@
 - **证据**：34 个提交改写后 author/committer email 唯一值为 `283176701+CC667-space@users.noreply.github.com`，提交数量及分支树与改写前一致，`refs/original` 为空。Push 前审计覆盖 `main` 全部历史快照：已知密钥模式在非测试/E2E 哨兵位置命中 0、历史禁止路径 0，工作区、`dist` 和 13 条目安装包均未发现凭据文件或已知密钥形态。typecheck、lint、301 项常规测试、build、安全扫描及隔离 Chrome 149 E2E 通过。GitHub 仓库 `CC667-space/GitHelper-CN` 已验证为 PUBLIC，`main` 首次 Push 成功。
 - **范围**：只处理源码公开、许可证和 Git 历史身份；不改变产品功能、Chrome 权限、安全边界、Provider/GitHub 请求或 Chrome Web Store 状态。
 - 状态：Phase 13 已完成，公开仓库与首次 Push 已验证 ｜ 2026-08-20
+
+## D-070 GitHub Release 使用可校验 ZIP，并移除正式运行时开发探针
+- **决策**：
+  - 经项目负责人 2026-08-21 明确授权，暂停 Chrome Web Store 上架，Phase 14 发布首个 GitHub Release `v0.1.0`。资产限定为 `GitHelper-CN-v0.1.0-chrome.zip` 与对应 SHA-256 文件；ZIP 解压后由 Chrome 开发者模式“加载已解压的扩展程序”，不发布或暗示一键 CRX。
+  - 正式 Background/Content/Options 删除已完成的 Phase 0 技术探针消息、截图校准处理、页面不可见触发器和“本地技术验证”。Options 同时移除开发阶段的批量真实探针卡；每个 Provider 卡内的“测试 Key 与模型”继续保留，仍是用户确认当前 Key/model 能力的必要入口。
+  - manifest/action 使用随包本地提供的 16/32/48/128 四档图标。打包脚本从 `package.json` 读取版本，断言 ZIP 根 manifest、版本、图标和禁止条目，并生成独立 SHA-256 文件。
+  - README 把 Release 快速上手放在源码构建之前，明确下载正确资产、校验、固定目录解压、开发者模式加载、Provider 配置、首次使用和同路径更新；Chrome Web Store 继续为独立暂停项。
+- **理由**：Phase 0 运行时入口已完成使命，继续存在会让 GitHub 页面 DOM 可触发内部截图校准流程，形成不必要攻击面和正式 UI 噪声。GitHub Release ZIP 是当前不支付商店费用、又能让用户取得可复核构建的最小发布方式；稳定版 Chrome 对仓库外置 CRX 不提供可依赖的一键安装路径，因此必须准确说明开发者模式流程。
+- **范围**：只做 Release 运行时清理、品牌图标、打包/校验和用户文档；不修改核心功能、Provider 能力、Key 存储方式、Chrome 权限/Host、GitHub 读写边界或 Chrome Web Store 状态。
+- 状态：Phase 14 本地发布验收已通过，待创建并核验远程 `v0.1.0` ｜ 2026-08-21

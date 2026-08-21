@@ -6,6 +6,7 @@
 > v1.2（2026-07-24）：探针 B 改为实测定稿坐标换算（D-029）；Phase 4 单 Provider 失败不阻塞（D-031）；限流分桶（D-032）；数据清除三分（D-033）；DeepSeek 模型策略（D-034）；minimum_chrome_version 114（D-035）。
 > v1.3（2026-08-03）：固定 Provider 扩展为八家；新增五家采用逐家精确可选 Host 权限；设置 JSON 只绑定 model（D-063）。
 > v1.4（2026-08-20）：新增 GLM/Kimi/Grok 与受限 custom OpenAI-compatible Provider；UUAPI 降为兼容项；新增 Phase 12（D-068）。
+> v1.5（2026-08-21）：记录 Phase 13 公开源码与 Phase 14 GitHub Release 加固/发布；Chrome Web Store 继续暂停（D-069/D-070）。
 
 ---
 
@@ -37,6 +38,10 @@ Phase 10 (安全加固 + 红队测试)
 Phase 11 (测试/打包/MVP 验收)  ← 汇聚，含唯一批量体验复核
    │
 Phase 12 (Provider 目录扩展与受限 custom 端点) ← v1 MVP 后定向增强
+   │
+Phase 13 (GitHub 公开源码) ← 已完成
+   │
+Phase 14 (GitHub Release 加固与发布) ← 当前阶段；不含 Chrome Web Store
 ```
 
 **关键路径**：0 → 1 → 1.5 → 2 → 3 → 4 → 9 → 11。
@@ -217,12 +222,33 @@ Phase 12 (Provider 目录扩展与受限 custom 端点) ← v1 MVP 后定向增�
 - **验收**：新增四条适配路线 Mock 全过；固定/动态 Host 权限、URL 拒绝矩阵、跨 origin/重定向阻断、JSON 凭据拒绝、v1 迁移、UUAPI 隐藏兼容、Options/Panel 和构建 manifest 均有自动测试；typecheck、lint、全量测试、build、安全扫描与隔离 Chrome E2E 通过。
 - **真实验证**：没有新 Key 不阻塞自动验收。若需填写新 Key或产生真实请求费用则暂停。
 
+## Phase 13 — GitHub 公开源码
+- **目标**：以 MIT License 公开现有源码，不发布安装包或 Chrome Web Store。
+- **验收**：公开仓库、历史邮箱隐私处理、Push 前全历史凭据审计与完整质量门禁通过。
+- **状态**：已完成（D-069）。
+
+## Phase 14 — GitHub Release 加固与发布
+- **目标**：在不扩展产品功能和 Chrome 权限的前提下，发布可下载、可校验、可按 README 直接加载的 `v0.1.0` 扩展 ZIP。
+- **任务**：
+  1. 清除正式运行时中的 Phase 0 技术探针消息、页面 DOM 触发器和 Options“本地技术验证”；按既有产品要求移除批量真实探针 UI，保留每个 Provider 的“测试 Key 与模型”。
+  2. 增加 16/32/48/128 四档扩展图标，并在 manifest/action 中引用；不新增权限或 Host。
+  3. 打包脚本从 `package.json` 读取版本，生成 `GitHelper-CN-v0.1.0-chrome.zip` 与 SHA-256 文件；校验 ZIP 根 `manifest.json`、版本、图标和禁止条目。
+  4. README 顶部提供从 Release 下载、校验、解压、开发者模式加载、Provider 配置、首次使用和更新的完整快速上手；明确 Source code ZIP 与扩展 ZIP 的区别。
+  5. 更新必要的基线、架构、安全、决策、验收、状态与用户指南，不创建第二套规划文件。
+  6. 运行 typecheck、lint、变更源文件 Prettier check、`git diff --check`、全量测试、build、安全扫描、隔离 Chrome E2E、打包与发布前凭据审计。
+  7. 创建 `Phase 14:` 本地提交，合并/推送既有 `main`，创建并验证 tag 与 GitHub Release `v0.1.0`；只上传版本化 ZIP 与校验文件。
+- **验收**：正式 bundle 不含 Phase 0 入口；Options 无开发专用区且单 Provider 测试仍可用；manifest 与 ZIP 图标完整；所有质量门禁通过；凭据审计零真实 Key；公开 Release/tag/两项资产存在，校验值与本地一致；README 安装路径可照做。
+- **范围**：不调用真实 Provider、不读取已保存 Key、不修改 Chrome 权限/Host/核心功能；不推进 Chrome Web Store，不生成或声称一键 CRX。
+- **授权**：项目负责人已明确授权 Phase 14 的既有 `origin` Push、tag、GitHub Release 与安装资产公开发布。其他发布渠道仍须另行确认。
+
 ---
 
-## 强制确认节点清单（v1.2）
+## 强制确认节点清单（v1.5）
 1. **Phase 4**：首次填入真实 AI Provider Key（凭据）—— 必需。
 2. **Phase 11**：MVP 批量体验复核（真实交互验收）—— 必需。
 3. **条件性**：匿名 GitHub API 限额被实测证明阻塞 MVP → 评估 Token（基线变更）；**所有**文本 Provider 或**所有**视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停。
+
+Phase 13 公开源码与 Phase 14 `v0.1.0` GitHub Release 已分别获得明确授权，不重复暂停；授权不覆盖 Chrome Web Store、Force Push、其他仓库或后续版本发布。
 
 **注意（D-031）**：单个 Provider 探针失败**不是**暂停节点——记录、禁用、继续。
 

@@ -22,6 +22,7 @@ describe('Extension action', () => {
     const open = vi.fn(async () => undefined);
     const close = vi.fn(async () => undefined);
     const setOptions = vi.fn(async () => undefined);
+    const runtimeMessageListener = vi.fn();
     vi.stubGlobal('chrome', {
       action: {
         onClicked: {
@@ -36,7 +37,7 @@ describe('Extension action', () => {
       runtime: {
         id: 'abcdefghijklmnopabcdefghijklmnop',
         onInstalled: { addListener: vi.fn() },
-        onMessage: { addListener: vi.fn() },
+        onMessage: { addListener: runtimeMessageListener },
         onStartup: { addListener: vi.fn() },
       },
       sidePanel: { close, open, setOptions },
@@ -67,6 +68,7 @@ describe('Extension action', () => {
     await import('../../src/background/service-worker');
     expect(actionListener).toBeTypeOf('function');
     expect(activatedListener).toBeTypeOf('function');
+    expect(runtimeMessageListener).not.toHaveBeenCalled();
 
     actionListener!({
       id: 17,
