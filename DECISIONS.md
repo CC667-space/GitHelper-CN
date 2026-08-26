@@ -620,3 +620,14 @@
 - **理由**：两项维护改动已完成自动门禁并由用户基本验收；复用 v0.1.0 已验证的版本化 ZIP + SHA-256 流水线，可以在不扩展产品功能、权限或发布渠道的前提下让公开安装包包含已修复能力。
 - **范围**：只发布现有 D-071/D-072 成果及其版本/文档/证据记录；不调用真实 Provider，不读取已保存 Key，不新增 Chrome 权限、Host、GitHub 写功能、长期搜索历史或 Chrome Web Store 工作。
 - 状态：`v0.1.1` 版本提交、Push、注释 tag、latest Release 与两项资产 digest 均已核验 ｜ 2026-08-21
+
+## D-074 公开仓库采用最小安全配置，并让测试哨兵避开静态密钥形状
+- **决策**：
+  - sanitizer 的 Google Key 测试值改为运行时分段拼接；测试仍把完整值送入 sanitizer 并断言原文被遮蔽，但源码不再保存可被静态扫描识别为公开 Key 的连续字符串。既有 Secret scanning 告警保持 `used_in_tests` 的已关闭状态，不为虚构哨兵改写 Git 历史。
+  - 根 `SECURITY.md` 是唯一安全报告政策，列出当前维护版本，并把安全问题引导到 GitHub Private vulnerability reporting；公开 Issue、真实凭据、Cookie、个人数据和完整浏览器配置不得作为复现材料提交。
+  - 公开仓库启用 Private vulnerability reporting、Dependabot alerts、Dependabot malware alerts、CodeQL Default setup（JavaScript/TypeScript、default query suite、remote threat model、standard runner）与 Push protection。Push protection 原本已启用；Malware alerts 无公开仓库 API，由项目负责人在 GitHub 设置页手动启用并确认。
+  - 不启用会自动创建 PR 的 Dependabot security updates，不修改个人通知设置；本轮只 Push 源码/记录提交，不创建 tag 或 Release。
+- **理由**：连续的虚构 Key 形状仍会产生公开泄漏告警，分段构造可同时保留真实运行时覆盖和静态扫描清洁度。仓库原有 Secret scanning 已能阻止常见凭据泄漏，但缺少私密报告入口、依赖告警与代码扫描；启用 GitHub 原生免费安全能力能补足公开维护边界，无需改变扩展权限或运行时架构。
+- **范围**：Phase 14 后续仓库维护；不修改产品功能、Provider、Chrome 权限/Host、Key 存储、GitHub 读写能力或发布资产，不建立自动依赖更新流程。
+- **证据**：typecheck、lint、316 项常规测试、build、安全扫描与隔离 Chrome 149 E2E 全部通过；CodeQL 首次 JavaScript/TypeScript 分析告警 0；生产工作区、`dist`、41 个历史提交和禁止路径的意外凭据命中 0。
+- 状态：已完成并获项目负责人确认 ｜ 2026-08-26

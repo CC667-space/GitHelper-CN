@@ -45,9 +45,10 @@ describe('sanitizer', () => {
   });
 
   it('遮蔽云密钥、Authorization、JWT、URL 凭据与 JSON 命名字段', () => {
+    const googleLikeKey = ['AIza', 'SyA12345678901234567890123456789012'].join('');
     const values = [
       'AKIAIOSFODNN7EXAMPLE',
-      'AIzaSyA12345678901234567890123456789012',
+      googleLikeKey,
       'Authorization: Bearer bearer-secret-value-123',
       'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature123456',
       'https://alice:super-secret@example.com/path',
@@ -57,7 +58,7 @@ describe('sanitizer', () => {
     const result = sanitizeText(values.join('\n'));
     for (const value of [
       'AKIAIOSFODNN7EXAMPLE',
-      'AIzaSyA12345678901234567890123456789012',
+      googleLikeKey,
       'bearer-secret-value-123',
       'signature123456',
       'super-secret',
