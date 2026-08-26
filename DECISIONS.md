@@ -629,5 +629,5 @@
   - 不启用会自动创建 PR 的 Dependabot security updates，不修改个人通知设置；本轮只 Push 源码/记录提交，不创建 tag 或 Release。
 - **理由**：连续的虚构 Key 形状仍会产生公开泄漏告警，分段构造可同时保留真实运行时覆盖和静态扫描清洁度。仓库原有 Secret scanning 已能阻止常见凭据泄漏，但缺少私密报告入口、依赖告警与代码扫描；启用 GitHub 原生免费安全能力能补足公开维护边界，无需改变扩展权限或运行时架构。
 - **范围**：Phase 14 后续仓库维护；不修改产品功能、Provider、Chrome 权限/Host、Key 存储、GitHub 读写能力或发布资产，不建立自动依赖更新流程。
-- **证据**：typecheck、lint、316 项常规测试、build、安全扫描与隔离 Chrome 149 E2E 全部通过；CodeQL 首次 JavaScript/TypeScript 分析告警 0；生产工作区、`dist`、41 个历史提交和禁止路径的意外凭据命中 0。
+- **证据**：typecheck、lint、316 项常规测试、build、安全扫描与隔离 Chrome 149 E2E 全部通过；CodeQL 首次 JavaScript/TypeScript 分析告警 0；生产工作区、`dist`、全部 Git 历史提交和禁止路径的意外凭据命中 0。
 - 状态：已完成并获项目负责人确认 ｜ 2026-08-26

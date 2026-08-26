@@ -324,7 +324,7 @@
   - 远端已启用 Private vulnerability reporting、Dependabot alerts、Dependabot malware alerts 与 CodeQL Default setup；Push protection 原本已启用，Malware alerts 由项目负责人在设置页确认
   - CodeQL 首次 JavaScript/TypeScript 分析完成且告警为 0；未启用会自动创建 PR 的 Dependabot security updates
   - 门禁通过：typecheck、lint、Vitest 58 files / 316 tests（另 1 file / 1 live test 跳过）、build（421 modules）、构建安全扫描与隔离 Chrome 149 E2E；Provider 请求 0、页面异常 0
-  - 最终凭据审计覆盖生产工作区、`dist`、41 个 Git 历史提交与禁止路径，意外敏感信息命中 0；本轮不创建 tag 或 Release
+  - 最终凭据审计覆盖生产工作区、`dist`、全部 Git 历史提交与禁止路径，意外敏感信息命中 0；本轮不创建 tag 或 Release
 
 ## 下一任务
 **等待后续真实使用反馈；`v0.1.1` 与仓库安全配置已核验，Chrome Web Store 上架继续暂停。**
