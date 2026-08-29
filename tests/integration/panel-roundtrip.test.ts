@@ -681,6 +681,95 @@ describe('Panel → Background → Content → Panel', () => {
     );
   });
 
+  it('搜索与导航设置为每次确认时，先发出一次性确认，确认后才执行', async () => {
+    const preferences = {
+      ...defaultUserPreferences(),
+      operationPolicy: {
+        ...defaultUserPreferences().operationPolicy,
+        search: 'confirm' as const,
+        navigation: 'confirm' as const,
+      },
+    };
+    const search = vi.fn(async () => ({
+      status: 'ok' as const,
+      conversion: {
+        naturalLanguage: '中文浏览器扩展',
+        target: 'repositories' as const,
+        query: '中文 浏览器 扩展',
+        explanation: '搜索公开仓库。',
+      },
+      totalCount: 0,
+      items: [],
+    }));
+    const openGitHubPage = vi.fn();
+    const emitSearchState = vi.fn();
+    const emitOperationConfirmationState = vi.fn();
+    const bridge = new PanelBridge(runtimeId, {
+      requestPageInfo: vi.fn(async () => {
+        throw new Error('页面上下文暂不可用');
+      }),
+      streamAnswer: vi.fn(),
+      loadPreferences: vi.fn(async () => preferences),
+      search,
+      openGitHubPage,
+      abort: vi.fn(() => false),
+      emit: vi.fn(),
+      emitSearchState,
+      emitOperationConfirmationState,
+    });
+
+    await bridge.dispatch(
+      createEnvelope('PANEL_SEARCH', {
+        naturalLanguage: '中文浏览器扩展',
+        target: 'repositories',
+      }),
+      panelSender,
+    );
+    expect(search).not.toHaveBeenCalled();
+    expect(emitSearchState).not.toHaveBeenCalled();
+    expect(emitOperationConfirmationState).toHaveBeenLastCalledWith(
+      expect.objectContaining({ action: 'search', naturalLanguage: '中文浏览器扩展' }),
+    );
+
+    await bridge.dispatch(
+      createEnvelope('PANEL_SEARCH', {
+        naturalLanguage: '中文浏览器扩展',
+        target: 'repositories',
+        confirmed: true,
+      }),
+      panelSender,
+    );
+    expect(search).toHaveBeenCalledOnce();
+
+    await bridge.dispatch(
+      createEnvelope('PANEL_OPEN_GITHUB_PAGE', {
+        url: 'https://github.com/octocat/demo',
+        disposition: 'background',
+      }),
+      panelSender,
+    );
+    expect(openGitHubPage).not.toHaveBeenCalled();
+    expect(emitOperationConfirmationState).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        action: 'navigation',
+        url: 'https://github.com/octocat/demo',
+      }),
+    );
+
+    await bridge.dispatch(
+      createEnvelope('PANEL_OPEN_GITHUB_PAGE', {
+        url: 'https://github.com/octocat/demo',
+        disposition: 'background',
+        confirmed: true,
+      }),
+      panelSender,
+    );
+    expect(openGitHubPage).toHaveBeenCalledExactlyOnceWith(
+      'https://github.com/octocat/demo',
+      'background',
+    );
+  });
+
   it('当前页面上下文暂不可用时仍可执行独立的公开 GitHub 搜索', async () => {
     const emitSearchState = vi.fn();
     const search = vi.fn(async () => ({

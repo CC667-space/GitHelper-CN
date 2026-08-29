@@ -5,14 +5,16 @@
 ---
 
 ## 当前阶段
-**Phase 14 — GitHub Release `v0.1.1` 与后续仓库安全加固（D-074）均已完成。**
+
+**Phase 14 — GitHub Release `v0.1.1`、仓库安全加固（D-074）与本地分层审计维护（D-075）均已完成。**
 
 ## 已完成
+
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
 - [x] 联网核实：DeepSeek API 目前不支持图像输入、`deepseek-chat`/`deepseek-reasoner` 别名 2026-07-24 15:59 UTC 起停用（推荐改用 `deepseek-v4-flash`，D-034）；UUAPI 为 OpenAI 兼容中转（uuapi.net/v1）；`chrome.storage.local.setAccessLevel('TRUSTED_CONTEXTS')` 为 Chrome 官方 API
 - [x] 冻结基线 `PROJECT_BASELINE.md`（v1.0，2026-07-23）
 - [x] 全部 8 份规划文件初版（2026-07-23）
-- [x] **v1.1 定向修订（2026-07-24，依据《修订任务单》P0-1~8 / C-1~3 / P1-1~4）**：
+- [x] **v1.1 定向修订（2026-07-24，依据《修订任务单》P0-1–8 / C-1–3 / P1-1–4）**：
   - PROJECT_BASELINE.md：唯一根目录冻结、数据流向准确表述、私有仓库/Token 移除、操作策略收紧
   - SECURITY.md：凭据 TRUSTED_CONTEXTS 隔离、Host 白名单、消息协议安全、注入防护客观表述
   - ARCHITECTURE.md：截图职责划分（SW 截图）、Capability 模型、存储分区与淘汰、SPA 处理、权限复审表
@@ -325,34 +327,49 @@
   - CodeQL 首次 JavaScript/TypeScript 分析完成且告警为 0；未启用会自动创建 PR 的 Dependabot security updates
   - 门禁通过：typecheck、lint、Vitest 58 files / 316 tests（另 1 file / 1 live test 跳过）、build（421 modules）、构建安全扫描与隔离 Chrome 149 E2E；Provider 请求 0、页面异常 0
   - 最终凭据审计覆盖生产工作区、`dist`、全部 Git 历史提交与禁止路径，意外敏感信息命中 0；本轮不创建 tag 或 Release
+- [x] **Phase 14 后续维护 — 分层审计修复（2026-08-30，D-075）完成**：
+  - 依赖公告清零：`brace-expansion` 5.0.9、`undici` 7.29.0、`postcss` 8.5.26、`nanoid` 3.3.18；`pnpm audit --json` 为 0 项漏洞，frozen-lockfile 安装通过
+  - Provider 探针状态按凭据 revision、文本/视觉 Model ID 与 custom Base URL 精确绑定；Key、Model、导入配置或 URL 变化后旧结论立即失效
+  - `search` / `navigation` 的 confirm 策略由 Background 强制执行，Panel 提供“取消 / 确认一次”；Panel Port 同时校验名称、扩展 ID 与页面路径
+  - 模型建议值核对日期更新为 2026-08-29，不覆盖已保存设置；仓库统一 LF/Prettier，格式门禁由历史 23 个差异收敛为全仓通过
+  - 生产依赖许可按实际安装图生成：110 个 package 路径、31 组唯一许可文本；根 MIT License 与 `THIRD_PARTY_NOTICES.txt` 均装入 `dist` 和 ZIP
+  - Windows CI 复用全部本地门禁；发布 ZIP 20 条目、固定时间戳，完整重建和连续打包 SHA-256 均为 `d595899094e67755cedc73045d6fe812bde531c567b1c15ace9f5f750ccc2bb2`
+  - E2E 启动失败也会清理临时 Chrome profile；审计发现的 4 个旧/空 profile 已从 `probe-artifacts` 清除，均为可重建的 Git 忽略测试数据
+  - 最终门禁：typecheck、lint、全仓 format、Vitest 60 files / 326 tests（另 1 file / 1 live test 跳过）；启用匿名 GitHub live 后 61 files / 327 tests 全过；build（421 modules）、构建扫描、隔离 Chrome 149 E2E 与确定性打包全部通过
+  - 凭据审计覆盖当前文件、`dist`、20 条目 ZIP 与全部 43 个历史提交：生产路径密钥形态命中 0；测试/脚本 8 个命中路径均为显式安全哨兵。未读取真实 Key
+  - 仅完成本地维护提交与本地安装包；未 Push、未创建 tag 或 Release，远端 `v0.1.1` 资产不变
 
 ## 下一任务
-**等待后续真实使用反馈；`v0.1.1` 与仓库安全配置已核验，Chrome Web Store 上架继续暂停。**
+
+**等待后续真实使用反馈或单独授权同步 D-075；远端仍为 `v0.1.1`，Chrome Web Store 上架继续暂停。**
 
 ## 已登记的后续优化
+
 - [x] **Panel UI 优化**：首轮统一视觉与防重叠整理已于 2026-07-29 完成（D-061）；2026-08-17 完成调整台定稿的四分段导航、视觉 Token 与浅色问答/代码块（D-066）；2026-08-21 完成 14/16/18px 字号三档与默认 16px（D-072）。后续仅根据长期真实使用反馈继续迭代，不预先扩展功能范围。
 
 ## 阶段进度表
-| Phase | 状态 |
-|---|---|
-| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成 |
-| 1 仓库结构 + 扩展骨架 | ✅ 已完成 |
-| 1.5 安全地基 | ✅ 已完成 |
-| 2 Side Panel + 消息通信 | ✅ 已完成 |
-| 3 页面识别 + 上下文 + SPA | ✅ 已完成 |
-| 4 Provider + 能力探针 + 对话 + 手动切换 | ✅ 已完成 |
-| 5 Session + 偏好 + 容量淘汰 | ✅ 已完成 |
-| 6 点击提问（MVP 必达） | ✅ 已完成 |
-| 7 框选 + 视觉（MVP 必达） | ✅ 已完成 |
-| 8 NL 搜索（MVP 必达） | ✅ 已完成 |
-| 9 一键仓库分析 | ✅ 已完成 |
-| 10 安全加固 + 红队测试 | ✅ 已完成 |
-| 11 测试 + 打包 + MVP 验收 | ✅ 已完成，v1 MVP 达标 |
-| 12 Provider 目录扩展 + 受限 custom 端点 | ✅ 已完成自动验收 |
-| 13 GitHub 公开开源发布 | ✅ 已完成 |
-| 14 GitHub Release 加固与发布 | ✅ 已完成，`v0.1.1` 与 D-074 仓库安全加固已核验 |
+
+| Phase                                     | 状态                                       |
+| ----------------------------------------- | ------------------------------------------ |
+| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成                                  |
+| 1 仓库结构 + 扩展骨架                     | ✅ 已完成                                  |
+| 1.5 安全地基                              | ✅ 已完成                                  |
+| 2 Side Panel + 消息通信                   | ✅ 已完成                                  |
+| 3 页面识别 + 上下文 + SPA                 | ✅ 已完成                                  |
+| 4 Provider + 能力探针 + 对话 + 手动切换   | ✅ 已完成                                  |
+| 5 Session + 偏好 + 容量淘汰               | ✅ 已完成                                  |
+| 6 点击提问（MVP 必达）                    | ✅ 已完成                                  |
+| 7 框选 + 视觉（MVP 必达）                 | ✅ 已完成                                  |
+| 8 NL 搜索（MVP 必达）                     | ✅ 已完成                                  |
+| 9 一键仓库分析                            | ✅ 已完成                                  |
+| 10 安全加固 + 红队测试                    | ✅ 已完成                                  |
+| 11 测试 + 打包 + MVP 验收                 | ✅ 已完成，v1 MVP 达标                     |
+| 12 Provider 目录扩展 + 受限 custom 端点   | ✅ 已完成自动验收                          |
+| 13 GitHub 公开开源发布                    | ✅ 已完成                                  |
+| 14 GitHub Release 加固与发布              | ✅ 已完成；D-075 本地维护已核验、尚未 Push |
 
 ## 待处理的强制确认节点
+
 - ✅ Phase 4：填入真实 Provider Key（用户已确认完成）
 - ✅ 所有视觉 Provider 首轮失败后的第二轮复探针成本确认（已授权并执行）
 - ✅ 第二轮视觉仍失败后的第三轮 `openrouter/free` fallback 真实确认（已授权、执行并通过）
@@ -368,9 +385,11 @@
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
-当前无阻塞。Phase 0–14、D-071/D-072/D-074 与 GitHub Release `v0.1.1` 均已完成；Chrome Web Store 上架是明确暂停的后续路线，不是当前阻塞项。
+
+当前无阻塞。Phase 0–14、D-071/D-072/D-074 与 GitHub Release `v0.1.1` 均已完成，D-075 已完成本地自动验收且尚未 Push；Chrome Web Store 上架是明确暂停的后续路线，不是当前阻塞项。
 
 ## 变更记录
+
 - 2026-07-23：完成全部规划文档，基线冻结 v1.0。
 - 2026-07-24：目录更名为 `C:\AI_GitHelper-CN` 并冻结为唯一项目根；完成 v1.1 定向修订（安全/权限/MV3/Provider 兼容/GitHub 边界/Git 治理/一致性/验收可执行性），未写任何项目代码。
 - 2026-07-24：完成 v1.2 最终定点修订（D-028~D-035 + D-007R/D-013R），未写任何项目代码。
@@ -429,3 +448,4 @@
 - 2026-08-21：用户基本验收 D-071/D-072 并授权发布 `v0.1.1`；版本、README/用户指南、发布说明和基线记录已更新，完整门禁、18 条目打包与 Push 前凭据审计通过，待远程 Push/tag/Release 核验。
 - 2026-08-21：`36e2327` 已 Push，注释 tag `v0.1.1` 指向该版本提交；公开 latest Release 与 ZIP/SHA-256 两项资产已上传，名称、大小和 GitHub digest 均与本地一致。Chrome Web Store 继续暂停。
 - 2026-08-26：完成 D-074 仓库安全加固；修复测试 Key 形状哨兵并补充私密漏洞报告政策，启用 PVR、Dependabot/其 Malware alerts、CodeQL Default setup，复核既有 Push protection 与已关闭测试告警；316 项常规测试及完整静态/构建/安全/E2E/凭据审计通过，本轮不创建新 Release。
+- 2026-08-30：完成 D-075 分层审计维护；修复依赖公告、过期探针绑定、操作确认后端强制、Panel Port 来源校验、模型建议目录、全仓格式、第三方许可、确定性打包、CI 与临时 Chrome profile 清理；326 项常规测试及完整静态/构建/安全/E2E/凭据审计通过。仅创建本地提交，不 Push、不创建 tag 或 Release。

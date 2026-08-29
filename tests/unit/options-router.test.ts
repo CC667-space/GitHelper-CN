@@ -168,4 +168,49 @@ describe('Options Provider router', () => {
     expect(response.ok).toBe(true);
     expect(resetLocalState).toHaveBeenCalledOnce();
   });
+
+  it('设置变更通知只失效指定 Provider 的能力探针', async () => {
+    let listener:
+      | ((
+          message: unknown,
+          sender: chrome.runtime.MessageSender,
+          sendResponse: (response: unknown) => void,
+        ) => boolean)
+      | undefined;
+    vi.stubGlobal('chrome', {
+      runtime: {
+        id: runtimeId,
+        onMessage: {
+          addListener: vi.fn(
+            (
+              next: (
+                message: unknown,
+                sender: chrome.runtime.MessageSender,
+                sendResponse: (response: unknown) => void,
+              ) => boolean,
+            ) => {
+              listener = next;
+            },
+          ),
+        },
+      },
+    });
+    const invalidateProbeState = vi.fn(async () => undefined);
+    const runtime = { invalidateProbeState } as unknown as ProviderRuntime;
+    registerOptionsRouter(runtime);
+
+    const response = await new Promise<{ ok?: boolean }>((resolve) => {
+      listener!(
+        createEnvelope('OPTIONS_INVALIDATE_PROVIDER_PROBES', { providerId: 'deepseek' }),
+        {
+          id: runtimeId,
+          url: `chrome-extension://${runtimeId}/src/options/index.html`,
+        },
+        (value) => resolve(value as { ok?: boolean }),
+      );
+    });
+
+    expect(response.ok).toBe(true);
+    expect(invalidateProbeState).toHaveBeenCalledExactlyOnceWith('deepseek');
+  });
 });

@@ -4,10 +4,10 @@
 
 ## 固定端点与模型配置
 
-| Provider   | 固定 ChatCompletions endpoint                   | 当前默认 model                                | 数据流向                |
-| ---------- | ----------------------------------------------- | --------------------------------------------- | ----------------------- |
-| DeepSeek   | `https://api.deepseek.com/chat/completions`     | `deepseek-v4-flash`（可选 `deepseek-v4-pro`） | DeepSeek 官方端点       |
-| UUAPI      | `https://uuapi.net/v1/chat/completions`         | 无通用默认；可手填，留空时探针先从 `/v1/models` 自动选择 | 中转/聚合，可能转交上游 |
+| Provider   | 固定 ChatCompletions endpoint                   | 当前默认 model                                                                                 | 数据流向                |
+| ---------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------- |
+| DeepSeek   | `https://api.deepseek.com/chat/completions`     | `deepseek-v4-flash`（可选 `deepseek-v4-pro`）                                                  | DeepSeek 官方端点       |
+| UUAPI      | `https://uuapi.net/v1/chat/completions`         | 无通用默认；可手填，留空时探针先从 `/v1/models` 自动选择                                       | 中转/聚合，可能转交上游 |
 | OpenRouter | `https://openrouter.ai/api/v1/chat/completions` | 文本默认 `~openai/gpt-latest`；视觉探针会依据 `/models` 的 `input_modalities` 自动选择兼容型号 | 中转/聚合，可能转交上游 |
 
 v1 不允许自定义 Base URL。DeepSeek 适配器拒绝已停用的 `deepseek-chat` / `deepseek-reasoner` 别名，并拒绝图像输入。
@@ -26,11 +26,11 @@ DeepSeek V4 的官方 ChatCompletions 文档显示 Thinking 默认为 enabled，
 
 ### 首轮真实探针（2026-07-24）
 
-| Provider   | UI 状态   | 文本             | 视觉             | UI 显示的失败原因 |
-| ---------- | --------- | ---------------- | ---------------- | ----------------- |
-| DeepSeek   | disabled  | 未验证/不可用    | 明确不路由       | 文本探针失败      |
-| UUAPI      | disabled  | 未验证/不可用    | 未验证/不支持    | `UUAPI: HTTP 502` |
-| OpenRouter | available | **已验证**       | 未验证/不支持    | 无                |
+| Provider   | UI 状态   | 文本          | 视觉          | UI 显示的失败原因 |
+| ---------- | --------- | ------------- | ------------- | ----------------- |
+| DeepSeek   | disabled  | 未验证/不可用 | 明确不路由    | 文本探针失败      |
+| UUAPI      | disabled  | 未验证/不可用 | 未验证/不支持 | `UUAPI: HTTP 502` |
+| OpenRouter | available | **已验证**    | 未验证/不支持 | 无                |
 
 结论：
 
@@ -41,11 +41,11 @@ DeepSeek V4 的官方 ChatCompletions 文档显示 Thinking 默认为 enabled，
 
 ### 第二轮真实探针（2026-07-24）
 
-| Provider   | UI 状态   | 文本             | 视觉             | UI 显示的失败原因 |
-| ---------- | --------- | ---------------- | ---------------- | ----------------- |
-| DeepSeek   | disabled  | 未验证/不可用    | 明确不路由       | 文本探针失败；未配置视觉模型或样例图 |
-| UUAPI      | disabled  | 未验证/不可用    | 未验证/不支持    | `UUAPI: All available accounts exhausted`；未配置视觉模型或样例图 |
-| OpenRouter | available | **已验证**       | 未验证/不支持    | `模型 ~openai/gpt-latest 返回空内容` |
+| Provider   | UI 状态   | 文本          | 视觉          | UI 显示的失败原因                                                 |
+| ---------- | --------- | ------------- | ------------- | ----------------------------------------------------------------- |
+| DeepSeek   | disabled  | 未验证/不可用 | 明确不路由    | 文本探针失败；未配置视觉模型或样例图                              |
+| UUAPI      | disabled  | 未验证/不可用 | 未验证/不支持 | `UUAPI: All available accounts exhausted`；未配置视觉模型或样例图 |
+| OpenRouter | available | **已验证**    | 未验证/不支持 | `模型 ~openai/gpt-latest 返回空内容`                              |
 
 第二轮结论：
 
@@ -55,11 +55,11 @@ DeepSeek V4 的官方 ChatCompletions 文档显示 Thinking 默认为 enabled，
 
 ### 第三轮真实探针（2026-07-24）
 
-| Provider   | UI 状态   | 文本             | 视觉             | UI 显示的失败原因 |
-| ---------- | --------- | ---------------- | ---------------- | ----------------- |
-| DeepSeek   | disabled  | 未验证/不可用    | 明确不路由       | 文本探针失败；未配置视觉模型或样例图 |
-| UUAPI      | available | **已验证**       | 未验证/不支持    | 未配置视觉模型或样例图 |
-| OpenRouter | available | **已验证**       | **已验证**       | 无 |
+| Provider   | UI 状态   | 文本          | 视觉          | UI 显示的失败原因                    |
+| ---------- | --------- | ------------- | ------------- | ------------------------------------ |
+| DeepSeek   | disabled  | 未验证/不可用 | 明确不路由    | 文本探针失败；未配置视觉模型或样例图 |
+| UUAPI      | available | **已验证**    | 未验证/不支持 | 未配置视觉模型或样例图               |
+| OpenRouter | available | **已验证**    | **已验证**    | 无                                   |
 
 第三轮结论：
 

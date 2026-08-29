@@ -10,7 +10,7 @@ import type {
 } from '../lib/types';
 import { runCapabilityProbe, type CapabilityProbeReport } from './capability-probe';
 import { buildMinimalContext } from './context-builder';
-import { getCredentialMask } from './credential-store';
+import { getCredentialMask, getCredentialRevision } from './credential-store';
 import { assertPublicContext } from './outbound-policy';
 import {
   ProviderManager,
@@ -46,9 +46,30 @@ const PROBE_STORAGE_KEY = 'provider:probes:v1';
 const SAMPLE_RED_PIXEL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAvSURBVFhH7c6hAQAACMOw/f/08BwAJqKmKmnSz7LHdQAAAAAAAAAAAAAAAAAAAANUDfhqnpuFxwAAAABJRU5ErkJggg==';
 
+interface ProbeBinding {
+  credentialRevision: string;
+  textModel: string;
+  visionModel?: string;
+  baseUrl?: string;
+}
+
+interface StoredProbeResult {
+  summary: CapabilityProbeSummary;
+  binding: ProbeBinding;
+}
+
 interface ProbeStorage {
-  schemaVersion: 1;
-  results: Partial<Record<ProviderId, CapabilityProbeSummary>>;
+  schemaVersion: 2;
+  results: Partial<Record<ProviderId, StoredProbeResult>>;
+}
+
+function sameProbeBinding(left: ProbeBinding, right: ProbeBinding): boolean {
+  return (
+    left.credentialRevision === right.credentialRevision &&
+    left.textModel === right.textModel &&
+    left.visionModel === right.visionModel &&
+    left.baseUrl === right.baseUrl
+  );
 }
 
 export interface StreamAnswerInput {
@@ -512,6 +533,26 @@ export class ProviderRuntime {
     this.manager.reset();
   }
 
+  async invalidateProbeState(providerId?: ProviderId): Promise<void> {
+    await this.ready;
+    const stored = await chrome.storage.local.get(PROBE_STORAGE_KEY);
+    const candidate = stored[PROBE_STORAGE_KEY] as ProbeStorage | undefined;
+    const results =
+      candidate?.schemaVersion === 2 && candidate.results ? { ...candidate.results } : {};
+    if (providerId) {
+      delete results[providerId];
+      this.manager.clearProbe(providerId);
+    } else {
+      for (const id of Object.keys(results) as ProviderId[]) {
+        delete results[id];
+      }
+      this.manager.clearAllProbes();
+    }
+    await chrome.storage.local.set({
+      [PROBE_STORAGE_KEY]: { schemaVersion: 2, results } satisfies ProbeStorage,
+    });
+  }
+
   async runConfiguredProbes(providerId?: ProviderId): Promise<CapabilityProbeReport[]> {
     await this.ready;
     const settings = await providerSettingsStore().read();
@@ -519,14 +560,16 @@ export class ProviderRuntime {
     const priorStorage = await chrome.storage.local.get(PROBE_STORAGE_KEY);
     const prior = priorStorage[PROBE_STORAGE_KEY] as ProbeStorage | undefined;
     const stored: ProbeStorage = {
-      schemaVersion: 1,
-      results: prior?.schemaVersion === 1 && prior.results ? { ...prior.results } : {},
+      schemaVersion: 2,
+      results: prior?.schemaVersion === 2 && prior.results ? { ...prior.results } : {},
     };
     const catalogs = providerId
       ? PROVIDER_CATALOG.filter((catalog) => catalog.id === providerId)
       : PROVIDER_CATALOG;
     for (const catalog of catalogs) {
-      if (!(await getCredentialMask(catalog.id))) {
+      if (!(await getCredentialRevision(catalog.id))) {
+        delete stored.results[catalog.id];
+        this.manager.clearProbe(catalog.id);
         continue;
       }
       const provider = this.providers.get(catalog.id)!;
@@ -559,7 +602,6 @@ export class ProviderRuntime {
             provider.capabilities.imageInputFormat === 'none' ? undefined : SAMPLE_RED_PIXEL,
         });
         reports.push(report);
-        stored.results[catalog.id] = report.summary;
         this.manager.setProbeResult(report.summary);
         if (
           report.summary.vision &&
@@ -570,6 +612,17 @@ export class ProviderRuntime {
             ...setting,
             visionModel: report.selectedModels.visionModel,
           });
+          setting = {
+            ...setting,
+            visionModel: report.selectedModels.visionModel,
+          };
+        }
+        const binding = await this.createProbeBinding(catalog.id, setting);
+        if (binding) {
+          stored.results[catalog.id] = { summary: report.summary, binding };
+        } else {
+          delete stored.results[catalog.id];
+          this.manager.clearProbe(catalog.id);
         }
       } catch (error: unknown) {
         const failed: CapabilityProbeSummary = {
@@ -586,8 +639,14 @@ export class ProviderRuntime {
           probedAt: new Date().toISOString(),
           failureReason: error instanceof Error ? error.message : String(error),
         };
-        stored.results[catalog.id] = failed;
         this.manager.setProbeResult(failed);
+        const binding = await this.createProbeBinding(catalog.id, setting);
+        if (binding) {
+          stored.results[catalog.id] = { summary: failed, binding };
+        } else {
+          delete stored.results[catalog.id];
+          this.manager.clearProbe(catalog.id);
+        }
       }
     }
     await chrome.storage.local.set({ [PROBE_STORAGE_KEY]: stored });
@@ -597,15 +656,44 @@ export class ProviderRuntime {
   private async loadProbeState(): Promise<void> {
     const stored = await chrome.storage.local.get(PROBE_STORAGE_KEY);
     const candidate = stored[PROBE_STORAGE_KEY] as ProbeStorage | undefined;
-    if (candidate?.schemaVersion !== 1 || !candidate.results) {
+    if (candidate?.schemaVersion !== 2 || !candidate.results) {
       return;
     }
+    const settings = await providerSettingsStore().read();
     for (const catalog of PROVIDER_CATALOG) {
       const result = candidate.results[catalog.id];
-      if (result?.providerId === catalog.id && typeof result.probedAt === 'string') {
-        this.manager.setProbeResult(result);
+      if (!result) {
+        continue;
+      }
+      const expectedBinding = await this.createProbeBinding(
+        catalog.id,
+        settings.providers[catalog.id],
+      );
+      if (
+        result.summary.providerId === catalog.id &&
+        typeof result.summary.probedAt === 'string' &&
+        expectedBinding &&
+        sameProbeBinding(result.binding, expectedBinding)
+      ) {
+        this.manager.setProbeResult(result.summary);
       }
     }
+  }
+
+  private async createProbeBinding(
+    providerId: ProviderId,
+    setting: { textModel: string; visionModel?: string; baseUrl?: string },
+  ): Promise<ProbeBinding | undefined> {
+    const credentialRevision = await getCredentialRevision(providerId);
+    if (!credentialRevision) {
+      return undefined;
+    }
+    return {
+      credentialRevision,
+      textModel: setting.textModel,
+      ...(setting.visionModel === undefined ? {} : { visionModel: setting.visionModel }),
+      ...(providerId === 'custom' && setting.baseUrl ? { baseUrl: setting.baseUrl } : {}),
+    };
   }
 }
 

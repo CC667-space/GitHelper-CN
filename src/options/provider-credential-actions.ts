@@ -13,6 +13,7 @@ export interface ProviderHostAccessWriter {
 export function createProviderCredentialActions(
   credentials: ProviderCredentialWriter,
   hostAccess: ProviderHostAccessWriter,
+  onCredentialChanged: (providerId: ProviderId) => Promise<void> = async () => undefined,
 ) {
   return {
     async save(providerId: ProviderId, apiKey: string, baseUrl?: string): Promise<void> {
@@ -22,10 +23,12 @@ export function createProviderCredentialActions(
         await hostAccess.request(providerId, baseUrl);
       }
       await credentials.write(providerId, apiKey);
+      await onCredentialChanged(providerId);
     },
 
     async delete(providerId: ProviderId): Promise<void> {
       await credentials.delete(providerId);
+      await onCredentialChanged(providerId);
       await hostAccess.remove(providerId);
     },
   };

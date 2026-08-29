@@ -4,6 +4,7 @@ import {
   panelRegionStateSchema,
   panelSearchStateSchema,
   panelRepositoryAnalysisStateSchema,
+  panelOperationConfirmationStateSchema,
   panelSessionStateSchema,
   providerStateSchema,
   streamEventSchema,
@@ -12,6 +13,7 @@ import {
   type PanelRegionState,
   type PanelSearchState,
   type PanelRepositoryAnalysisState,
+  type PanelOperationConfirmationState,
   type ProviderState,
   type StreamEvent,
 } from '../lib/bridge-protocol';
@@ -37,9 +39,14 @@ export interface PanelConnection {
   cancelPick?(): void;
   startRegion?(): void;
   cancelRegion?(): void;
-  search?(naturalLanguage: string, target: SearchTarget, providerId?: ProviderId): void;
+  search?(
+    naturalLanguage: string,
+    target: SearchTarget,
+    providerId?: ProviderId,
+    confirmed?: true,
+  ): void;
   clearSearch?(): void;
-  openGitHubPage?(url: string, disposition?: 'foreground' | 'background'): void;
+  openGitHubPage?(url: string, disposition?: 'foreground' | 'background', confirmed?: true): void;
   analyzeRepository?(providerId?: ProviderId): void;
   disconnect(): void;
 }
@@ -56,6 +63,7 @@ export function connectPanel(
   onRegionState: (state: PanelRegionState) => void = () => undefined,
   onSearchState: (state: PanelSearchState) => void = () => undefined,
   onRepositoryAnalysisState: (state: PanelRepositoryAnalysisState) => void = () => undefined,
+  onOperationConfirmationState: (state: PanelOperationConfirmationState) => void = () => undefined,
 ): PanelConnection {
   let activePort: chrome.runtime.Port | undefined;
   let reconnectAttempt = 0;
@@ -108,6 +116,14 @@ export function connectPanel(
       onRepositoryAnalysisState(
         parseEnvelope(raw, panelRepositoryAnalysisStateSchema, {
           expectedType: 'REPOSITORY_ANALYSIS_STATE',
+        }).payload,
+      );
+      return;
+    }
+    if (candidate?.type === 'OPERATION_CONFIRMATION_STATE') {
+      onOperationConfirmationState(
+        parseEnvelope(raw, panelOperationConfirmationStateSchema, {
+          expectedType: 'OPERATION_CONFIRMATION_STATE',
         }).payload,
       );
       return;
@@ -200,20 +216,23 @@ export function connectPanel(
     cancelRegion() {
       activePort?.postMessage(createEnvelope('PANEL_REGION_CANCEL', {}));
     },
-    search(naturalLanguage, target, providerId) {
+    search(naturalLanguage, target, providerId, confirmed) {
       activePort?.postMessage(
         createEnvelope('PANEL_SEARCH', {
           naturalLanguage,
           target,
           providerId,
+          confirmed,
         }),
       );
     },
     clearSearch() {
       activePort?.postMessage(createEnvelope('PANEL_SEARCH_CLEAR', {}));
     },
-    openGitHubPage(url, disposition = 'foreground') {
-      activePort?.postMessage(createEnvelope('PANEL_OPEN_GITHUB_PAGE', { url, disposition }));
+    openGitHubPage(url, disposition = 'foreground', confirmed) {
+      activePort?.postMessage(
+        createEnvelope('PANEL_OPEN_GITHUB_PAGE', { url, disposition, confirmed }),
+      );
     },
     analyzeRepository(providerId) {
       activePort?.postMessage(createEnvelope('PANEL_ANALYZE_REPOSITORY', { providerId }));

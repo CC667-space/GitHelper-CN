@@ -130,15 +130,18 @@ OpenRouter、SiliconFlow、旧 UUAPI 与自定兼容服务可能把请求转交�
 git clone https://github.com/CC667-space/GitHelper-CN.git
 cd GitHelper-CN
 pnpm install --frozen-lockfile
+pnpm audit
+pnpm notices:generate
 pnpm typecheck
 pnpm lint
+pnpm format:check
 pnpm test
 pnpm build
 pnpm scan:build
 pnpm package:extension
 ```
 
-构建输出位于 `dist/`；版本化 ZIP 与 SHA-256 文件位于 `artifacts/`。`artifacts/` 不进入 Git，只作为 GitHub Release 上传资产。
+构建输出位于 `dist/`；版本化 ZIP 与 SHA-256 文件位于 `artifacts/`。打包脚本会把项目 [MIT License](LICENSE) 与 [生产依赖许可证清单](THIRD_PARTY_NOTICES.txt) 放入 ZIP，并使用固定条目顺序和时间戳生成可重复校验的包。`artifacts/` 不进入 Git，只作为 GitHub Release 上传资产。
 
 ## 项目状态
 
@@ -149,4 +152,4 @@ pnpm package:extension
 
 ## License
 
-[MIT](LICENSE)
+项目源码使用 [MIT License](LICENSE)；随扩展分发的生产依赖许可证见 [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt)。

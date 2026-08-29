@@ -9,14 +9,15 @@
 > v1.6（2026-08-21）：明确普通问答实时 DOM 读取、README/简介证据隔离及 License/安装说明的有限可见边界（D-071）。
 > v1.7（2026-08-21）：`v0.1.1` 维护版继续复用既有 Release 安全边界；D-072 搜索快照仅存脱敏有限结果于 `storage.session`，不新增权限或长期数据（D-073）。
 > v1.8（2026-08-26）：补充公开仓库的支持版本与私密漏洞报告入口；不改变产品运行时安全边界（D-074）。
+> v1.9（2026-08-29）：能力探针绑定 Key 修订号与 model/custom URL；Panel Port 校验精确扩展来源；确认策略在 Background 执行；发布包补齐许可证和确定性构建（D-075）。
 
 ---
 
 ## 0. 支持版本与漏洞报告
 
-| 版本 | 安全维护状态 |
-|---|---|
-| `0.1.1` | 当前支持 |
+| 版本      | 安全维护状态                            |
+| --------- | --------------------------------------- |
+| `0.1.1`   | 当前支持                                |
 | `< 0.1.1` | 不再维护，请先升级到最新 GitHub Release |
 
 若发现安全问题，请通过本仓库 **Security and quality → Advisories → Report a vulnerability**
@@ -32,6 +33,7 @@ Token、Cookie、个人数据或完整浏览器配置；请使用脱敏后的最
 ## 1. 数据最小化（默认不整页发送）
 
 **每次请求只允许包含：**
+
 - 用户问题
 - 页面元数据：URL、页面类型、仓库名、Issue/PR 编号
 - 用户选中元素 / 框选内容
@@ -41,6 +43,7 @@ Token、Cookie、个人数据或完整浏览器配置；请使用脱敏后的最
 - 必要用户偏好
 
 **禁止：**
+
 - 默认发送整页 HTML / 整个 README / 整个 Issue 全部评论
 - 未经框选就上传截图
 - 把完整聊天历史无限拼接进请求
@@ -67,15 +70,17 @@ Token、Cookie、个人数据或完整浏览器配置；请使用脱敏后的最
 ## 3. API Key / 凭据边界（v1.2 细化，P0-1 / D-028）
 
 ### 3.1 可访问范围
+
 - Key 仅存 `chrome.storage.local`；扩展初始化即调用：
   ```ts
-  chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' })
+  chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
   ```
   将存储限制为**仅可信扩展上下文**（Background Service Worker / Side Panel / Options）可访问。
   （依据：Chrome 官方文档，`storage.local` 默认对 Content Script 暴露，须显式限制。）
 - **Content Script 四不**：不读取 Key、不接收 Key、不在消息中转发 Key、不持有任何 Provider 完整凭据。
 
 ### 3.2 录入与保存路径（v1.2，D-028）
+
 - `credential-store` 是**仅可信扩展上下文可导入的共享模块**，职责按上下文分离：
   - **Options 页**：仅调用 `write`（保存）与 `delete`（删除），不读取已存明文。
   - **Background SW**：仅调用 `read`，且读取结果只用于在出站请求 Header 注入（inject），注入代码路径唯一。
@@ -85,7 +90,9 @@ Token、Cookie、个人数据或完整浏览器配置；请使用脱敏后的最
 - **已保存的 Key 明文不得回显**：UI 需要展示时只显示 Background 计算下发的掩码（尾 4 位）；不提供"查看明文"功能。
 
 ### 3.3 隔离要求
+
 已保存的 Key 明文**不得进入**：
+
 - Zustand 等普通 UI 状态
 - Session 数据 / 对话记录
 - 日志 / 错误详情
@@ -93,11 +100,13 @@ Token、Cookie、个人数据或完整浏览器配置；请使用脱敏后的最
 - 普通消息载荷（含 Content Script 消息）
 
 ### 3.4 用户须知（写入 Options 页）
+
 - 浏览器本地存储**不是加密保险箱**，本机恶意软件或他人物理访问可能读取。
 - BYOK 模式适用于**个人原型**。
 - 建议使用**专用、可撤销、设置了额度限制**的 API Key。
 
 ### 3.5 Provider Host 授权与设置 JSON（v1.4，D-063 / D-068）
+
 - DeepSeek / UUAPI / OpenRouter 沿用静态 Host 权限；其余固定 Provider 保存 Key 时只请求该家的**单一精确 Host**。拒绝授权时 Key 不写入。
 - custom 拒绝 URL credentials、query、fragment、非默认端口、localhost、私网/回环/链路本地/保留地址字面量。manifest 的 `https://*/*` 只是未授予候选范围；Options 必须先保存 URL/model，再在保存 Key 的用户手势中申请该精确 Host。
 - Background 读取 Key 前再次读取并校验 custom 配置，确认实际请求 origin 完全一致且权限存在；custom fetch 使用 `credentials: omit` 并拒绝重定向。权限缺失、配置变化或 origin 不一致时不得读取 Key、不得发请求。
@@ -119,14 +128,14 @@ Token、Cookie、个人数据或完整浏览器配置；请使用脱敏后的最
 
 `Sanitizer` 在**所有出站内容**（含选中/框选/摘要/上下文）发送前扫描并遮蔽：
 
-| 类别 | 检测方式（示例） |
-|---|---|
-| OpenAI/通用 API Key | `sk-[A-Za-z0-9]{20,}` 等前缀模式 |
-| GitHub Token | `gh[pousr]_[A-Za-z0-9]{36,}`、`github_pat_...` |
-| 私钥 | `-----BEGIN (RSA|OPENSSH|EC|PGP) PRIVATE KEY-----` |
-| `.env` 行 | 敏感键（PASSWORD/SECRET/TOKEN/KEY）的 `KEY=VALUE` |
-| Cookie / 密码字段 | `Set-Cookie`、`password=` 等 |
-| PII | 邮箱、手机号（保守遮蔽，可配置） |
+| 类别                | 检测方式（示例）                                   |
+| ------------------- | -------------------------------------------------- |
+| OpenAI/通用 API Key | `sk-[A-Za-z0-9]{20,}` 等前缀模式                   |
+| GitHub Token        | `gh[pousr]_[A-Za-z0-9]{36,}`、`github_pat_...`     |
+| 私钥                | `-----BEGIN <RSA/OPENSSH/EC/PGP> PRIVATE KEY-----` |
+| `.env` 行           | 敏感键（PASSWORD/SECRET/TOKEN/KEY）的 `KEY=VALUE`  |
+| Cookie / 密码字段   | `Set-Cookie`、`password=` 等                       |
+| PII                 | 邮箱、手机号（保守遮蔽，可配置）                   |
 
 - 命中 → 替换为 `‹REDACTED:类型›`，Panel 提示"已遮蔽 N 处敏感信息"。
 - 规则集中在 `sanitizer` 单模块，配套单元测试（正/反/边界）。宁可多遮蔽，不可漏发。
@@ -136,9 +145,11 @@ Token、Cookie、个人数据或完整浏览器配置；请使用脱敏后的最
 ## 6. 消息协议安全（v1.1，P1-3）
 
 跨上下文通信（Content↔SW、Panel↔SW、SW→Content、Provider→UI、ToolCall→Executor）必须：
+
 - 固定 `type` + 协议版本 + 请求 ID
 - 参数 zod Schema 校验（收端校验，不信任发端）
 - **来源检查**：SW 校验 `sender`（tab/frame/扩展页面来源），拒绝非预期来源
+- Panel 长连接只接受名称正确、`sender.id` 等于当前扩展 ID，且 URL 路径精确为 `/src/panel/index.html` 的 Port；同名 Content Script 或其他扩展页面 Port 必须立即断开且不得启动 hydration（D-075）
 - 最大载荷限制、超时、类型化错误
 - **SW 不得接受 Content Script 提供的任意 URL 并代为 fetch**——出站请求域名必须命中 Provider Host 白名单或 `api.github.com`
 - API Key 永不出现在任何消息载荷中（见第 3 节）
@@ -162,7 +173,8 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
 
 ## 8. 操作权限护栏（v1.1 收紧，C-3）
 
-- 自动：导航 / 公开搜索 / 信息提取。
+- 自动：当偏好明确为 `auto` 时的 GitHub 导航 / 公开搜索，以及本地信息提取。
+- 可配置逐次确认：当 `operationPolicy.navigation` 或 `operationPolicy.search` 为 `confirm` 时，Background 必须先返回一次性确认状态，只有可信 Panel 的“确认一次”重发才执行；不能只靠 UI 隐藏按钮（D-075）。
 - **逐次确认**：下载、跳转外部可执行文件。确认弹窗**不提供"始终允许该类操作"**选项。
 - **固定拒绝**：账号相关变更（`accountChanges: 'deny'`，v1 不实现账号写入，不可配置放开）。
 - 类型约束：
@@ -170,13 +182,14 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
   operationPolicy: {
     navigation: 'auto' | 'confirm';
     search: 'auto' | 'confirm';
-    downloads: 'confirm' | 'deny';   // 无 'auto'
-    accountChanges: 'deny';          // 字面量，不可放开
+    downloads: 'confirm' | 'deny'; // 无 'auto'
+    accountChanges: 'deny'; // 字面量，不可放开
   }
   ```
 - 禁止（v1）：一切 GitHub 写操作、自由坐标点击、任意网页控制、自动下载运行文件。
 
 ### 8.1 导航工具限域与 Scheme 黑名单（v1.2，D-013R）
+
 - 原 `openPage` 拆分为职责独立的工具：
   - `openGitHubPage`：仅允许 `https://github.com/*`，收端校验 URL 前缀，属 `navigation` 类（auto/confirm）。
   - `openExternalLink`：GitHub 之外的外部链接，**逐次确认**（`external` 类确认弹窗）。
@@ -184,6 +197,7 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
 - **所有导航/打开类工具一律拒绝**非 `https:` Scheme：`javascript:`、`data:`、`file:`、`chrome:`、`chrome-extension:`、`blob:`、`vbscript:` 等直接拒绝并返回类型化错误（zod 校验 + 收端二次校验）。
 
 ### 8.2 中文语义转换与匿名 GitHub 搜索边界（D-047/D-060）
+
 - 用户主动输入的搜索描述可发送给当前文本 Provider；发送字段仅限脱敏后的搜索描述、目标类型和当前日期，不附带 PageContext、选区、仓库文件或会话历史。每次搜索最多调用一次，失败不重试并自动降级本地转换。
 - Provider 只返回 strict zod 校验的受限 `SearchIntent`，不能返回或控制 fetch URL、Header、GitHub Token、工具名或任意 query 片段；相对日期和 GitHub 限定词由本地编译器生成。
 - 搜索请求只由 Background 用固定 `https://api.github.com/search/repositories|issues` 构造；Panel/Content 不能传入 fetch URL、Header 或 GitHub Token。
@@ -193,6 +207,7 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
 - D-072 的搜索连续性只在成功后把脱敏描述、目标类型和有限结果按 `tabId` 写入 `chrome.storage.session`；每标签页一项、最多 10 项、2 小时过期。恢复只读该快照，零 Provider/GitHub API 请求；显式清除、清除会话/偏好和全清都会移除对应快照。
 
 ### 8.3 仓库分析事实与 Provider 边界（D-048）
+
 - 私有/无权限 PageContext 在 GitHub API 与 Provider 之前统一零出站；仓库名必须通过 `owner/repository` 格式校验，API 路径由 Background 固定构造。
 - README/描述/Topic 即使来自公开仓库仍是不可信数据：发送 Provider 前经 sanitizer，只放 user 角色并带不可信边界；Provider 输出经固定 zod Schema，不直接渲染 HTML。面向用户的总结、用途、功能、风险等自然语言字段须通过中文叙述校验，未中文化结果最多按既有上限重试一次；技术证据字段仅对纯命令、路径、包名和代码标识符豁免，普通英文解释句仍拒绝（D-057）。
 - Star、Release、日期、归档、许可证、Issue/PR 等事实字段不在 Provider 输出 Schema 中，最终只能由 DOM/API 回填，避免 Prompt Injection 或模型幻觉改写事实。
@@ -200,6 +215,7 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
 - 仓库卡、core 缓存和限流状态不保存 README 正文、Provider Key 或 GitHub Token；v1 仍无 GitHub Token。
 
 ### 8.4 公开仓库文件证据边界（D-053 / D-054 / D-056）
+
 - 只在公开 PageContext 通过后，由 Background 固定构造 `api.github.com/repos/{owner}/{repo}/contents` 请求；Panel/Content 不能传 URL、Header、分支或文件路径。
 - 目录检查最多根目录 + 2 个高信号目录；文件最多 3 个，API 声明大小 ≤24KB 且只保留前 4KB 解码文本。最多只选 1 份 README，依次优先根目录中文 README、根目录默认 README、根目录其他本地化 README 和嵌套说明，至少保留 2 个非 README 配置/入口候选。README 不增加请求深度、文件数或文本量；API 与 DOM 同时有 README 时优先使用已校验 API 片段。锁文件、依赖/文档/测试目录和含空段、`.`、`..` 的路径拒绝；文件详情响应的路径必须与请求路径完全一致，且二次声明大小仍须处于 `(0, 24KB]`。
 - 文件正文与注释仍是 Prompt Injection 不可信数据：先经 sanitizer，再放入 user 角色；不得进入 System Prompt、日志、会话、缓存或分析卡。卡片只保留路径、角色与最多 4 条确定性内容线索。
@@ -210,9 +226,11 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
 ## 8.5 数据清除（v1.2，D-033）
 
 三种**相互独立**的清除操作，Options 页分别提供入口：
+
 1. **清除会话/偏好**：删除全部会话与用户偏好，**不删除**任何 Provider API Key。
 2. **删除单个 Provider Key**：仅经 credential-store `delete` 删除指定 Provider 凭据，不影响会话/偏好。
 3. **清除全部本地数据**：会话 + 偏好 + 全部凭据一并删除；**必须经明确二次确认**（弹窗说明将删除的内容与不可恢复性）。
+
 - 每种清除后配套断言：目标数据在 storage 中无残留；非目标数据完好。
 
 ---
@@ -224,7 +242,7 @@ GitHub 页面全部文本（README / Issue / PR / 评论 / 代码注释 / 文件
 - 截图由**可信上下文**（SW/Panel）调用 `captureVisibleTab` 完成，Content Script 只提供选区与坐标信息（见 ARCHITECTURE 3.5）。
 - 视觉截图压缩后约 1MB 上限，避免 base64 请求逼近 2MB Provider 负载边界；无论成功、失败或取消，解码 bitmap 都必须关闭。
 - 正式 Release 不包含 Phase 0 的原始 `PHASE0_*` 消息处理、GitHub 页面不可见触发按钮或 Options“本地技术验证/批量真实探针”入口；避免网页数据面触发已完成的截图校准流程。每个 Provider 卡内的显式“测试 Key 与模型”仍受可信 Options 来源、固定消息 Schema、精确 Host、凭据隔离和用户点击约束。
-- GitHub Release ZIP 仅包含 `dist/`，打包时校验根 `manifest.json`、版本、四档本地图标与禁止条目，并生成 SHA-256 文件。发布前仍须扫描工作区、Git 历史、`dist` 与 ZIP，不得把真实 Key、环境文件、浏览器 profile、日志或 source map 上传为资产。
+- GitHub Release ZIP 归档构建后的 `dist/`，打包前把根 `LICENSE` 与由生产依赖图生成的 `THIRD_PARTY_NOTICES.txt` 复制进 `dist/`；校验根 `manifest.json`、版本、四档本地图标、两份法律文件与禁止条目，并生成 SHA-256 文件。ZIP 条目排序且时间戳固定，重复构建应得到相同哈希。发布前仍须扫描工作区、Git 历史、`dist` 与 ZIP，不得把真实 Key、环境文件、浏览器 profile、日志或 source map 上传为资产（D-075）。
 
 ---
 
@@ -237,6 +255,7 @@ Storage 访问级限制、Provider Host 白名单、消息来源验证、消息 
 Prompt Injection 红队测试、私有数据测试、工具白名单测试、权限复查、数据清除测试、泄漏检查、发布前安全审查。
 
 **Phase 10 落地证据（D-049）**：
+
 - sanitizer 覆盖字符串模式与结构化敏感键名；普通消息递归拒绝凭据字段；实际 Provider 请求体和日志均用测试哨兵验证无明文。
 - 完整只读工具注册表经 strict zod 校验；GitHub 导航拒绝非 HTTPS/非 GitHub Host/多余参数，外链拒绝 URL userinfo 并要求逐次确认；写入、账号和下载工具不存在。
 - 对话、搜索、仓库分析均在 PanelBridge 入口执行私有页零出站；测试断言 Provider/API/会话/截图依赖零调用。

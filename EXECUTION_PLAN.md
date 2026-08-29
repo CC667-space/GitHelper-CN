@@ -9,6 +9,7 @@
 > v1.5（2026-08-21）：记录 Phase 13 公开源码与 Phase 14 GitHub Release 加固/发布；Chrome Web Store 继续暂停（D-069/D-070）。
 > v1.6（2026-08-21）：记录 Phase 14 后续的普通问答 PageContext 定向维护补丁，不改变 Release 或 Chrome Web Store 状态（D-071）。
 > v1.7（2026-08-21）：记录 D-072 字号/搜索连续性维护与获授权的 `v0.1.1` GitHub Release；Chrome Web Store 继续暂停（D-073）。
+> v1.8（2026-08-29）：记录 Phase 14 后续分层审计维护：依赖、探针、确认/Port、模型目录、格式、许可证、确定性打包与 CI（D-075）；不含远程发布。
 
 ---
 
@@ -49,6 +50,7 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 **关键路径**：0 → 1 → 1.5 → 2 → 3 → 4 → 9 → 11。
 
 **早期演示 vs 最终 MVP（C-2，重要）**：
+
 - Phase 6（点击提问）、Phase 7（框选提问）、Phase 8（NL 搜索）**可以不阻塞早期技术 Demo**（Phase 4 后即可演示对话，Phase 9 后即可演示分析）；
 - 但它们是**冻结的 v1 核心功能，必须阻塞最终 MVP 验收**——Phase 11 完成时三者必须全部实现并通过验收；
 - 若确需删减任何一项，属**基线变更**，必须暂停请用户确认，不得静默降级。
@@ -75,6 +77,7 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 ---
 
 ## Phase 0 — 基线检查、环境与技术探针
+
 - **目标**：只读基线检查通过，工具链跑通，关键技术假设经真实探针验证，Git 基线建立。
 - **前置**：无。
 - **任务**：
@@ -96,6 +99,7 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **强制确认节点**：无。**自动进入 Phase 1**。
 
 ## Phase 1 — 仓库结构与扩展骨架
+
 - **目标**：完整目录结构 + 四端入口 + 共享库骨架。
 - **任务**：
   1. 按 ARCHITECTURE §4 建目录与空模块（`src/`、`tests/`、`scripts/`；`lib/types.ts` 落地 §5 数据模型，**含 ProviderCapabilities / ProviderCredential，不含 GitHubTokenConfig / allowPrivateRepos**）。
@@ -106,6 +110,7 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **自动进入 Phase 1.5**。
 
 ## Phase 1.5 — 安全地基（P0-5，新增；必须先于任何真实 API 调用）
+
 - **目标**：把 SECURITY §10 "早期安全地基"全部落地并可测试。
 - **任务**：
   1. SW 启动即 `setAccessLevel('TRUSTED_CONTEXTS')`；`credential-store` 独立凭据接口（Options 只 write/delete，Background 只 read/inject，Content 禁止导入 + lint import 边界，D-028）。
@@ -121,6 +126,7 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **自动进入 Phase 2**。
 
 ## Phase 2 — Side Panel 与消息通信
+
 - **目标**：Panel UI 骨架 + 三端消息全链路（走 Phase 1.5 的安全信封）。
 - **任务**：
   1. React + Tailwind + Zustand 搭 Panel 骨架（会话区/输入区/顶部 Provider 下拉占位）。
@@ -131,6 +137,7 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **自动进入 Phase 3**。
 
 ## Phase 3 — GitHub 页面识别与上下文读取（关键路径）
+
 - **目标**：识别页面类型 + DOM 优先解析 PageContext + SPA 变化跟踪。
 - **任务**：
   1. `detector` 按 URL+DOM 识别 repo/issue/pr/releases/blob/search 等。
@@ -143,6 +150,7 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **自动进入 Phase 4**。
 
 ## Phase 4 — Provider 抽象 + 能力探针 + 文本对话 + 手动切换（关键路径）
+
 - **目标**：八个固定 Provider 适配器全部完成（代码+Mock 测试）、能力经探针验证、可手动切换、文本对话流式闭环。
 - **任务**：
   1. `providers/base` 公共协议骨架（chat/chatStream/abort/capabilities，OpenAI 兼容组装）+ DeepSeek / UUAPI / OpenRouter / OpenAI / Anthropic / Gemini / Qwen / SiliconFlow **独立适配器**（D-007R/D-030/D-063；**固定 apiHost 预设，无自定义 Base URL**；model 可配置）。原三家沿用静态 Host，新增五家保存 Key 时逐家申请精确可选 Host 权限。
@@ -163,6 +171,7 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - 确认后**自动进入 Phase 5**。
 
 ## Phase 5 — Session 与本地偏好
+
 - **目标**：会话 CRUD + 恢复 + 摘要 + 偏好管理 + 容量淘汰 + 数据清除。
 - **任务**：
   1. `session-store`：新建/继续/最近/删除/页面关联/30 天过期。
@@ -174,24 +183,28 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **自动进入 Phase 6**。
 
 ## Phase 6 — 点击元素提问（MVP 必达，C-2）
+
 - **目标**：pick 模式选中元素并提问。
 - **任务**：`selection/pick` 叠层高亮 + 提取 SelectedElement + 接入 AI 流；SPA 切换清理 pick 状态。
 - **验收**：能进入/退出 pick 模式；选中元素结构提取正确；提问得到基于该元素的回答；集成测试断言选中数据结构。
 - **自动进入 Phase 7**。
 
 ## Phase 7 — 框选区域与视觉输入（MVP 必达，C-2）
+
 - **目标**：drag 框选 + 结构化优先 + 不足时截图走视觉。
 - **任务**：`selection/region` 画框 + 结构化提取 + 坐标/dpr/滚动/缩放上报；**SW 侧 `capture` 模块** captureVisibleTab + 裁剪（P0-4 职责划分）；视觉 Provider 调用（Capability 护栏 + 消耗提示 + visionEnabled 开关）。
 - **验收**：框选提取结构化数据；结构充分时不截图；不足时 SW 截图裁剪对齐（复用 Phase 0 探针 B 的验证方法）并走视觉 Provider；visionEnabled=false 时禁用视觉；截图不持久保存。
 - **自动进入 Phase 8**。
 
 ## Phase 8 — 自然语言 GitHub 搜索（MVP 必达，C-2）
+
 - **目标**：中文 NL → GitHub 搜索语句/API 参数 → 结果。
 - **任务**：搜索工具（searchRepos/searchIssues，匿名 API + **search 桶独立节流**，D-032）+ NL 转换 prompt + 结果渲染；公开搜索自动执行；展示简短查询解释；search 桶受限时降级为打开 GitHub 网页搜索或本地 DOM 结果。
 - **验收**：≥5 组中文查询转出合理 GitHub 语法；仓库/Issue 搜索返回结果；search 限流降级可读且不指数重试。
 - **自动进入 Phase 9**。
 
 ## Phase 9 — 一键仓库分析（关键路径）
+
 - **目标**：结构化中文仓库分析卡片。
 - **任务**：聚合 DOM + **匿名** GitHub API（缓存 + 按 resource 分桶节流，D-032）→ 固定 JSON schema（用途/语言/平台/安装/Release/更新/Star/归档/许可证/Issue-PR/难度/风险/下一步）→ 渲染中文卡片；可变数据事实回填防幻觉；structuredOutput 能力不可用时按 D-021 降级。
 - **验收**：≥3 个真实公开仓库产出完整卡片；关键数字来自 DOM/API；缺字段优雅降级；匿名限额撞墙时降级提示正常。
@@ -199,6 +212,7 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **自动进入 Phase 10**。
 
 ## Phase 10 — 安全加固与红队测试
+
 - **目标**：SECURITY §10 "后期安全加固"全部完成。
 - **任务**：完善 sanitizer 规则集；Prompt Injection **红队测试**（构造攻击样例 + 记录结果，见 P1-2 表述边界）；私有页面零出站复验；工具白名单越权测试（含非 https Scheme 拒绝：javascript/data/file/chrome 等，D-013R）；权限复查（对照 Phase 0 探针 C 结论）；三种数据清除测试（D-033）；泄漏检查（出站体/日志扫描）。
 - **产物**：安全测试套件 + 红队测试记录（`tests/security/redteam-log.md`）。
@@ -206,6 +220,7 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **自动进入 Phase 11**。
 
 ## Phase 11 — 测试、打包与 MVP 验收（汇聚）
+
 - **目标**：整体测试通过 + 可分发扩展包 + 唯一一次批量体验复核。
 - **前置**：**Phase 6/7/8 必须已完成并通过验收**（C-2：核心功能不得缺席最终 MVP）。
 - **任务**：补齐单元/组件/集成/E2E（Playwright 加载扩展）；`pnpm build` 产出可加载包（`dist/`）；跑通成功标准 S1-S5；整理使用说明（放 `docs/`，属派生文档）。
@@ -213,6 +228,7 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **强制确认节点 ②（批量体验复核）**：交用户在真实 Chrome 手工体验 S1-S5 闭环，确认 MVP 达标。这是**唯一的人工体验验收节点**。
 
 ## Phase 12 — Provider 目录扩展与受限 custom 端点
+
 - **目标**：不改变既有 GitHub 功能，加入 GLM / Kimi / Grok 官方端点和一个受限 OpenAI-compatible custom Provider；UUAPI 仅保留旧配置兼容。
 - **任务**：
   1. Catalog 加入三家固定官方 endpoint、已核对 model 候选和独立适配器；逐家使用精确可选 Host。
@@ -225,11 +241,13 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **真实验证**：没有新 Key 不阻塞自动验收。若需填写新 Key或产生真实请求费用则暂停。
 
 ## Phase 13 — GitHub 公开源码
+
 - **目标**：以 MIT License 公开现有源码，不发布安装包或 Chrome Web Store。
 - **验收**：公开仓库、历史邮箱隐私处理、Push 前全历史凭据审计与完整质量门禁通过。
 - **状态**：已完成（D-069）。
 
 ## Phase 14 — GitHub Release 加固与发布
+
 - **目标**：在不扩展产品功能和 Chrome 权限的前提下，发布可下载、可校验、可按 README 直接加载的 `v0.1.0` 扩展 ZIP。
 - **任务**：
   1. 清除正式运行时中的 Phase 0 技术探针消息、页面 DOM 触发器和 Options“本地技术验证”；按既有产品要求移除批量真实探针 UI，保留每个 Provider 的“测试 Key 与模型”。
@@ -244,20 +262,29 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **授权**：项目负责人已明确授权 Phase 14 的既有 `origin` Push、tag、GitHub Release 与安装资产公开发布。其他发布渠道仍须另行确认。
 
 ### Phase 14 后续维护补丁 — 当前页面问答上下文（D-071）
+
 - **目标**：修复同一仓库页面 README 延迟渲染后普通问答仍使用旧 PageContext，以及项目简介被误当成 README 的问题。
 - **实现边界**：每次 `PAGE_INFO_REQUEST` 重读当前 DOM；兼容当前 `article.markdown-body` README 容器；为 Provider 标注简介/README/License/安装说明的证据状态。
 - **验收**：固定仓库初载、滚动后、重新提问三个时点有可重复测试；README 8,000 字与整体 32KB 限制有断言；未读取到时只能说明当前证据缺失。
 - **范围**：不新增 Chrome 权限、GitHub API/Provider 调用、完整仓库读取、持久数据或发布授权。
 
 ### Phase 14 维护版 — 字号、搜索连续性与 `v0.1.1`（D-072/D-073）
+
 - **内容**：Side Panel 14/16/18px 字号；按 GitHub `tabId` 保存最近一次成功搜索的 2 小时 `storage.session` 快照；搜索结果前台/后台打开；把 D-071/D-072 发布为 `v0.1.1`。
 - **发布门禁**：复跑 typecheck、lint、变更文件格式、`git diff --check`、全量测试、build、安全扫描、隔离 Chrome E2E、版本化打包与源码/历史/`dist`/ZIP 凭据审计。
 - **远程验收**：`origin/main`、注释 tag `v0.1.1`、非 draft/prerelease Release，以及仅 ZIP/SHA-256 两项资产均存在且 digest 与本地一致。
 - **范围**：不新增 Chrome 权限/Host、Provider 请求、GitHub 写操作、长期搜索历史、自动重开 Panel 或 Chrome Web Store 发布。
 
+### Phase 14 后续分层审计维护（D-075）
+
+- **内容**：修复已确认的生产/开发依赖告警；让能力探针绑定 Key 修订号和实际 model/custom URL；在 Background 落实 navigation/search 确认策略并收紧 Panel Port 来源；核对易变 model 候选；统一 LF/Prettier；补齐生产依赖许可证、确定性 ZIP 与最小 Windows CI。
+- **门禁**：frozen install、`pnpm audit` 零告警、许可证清单再生成零差异、typecheck、lint、format、全量测试、build、安全扫描、隔离 Chrome E2E、重复打包哈希一致、凭据扫描与 `git diff --check`。
+- **范围**：只做仓库维护与既有安全契约落地；不新增 Chrome 权限/Host、产品功能、真实 Provider 请求、GitHub 写操作、tag、Release 或 Chrome Web Store 工作。
+
 ---
 
 ## 强制确认节点清单（v1.7）
+
 1. **Phase 4**：首次填入真实 AI Provider Key（凭据）—— 必需。
 2. **Phase 11**：MVP 批量体验复核（真实交互验收）—— 必需。
 3. **条件性**：匿名 GitHub API 限额被实测证明阻塞 MVP → 评估 Token（基线变更）；**所有**文本 Provider 或**所有**视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停。

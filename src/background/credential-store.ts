@@ -18,6 +18,7 @@ export interface OptionsCredentialStore {
 export interface BackgroundCredentialStore {
   read(providerId: ProviderId): Promise<ProviderCredential | undefined>;
   getMask(providerId: ProviderId): Promise<string | undefined>;
+  getRevision(providerId: ProviderId): Promise<string | undefined>;
   injectAuthorization(providerId: ProviderId, headers?: HeadersInit): Promise<Headers>;
 }
 
@@ -43,6 +44,7 @@ export function createOptionsCredentialStore(area: CredentialStorageArea): Optio
       const credential: ProviderCredential = {
         providerId,
         apiKey: validateApiKey(apiKey),
+        revision: crypto.randomUUID(),
       };
       await area.set({ [storageKey(providerId)]: credential });
     },
@@ -75,6 +77,13 @@ export function createBackgroundCredentialStore(
     async getMask(providerId) {
       const credential = await read(providerId);
       return credential ? maskApiKey(credential.apiKey) : undefined;
+    },
+    async getRevision(providerId) {
+      const credential = await read(providerId);
+      if (!credential) {
+        return undefined;
+      }
+      return credential.revision ?? 'legacy-v1';
     },
     async injectAuthorization(providerId, headers) {
       const credential = await read(providerId);
@@ -112,6 +121,10 @@ export function readCredential(providerId: ProviderId): Promise<ProviderCredenti
 
 export function getCredentialMask(providerId: ProviderId): Promise<string | undefined> {
   return createBackgroundCredentialStore(localArea()).getMask(providerId);
+}
+
+export function getCredentialRevision(providerId: ProviderId): Promise<string | undefined> {
+  return createBackgroundCredentialStore(localArea()).getRevision(providerId);
 }
 
 export function injectProviderAuthorization(

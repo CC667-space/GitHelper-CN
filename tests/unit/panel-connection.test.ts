@@ -117,6 +117,48 @@ describe('Panel connection lifecycle', () => {
     connection.disconnect();
   });
 
+  it('接收操作确认事件，并在确认重发时携带一次性 confirmed 标记', () => {
+    const fake = createFakePort();
+    vi.stubGlobal('chrome', {
+      runtime: {
+        connect: vi.fn(() => fake.port),
+      },
+    });
+    const onConfirmation = vi.fn();
+    const connection = connectPanel(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      onConfirmation,
+    );
+
+    fake.emitMessage(
+      createEnvelope('OPERATION_CONFIRMATION_STATE', {
+        action: 'search',
+        requestId: 'confirm-search',
+        naturalLanguage: '中文浏览器扩展',
+        target: 'repositories',
+        providerId: 'deepseek',
+      }),
+    );
+    connection.search?.('中文浏览器扩展', 'repositories', 'deepseek', true);
+
+    expect(onConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'search', requestId: 'confirm-search' }),
+    );
+    expect(fake.postMessage).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        type: 'PANEL_SEARCH',
+        payload: expect.objectContaining({ confirmed: true }),
+      }),
+    );
+  });
+
   it('发送显式会话选择、新建、删除和带会话身份的问题', () => {
     const fake = createFakePort();
     vi.stubGlobal('chrome', {

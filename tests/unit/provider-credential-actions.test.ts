@@ -40,12 +40,17 @@ describe('Provider credential actions', () => {
         return true;
       }),
     };
-    const actions = createProviderCredentialActions(credentials, hostAccess);
+    const invalidate = vi.fn(async () => {
+      calls.push('invalidate');
+    });
+    const actions = createProviderCredentialActions(credentials, hostAccess, invalidate);
 
     await actions.save('openai', 'sk-test-openai-key');
     await actions.delete('openai');
 
-    expect(calls).toEqual(['request', 'write', 'delete', 'remove']);
+    expect(calls).toEqual(['request', 'write', 'invalidate', 'delete', 'invalidate', 'remove']);
+    expect(invalidate).toHaveBeenNthCalledWith(1, 'openai');
+    expect(invalidate).toHaveBeenNthCalledWith(2, 'openai');
   });
 
   it('custom 保存 Key 时把已保存 URL 直接交给本次权限请求', async () => {

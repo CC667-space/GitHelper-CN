@@ -29,4 +29,24 @@ describe('GitHub Release runtime hardening', () => {
 
     expect(packageJson.scripts?.['probe:phase0']).toBeUndefined();
   });
+
+  it('发布包使用固定时间戳并包含项目及生产依赖许可证', () => {
+    const packageScript = readProjectFile('scripts/package-extension.ps1');
+    const thirdPartyNotices = readProjectFile('THIRD_PARTY_NOTICES.txt');
+
+    expect(packageScript).not.toContain('Compress-Archive');
+    expect(packageScript).toContain('1980, 1, 1');
+    expect(packageScript).toContain("'LICENSE', 'THIRD_PARTY_NOTICES.txt'");
+    expect(thirdPartyNotices).toContain('react@18.3.1');
+    expect(thirdPartyNotices).toContain('zod@4.4.3');
+    expect(thirdPartyNotices).toContain('License texts');
+  });
+
+  it('隔离 Chrome 即使启动失败也会进入临时 profile 清理路径', () => {
+    const e2eScript = readProjectFile('scripts/run-phase11-e2e.mjs');
+
+    expect(e2eScript).toMatch(
+      /let context;\s*const pageErrors = \[\];\s*try \{\s*context = await chromium\.launchPersistentContext[\s\S]*\} finally \{\s*await context\?\.close\(\);[\s\S]*await rm\(profilePath, \{ recursive: true, force: true \}\);/,
+    );
+  });
 });

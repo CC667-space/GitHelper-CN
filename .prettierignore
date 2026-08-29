@@ -4,3 +4,4 @@ coverage/
 probe-artifacts/
 pnpm-lock.yaml
 references/Claude_Prompt.md
+THIRD_PARTY_NOTICES.txt

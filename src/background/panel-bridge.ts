@@ -20,6 +20,7 @@ import {
   panelOpenGitHubPageSchema,
   panelAnalyzeRepositoryRequestSchema,
   panelRepositoryAnalysisStateSchema,
+  panelOperationConfirmationStateSchema,
   panelSessionStateSchema,
   panelSessionNewSchema,
   panelSessionSelectSchema,
@@ -37,6 +38,7 @@ import {
   type PanelRegionState,
   type PanelSearchState,
   type PanelRepositoryAnalysisState,
+  type PanelOperationConfirmationState,
   type PickOutcome,
   type RegionOutcome,
   type ProviderRuntimeView,
@@ -134,6 +136,7 @@ export interface PanelBridgeDependencies {
   emitRegionState?(state: PanelRegionState): void;
   emitSearchState?(state: PanelSearchState): void;
   emitRepositoryAnalysisState?(state: PanelRepositoryAnalysisState): void;
+  emitOperationConfirmationState?(state: PanelOperationConfirmationState): void;
 }
 
 export class PanelBridge {
@@ -256,7 +259,20 @@ export class PanelBridge {
             if (!this.dependencies.openGitHubPage) {
               throw new Error('GitHub 页面打开能力尚未注册');
             }
-            const { url, disposition } = panelOpenGitHubPageSchema.parse(payload);
+            const { url, disposition, confirmed } = panelOpenGitHubPageSchema.parse(payload);
+            const preferences = await this.dependencies.loadPreferences?.();
+            if (preferences?.operationPolicy.navigation === 'confirm' && !confirmed) {
+              if (!this.dependencies.emitOperationConfirmationState) {
+                throw new Error('导航确认能力尚未注册');
+              }
+              this.dependencies.emitOperationConfirmationState({
+                action: 'navigation',
+                requestId: crypto.randomUUID(),
+                url,
+                disposition,
+              });
+              return { opened: false, confirmationRequired: true };
+            }
             await this.dependencies.openGitHubPage(url, disposition);
             return { opened: true };
           },
@@ -439,6 +455,20 @@ export class PanelBridge {
     const request = panelSearchRequestSchema.parse(payload);
     if (!this.dependencies.search || !this.dependencies.emitSearchState) {
       throw new Error('GitHub 搜索能力尚未注册');
+    }
+    const preferences = await this.dependencies.loadPreferences?.();
+    if (preferences?.operationPolicy.search === 'confirm' && !request.confirmed) {
+      if (!this.dependencies.emitOperationConfirmationState) {
+        throw new Error('搜索确认能力尚未注册');
+      }
+      this.dependencies.emitOperationConfirmationState({
+        action: 'search',
+        requestId: context.requestId,
+        naturalLanguage: sanitizeText(request.naturalLanguage).value,
+        target: request.target,
+        providerId: request.providerId,
+      });
+      return { accepted: false, requestId: context.requestId, confirmationRequired: true };
     }
     this.dependencies.emitSearchState({
       status: 'searching',
@@ -655,6 +685,21 @@ export async function captureActivePageRegion(
   return await captureSelectedRegion(tab, region, signal);
 }
 
+export function isTrustedPanelPort(port: chrome.runtime.Port, runtimeId: string): boolean {
+  if (port.name !== PANEL_PORT_NAME || port.sender?.id !== runtimeId || !port.sender.url) {
+    return false;
+  }
+  const expectedPrefix = `chrome-extension://${runtimeId}/`;
+  if (!port.sender.url.startsWith(expectedPrefix)) {
+    return false;
+  }
+  try {
+    return new URL(port.sender.url).pathname === '/src/panel/index.html';
+  } catch {
+    return false;
+  }
+}
+
 function errorStreamEvent(error: unknown, requestId?: string): Envelope<StreamEvent> {
   return createEnvelope('STREAM_EVENT', {
     requestId: requestId ?? crypto.randomUUID(),
@@ -682,7 +727,7 @@ export function registerPanelPortBridge(
   );
   const searchSnapshots = new SearchSnapshotStore(chrome.storage.session);
   chrome.runtime.onConnect.addListener((port) => {
-    if (port.name !== PANEL_PORT_NAME) {
+    if (!isTrustedPanelPort(port, chrome.runtime.id)) {
       port.disconnect();
       return;
     }
@@ -826,6 +871,13 @@ export function registerPanelPortBridge(
           createEnvelope(
             'REPOSITORY_ANALYSIS_STATE',
             panelRepositoryAnalysisStateSchema.parse(state),
+          ),
+        ),
+      emitOperationConfirmationState: (state) =>
+        messenger.post(
+          createEnvelope(
+            'OPERATION_CONFIRMATION_STATE',
+            panelOperationConfirmationStateSchema.parse(state),
           ),
         ),
     });

@@ -178,5 +178,4 @@ describe('Capability probe', () => {
     expect(report.selectedModels.visionModel).toBe('openrouter/free');
     expect(report.checks.vision?.detail).toContain('备用模型');
   });
-
 });

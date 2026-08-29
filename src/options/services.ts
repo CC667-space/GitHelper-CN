@@ -1,4 +1,5 @@
 import {
+  optionsInvalidateProbesRequestSchema,
   optionsProviderStateRequestSchema,
   optionsResetLocalStateRequestSchema,
   optionsRunProbesRequestSchema,
@@ -63,17 +64,26 @@ async function loadProviders(): Promise<ProviderRuntimeView[]> {
   }).payload.providers;
 }
 
+async function invalidateProviderProbes(providerId?: ProviderId): Promise<void> {
+  await runtimeRequest(
+    'OPTIONS_INVALIDATE_PROVIDER_PROBES',
+    optionsInvalidateProbesRequestSchema.parse({ providerId }),
+  );
+}
+
 export const defaultOptionsServices: OptionsServices = {
   loadProviders,
   saveKey: (providerId, apiKey, baseUrl) =>
     createProviderCredentialActions(
       { write: writeCredential, delete: deleteCredential },
       providerHostAccess(),
+      invalidateProviderProbes,
     ).save(providerId, apiKey, baseUrl),
   deleteKey: (providerId) =>
     createProviderCredentialActions(
       { write: writeCredential, delete: deleteCredential },
       providerHostAccess(),
+      invalidateProviderProbes,
     ).delete(providerId),
   saveModels: async (providerId, setting) => {
     const store = providerSettingsStore();
@@ -84,7 +94,10 @@ export const defaultOptionsServices: OptionsServices = {
       providerId === 'custom' ? (await store.read()).providers.custom.baseUrl : undefined;
     if (providerId === 'custom' && previous && previous !== current) {
       await deleteCredential('custom');
+      await invalidateProviderProbes('custom');
       await providerHostAccess().remove('custom', previous);
+    } else {
+      await invalidateProviderProbes(providerId);
     }
   },
   importProviderSettings: async (source) => {
@@ -93,7 +106,10 @@ export const defaultOptionsServices: OptionsServices = {
     const imported = await store.importJson(source);
     if (previous && previous !== imported.providers.custom.baseUrl) {
       await deleteCredential('custom');
+      await invalidateProviderProbes();
       await providerHostAccess().remove('custom', previous);
+    } else {
+      await invalidateProviderProbes();
     }
   },
   exportProviderSettings: () => providerSettingsStore().exportJson(),

@@ -1,4 +1,5 @@
 import {
+  optionsInvalidateProbesRequestSchema,
   optionsProviderStateRequestSchema,
   optionsResetLocalStateRequestSchema,
   optionsRunProbesRequestSchema,
@@ -31,6 +32,15 @@ export function registerOptionsRouter(runtime: ProviderRuntime): void {
             return sanitizeUnknown({
               providers: await runtime.views(),
             }).value;
+          },
+        },
+        OPTIONS_INVALIDATE_PROVIDER_PROBES: {
+          source: 'extension',
+          payloadSchema: optionsInvalidateProbesRequestSchema,
+          handler: async (payload) => {
+            const { providerId } = optionsInvalidateProbesRequestSchema.parse(payload);
+            await runtime.invalidateProbeState(providerId);
+            return {};
           },
         },
         OPTIONS_RESET_LOCAL_STATE: {

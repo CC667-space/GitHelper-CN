@@ -4,6 +4,9 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $distPath = Join-Path $projectRoot 'dist'
 $artifactsPath = Join-Path $projectRoot 'artifacts'
 $packageJsonPath = Join-Path $projectRoot 'package.json'
+$licensePath = Join-Path $projectRoot 'LICENSE'
+$thirdPartyNoticesPath = Join-Path $projectRoot 'THIRD_PARTY_NOTICES.txt'
+$noticeGeneratorPath = Join-Path $PSScriptRoot 'generate-third-party-notices.mjs'
 $packageJson = Get-Content -Raw -Encoding UTF8 -LiteralPath $packageJsonPath | ConvertFrom-Json
 $version = [string]$packageJson.version
 
@@ -27,6 +30,17 @@ if ([string]$manifest.version -ne $version) {
   throw "版本不一致：package.json=$version，dist/manifest.json=$($manifest.version)"
 }
 
+& node $noticeGeneratorPath
+if ($LASTEXITCODE -ne 0) {
+  throw '生成 THIRD_PARTY_NOTICES.txt 失败'
+}
+foreach ($legalFile in @($licensePath, $thirdPartyNoticesPath)) {
+  if (-not (Test-Path -LiteralPath $legalFile)) {
+    throw "发布包缺少法律文件：$legalFile"
+  }
+  Copy-Item -LiteralPath $legalFile -Destination $distPath -Force
+}
+
 $requiredIcons = @(
   'icons\icon-16.png',
   'icons\icon-32.png',
@@ -46,14 +60,63 @@ foreach ($oldPath in @($archivePath, $checksumPath, $legacyArchivePath)) {
   }
 }
 
-Compress-Archive -Path (Join-Path $distPath '*') -DestinationPath $archivePath -CompressionLevel Optimal
-
+Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
+$fixedTimestamp = [DateTimeOffset]::new(1980, 1, 1, 0, 0, 0, [TimeSpan]::Zero)
+$resolvedDistPath = (Resolve-Path -LiteralPath $distPath).Path.TrimEnd('\')
+$sourceFiles = @(
+  Get-ChildItem -LiteralPath $distPath -Recurse -File |
+    ForEach-Object {
+      if (-not $_.FullName.StartsWith("$resolvedDistPath\", [StringComparison]::OrdinalIgnoreCase)) {
+        throw "发布文件越出 dist：$($_.FullName)"
+      }
+      [PSCustomObject]@{
+        FullName = $_.FullName
+        RelativePath = $_.FullName.Substring($resolvedDistPath.Length + 1).Replace('\', '/')
+      }
+    } |
+    Sort-Object -Property RelativePath
+)
+
+$archiveStream = [System.IO.File]::Open($archivePath, [System.IO.FileMode]::CreateNew)
+$zipWriter = [System.IO.Compression.ZipArchive]::new(
+  $archiveStream,
+  [System.IO.Compression.ZipArchiveMode]::Create,
+  $false
+)
+try {
+  foreach ($sourceFile in $sourceFiles) {
+    $entry = $zipWriter.CreateEntry(
+      $sourceFile.RelativePath,
+      [System.IO.Compression.CompressionLevel]::Optimal
+    )
+    $entry.LastWriteTime = $fixedTimestamp
+    $entryStream = $entry.Open()
+    $inputStream = [System.IO.File]::OpenRead($sourceFile.FullName)
+    try {
+      $inputStream.CopyTo($entryStream)
+    }
+    finally {
+      $inputStream.Dispose()
+      $entryStream.Dispose()
+    }
+  }
+}
+finally {
+  $zipWriter.Dispose()
+  $archiveStream.Dispose()
+}
+
 $archive = [System.IO.Compression.ZipFile]::OpenRead($archivePath)
 try {
   $entryNames = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
   if ($entryNames -notcontains 'manifest.json') {
     throw '扩展包根目录缺少 manifest.json'
+  }
+  foreach ($legalEntry in @('LICENSE', 'THIRD_PARTY_NOTICES.txt')) {
+    if ($entryNames -notcontains $legalEntry) {
+      throw "扩展包缺少法律文件：$legalEntry"
+    }
   }
   foreach ($icon in $requiredIcons) {
     $normalizedIcon = $icon.Replace('\', '/')

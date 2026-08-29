@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "generate:icons": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-extension-icons.ps1",
+    "notices:generate": "node scripts/generate-third-party-notices.mjs",
     "scan:build": "node scripts/scan-build-safety.mjs",
     "test:e2e": "node scripts/run-phase11-e2e.mjs",
     "package:extension": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-extension.ps1",

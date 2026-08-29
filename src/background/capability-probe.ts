@@ -75,8 +75,7 @@ export async function runCapabilityProbe(
     (configuredVisionMetadata !== undefined &&
       !configuredVisionMetadata.inputModalities?.includes('image'));
   const selectedVisionModel = shouldSelectVisionModel
-    ? (models.find((model) => model.inputModalities?.includes('image'))?.id ??
-      options.visionModel)
+    ? (models.find((model) => model.inputModalities?.includes('image'))?.id ?? options.visionModel)
     : options.visionModel;
 
   let text = false;
@@ -132,9 +131,7 @@ export async function runCapabilityProbe(
   let vision = false;
   let resolvedVisionModel = selectedVisionModel;
   if (selectedVisionModel && options.sampleImageDataUrl) {
-    const tryVisionModel = async (
-      model: string,
-    ): Promise<{ passed: boolean; detail: string }> => {
+    const tryVisionModel = async (model: string): Promise<{ passed: boolean; detail: string }> => {
       try {
         const response = await provider.chat(
           request(`probe:vision:${crypto.randomUUID()}`, model, '图片中是什么颜色？', {

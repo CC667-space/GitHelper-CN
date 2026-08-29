@@ -33,6 +33,9 @@ describe('credential-store', () => {
 
     await options.write('deepseek', apiKey);
     await expect(background.getMask('deepseek')).resolves.toBe('••••3456');
+    await expect(background.getRevision('deepseek')).resolves.toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u,
+    );
     const headers = await background.injectAuthorization('deepseek', {
       Accept: 'application/json',
     });
@@ -41,6 +44,27 @@ describe('credential-store', () => {
 
     await options.delete('deepseek');
     await expect(background.read('deepseek')).resolves.toBeUndefined();
+  });
+
+  it('每次重写 Key 都生成新的非秘密修订号，旧凭据仍有稳定兼容修订号', async () => {
+    const area = new MemoryCredentialArea();
+    const options = createOptionsCredentialStore(area);
+    const background = createBackgroundCredentialStore(area);
+
+    await options.write('deepseek', 'deepseek-test-key-one');
+    const first = await background.getRevision('deepseek');
+    await options.write('deepseek', 'deepseek-test-key-two');
+    const second = await background.getRevision('deepseek');
+
+    expect(first).toBeTruthy();
+    expect(second).toBeTruthy();
+    expect(second).not.toBe(first);
+
+    area.values['credential:provider:deepseek'] = {
+      providerId: 'deepseek',
+      apiKey: 'legacy-deepseek-key',
+    };
+    await expect(background.getRevision('deepseek')).resolves.toBe('legacy-v1');
   });
 
   it('批量删除只移除目录内全部 Provider 凭据', async () => {

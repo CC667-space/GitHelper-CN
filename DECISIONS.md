@@ -7,37 +7,44 @@
 ---
 
 ## D-001 语言与类型：TypeScript（strict）
+
 - **决策**：全项目 TypeScript，`strict: true`。
 - **理由**：消息在 content/background/panel 间传递，强类型能在编译期挡住大量结构错误；执行 Agent 修 TS 错误比修运行时 bug 便宜。
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-002 构建工具：Vite + `@crxjs/vite-plugin`
+
 - **决策**：用 Vite 打包，CRXJS 插件处理 MV3 manifest、HMR、多入口（background/content/panel/options）。
 - **理由**：MV3 多入口手写 Rollup 配置成本高；CRXJS 是当前社区最成熟的 MV3 + Vite 方案，支持热重载，显著加快原型迭代。备选（webpack、手写 esbuild）配置更重，收益不明显。
 - **回退**：若 CRXJS 与 MV3 未来版本冲突，回退到 Vite 手写多入口 + `manifest.json` 静态维护。
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-003 UI 框架：React 18 + TypeScript
+
 - **决策**：Side Panel 与 Options 页用 React 18 函数组件 + Hooks。
 - **理由**：Side Panel 有会话列表、消息流、设置表单等有状态 UI，React 生态与招聘/AI 生成代码支持最好；对非专业前端也最易读。备选 Vue/Svelte 同样可行，选 React 纯粹因生态与 Agent 友好度。
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-004 样式：Tailwind CSS
+
 - **决策**：Tailwind 原子类，少量全局 CSS 变量控制主题。
 - **理由**：扩展 UI 小而多，Tailwind 免去命名与切文件，AI 生成一致性高。
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-005 状态管理：Zustand + chrome.storage 持久化封装
+
 - **决策**：面板内轻状态用 Zustand；跨上下文持久数据走统一 `storage` 封装（chrome.storage.local）。
 - **理由**：Redux 对本项目过重；Zustand 极简、无 boilerplate，适合 MVP。持久层单独封装以便未来迁移。
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-006 存储：chrome.storage.local 统一封装（带 schema 版本号）
+
 - **决策**：所有持久数据经 `lib/storage` 读写，每类数据带 `schemaVersion`，预留迁移函数。
 - **理由**：MV3 Service Worker 随时休眠，内存态不可靠，必须落 storage；版本号防止未来数据结构变更破坏旧数据。
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-007 AI Provider 抽象：公共协议骨架 + 独立适配器 + 能力探针（v1.2 修订）
+
 - **决策（v1.2 修订版，由 D-021 补充、D-030 定稿）**：
   - 定义公共 `Provider` 协议骨架（`chat()` / `chatStream()` / `abort()` / capabilities 声明），基于 OpenAI 兼容 `chat/completions` 组装请求。
   - 每个 Provider（DeepSeek / UUAPI / OpenRouter）是**独立适配器**，可各自覆写：请求头、模型名映射、流式解析差异、工具调用格式、错误/限流响应格式、usage 字段差异。
@@ -47,6 +54,7 @@
 - 状态：冻结（v1.2 替代原 D-007；模型名策略见 D-034）｜ 2026-07-24
 
 ## D-008 Provider 路由 + 手动切换（含用户补充）
+
 - **决策**：
   - 默认路由：**文本 → DeepSeek**（成本最低）；**视觉 → UUAPI**（DeepSeek 不支持图像）；**兜底 → OpenRouter**。
   - **手动切换（用户明确要求）**：设置页可**分别配置**"文本 Provider"和"视觉 Provider"；Side Panel 顶部提供 **Provider 下拉**，用户可随时手动指定当前对话使用哪家 + 哪个 model。**手动选择优先级高于默认路由**。
@@ -55,6 +63,7 @@
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-009 API Key 处理：BYOK + 可信上下文隔离存储（v1.1 修订，P0-1/P0-2）
+
 - **决策**：
   - Key 仅存 `chrome.storage.local`，初始化即 `setAccessLevel('TRUSTED_CONTEXTS')`，Content Script 无访问权。
   - 凭据用独立结构 `ProviderCredential` + 独立接口 `credential-store`（唯一明文读取点；v1.2 由 D-028 细化：Options 只 write/delete、Background 只 read/inject、Content 禁止导入）；不进 UI 状态/Session/日志/导出/消息载荷。
@@ -65,6 +74,7 @@
 - 状态：冻结（v1.1 替代原 D-009）｜ 2026-07-24
 
 ## D-010 GitHub 数据获取：DOM 优先 + 匿名 REST API，v1 无 Token（v1.1 修订，P0-7）
+
 - **决策**：
   - 页面能读的优先 DOM；结构化数据走 GitHub REST API，**匿名调用**（core 60 次/小时；search 独立且更低配额，分桶见 D-032）。
   - 缓解限额：本地缓存 + 按 resource 分桶节流（D-032 细化）+ 超限降级纯 DOM 并提示。
@@ -74,15 +84,18 @@
 - 状态：冻结（v1.1 替代原 D-010）｜ 2026-07-24
 
 ## D-011 DOM 解析策略：按页面类型的解析器 + 稳定选择器优先
+
 - **决策**：以 URL + 页面特征识别页面类型（repo/issue/pr/releases/blob/search 等），每类型一个 parser 模块；选择器优先用语义/ARIA/稳定属性，避免依赖易变 class；解析失败要降级不报错。
 - **理由**：GitHub 会改版，解析必须容错、可局部替换。
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-012 视觉模型策略：结构化不足才截图，局部优先
+
 - **决策**：仅当 DOM/API 无法获取（图片/流程图/canvas/特殊渲染/用户明确框选视觉关系）时，截**局部**图调用视觉 Provider；调用前提示消耗额度；设置可全局关闭视觉。
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-013 工具调用：白名单 + 参数 schema 校验（v1.2 修订：openPage 拆分限域）
+
 - **决策**：模型只能调用预定义白名单工具，每工具参数用 zod 校验，越权/写操作类工具 v1 不提供。
 - **v1.2 修订（导航工具拆分）**：
   - 原 `openPage` 拆为：`openGitHubPage`（仅 `https://github.com/*`，navigation 类）+ `openExternalLink`（外部链接，逐次确认 external 类）+ 下载类操作（逐次确认 download 类）。
@@ -91,27 +104,33 @@
 - 状态：冻结（v1.2 修订）｜ 2026-07-24
 
 ## D-014 测试：Vitest（单元/组件）+ Playwright（扩展集成，后期）
+
 - **决策**：逻辑与解析用 Vitest + jsdom/fixtures；扩展端到端用 Playwright（`--load-extension`），集成测试在后期阶段引入，不阻塞早期。
 - **理由**：Vitest 与 Vite 同源、快；Playwright 是 MV3 E2E 事实标准。
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-015 校验库：zod
+
 - **决策**：工具参数、存储数据、Provider 配置统一用 zod 校验。
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-016 日志：分级 logger 封装 + 开发/生产开关
+
 - **决策**：`lib/logger` 统一封装（debug/info/warn/error），生产默认只 warn/error；**日志绝不记录 API Key / Token / 完整页面内容**。
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-017 代码规范：ESLint + Prettier + TypeScript strict
+
 - **决策**：ESLint（含 `@typescript-eslint`）+ Prettier，CI 前置检查。
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-018 包管理与 Node：pnpm + Node LTS
+
 - **决策**：pnpm（磁盘友好、快）；Node 版本锁 `.nvmrc` / `package.json#engines`。
 - 状态：冻结 ｜ 2026-07-23
 
 ## D-019 国际化：v1 仅中文（zh-CN），但文案集中化
+
 - **决策**：UI 文案集中在 `locales/zh-CN`，为未来多语言留结构，但 v1 不做多语言切换。
 - **理由**：目标用户是中文用户，多语言是非目标；集中化只为可维护。
 - 状态：冻结 ｜ 2026-07-23
@@ -121,21 +140,25 @@
 # v1.1 定向修订新增决策（2026-07-24，依据《修订任务单》）
 
 ## D-020 固定 Provider 端点，v1 禁自定义 Base URL（P0-3）
+
 - **决策**：v1 仅支持三个预定义 API Host（`api.deepseek.com` / `uuapi.net` / `openrouter.ai`）。用户可填 Key、可选 model，**不能修改 Base URL**。manifest host 权限静态列举这三域 + github 两域，闭合一致。
 - **理由**："任意 Base URL"与"少量固定 host 权限"不兼容；个人 MVP 固定端点最简单且安全。自定义端点延后（届时须 `optional_host_permissions` + 运行时授权 + HTTPS 强制 + 精确域名校验，属基线变更）。
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-021 Provider Capability 模型 + 能力探针（P0-6；对 D-007 的能力验证补充）
+
 - **决策**：每个 Provider 声明 `ProviderCapabilities`（streaming/vision/toolCalls/structuredOutput/usage/abort/imageInputFormat/toolCallStreamingFormat/errorResponseFormat）。首次 Provider 阶段（Phase 4）运行**能力探针**：文本、流式、取消、图片输入、工具调用、结构化输出、错误与限流响应。探针结果写入 `capabilities.probedAt`，**未经探针验证的能力不得写成既定事实**；structuredOutput 不可用时降级为 prompt 约束 + 本地 zod 校验重试。
 - **与 D-007 的关系**：D-007（v1.2）定义"公共协议骨架 + 独立适配器"，D-021 提供其能力验证机制；两者共同替代原 D-007 "差异仅在 baseURL/model/headers" 的过窄假设。
 - **理由**："OpenAI 兼容"是宣传口径，不同中转端点在流式工具调用、结构化输出、usage 返回上差异真实存在。
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-022 v1 移除 GitHub Token 与私有仓库支持（P0-7）
+
 - **决策**：见 D-010（v1.1 修订）。数据模型删除 `GitHubTokenConfig`；偏好删除 `allowPrivateRepos`；删除相关设置界面与确认节点。
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-023 Git 基线、阶段提交与回滚（P0-8）
+
 - **决策**：
   - `C:\AI_GitHelper-CN` = 唯一项目根 = 唯一本地 Git 仓库根，禁止嵌套项目根。
   - 执行 Agent 首轮：若非 Git 仓库则 `git init` + 建 `.gitignore`（node_modules/、dist/、.env、.env.*、密钥文件、临时截图、测试输出、构建缓存、浏览器本地数据副本）+ 把冻结规划文件作为基线提交。
@@ -146,18 +169,22 @@
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-024 操作策略收紧 + 高风险不可永久放行（C-3）
+
 - **决策**：`operationPolicy` 类型收紧为 `navigation/search: 'auto'|'confirm'`，`downloads: 'confirm'|'deny'`（无 auto），`accountChanges: 'deny'`（固定，v1 无账号写入）。确认弹窗只有 [允许本次]/[拒绝]，**无"始终允许该类"**。
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-025 规划文件唯一权威 + Claude_Prompt 降级（C-1）
+
 - **决策**：8 份规划文件只在根目录保留唯一版本，不复制到 `docs/`（docs 只放派生使用文档）。`Claude_Prompt.md` 移至 `references/`，仅历史追溯；冲突时以基线→AGENTS→SECURITY→EXECUTION_PLAN→ACCEPTANCE 顺序裁决。
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-026 存储分区与容量淘汰（P1-1）
+
 - **决策**：storage.session 放即时页面状态；storage.local（TRUSTED_CONTEXTS）放偏好/配置/索引/摘要/凭据（独立前缀）；IndexedDB 预留（逼近配额才启用）；截图不持久保存。限额与淘汰顺序见 ARCHITECTURE §8；`getBytesInUse()` 写入前检查。
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-027 消息协议安全（P1-3）
+
 - **决策**：统一信封含协议版本/请求 ID/固定 type；收端 zod 校验 + sender 来源检查 + 最大载荷 + 超时 + 类型化错误；SW 拒绝代 fetch 任意 URL（域名白名单）；凭据永不进消息。
 - 状态：冻结 ｜ 2026-07-24
 
@@ -166,6 +193,7 @@
 # v1.2 最终定点修订新增决策（2026-07-24）
 
 ## D-028 凭据录入与保存路径（细化 D-009R）
+
 - **决策**：
   - `credential-store` 为**仅可信扩展上下文可导入**的共享模块，职责按上下文分离：**Options 只 write/delete；Background 只 read/inject（Header 注入路径唯一）**；Content Script **禁止导入**。
   - 双重保护：运行时 `storage.local` TRUSTED_CONTEXTS 访问级 + 构建期 lint/import 边界（禁止 `src/content/**` 引用 credential-store）。
@@ -175,6 +203,7 @@
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-029 截图坐标换算由 Phase 0 探针 B 实测定稿
+
 - **决策**：
   - 删除规划期写死的"矩形 × dpr × 缩放，扣除滚动偏移"公式；**最终换算方法以 Phase 0 探针 B 真实环境实测结论为准**（记入 `scripts/probe-results.md` 并回写 ARCHITECTURE §3.5）。
   - 探针首选假设：`scaleX = 截图实际像素宽 / 视口 CSS 宽`（`scaleY` 同理），天然吸收 DPI/缩放/Side Panel 挤压的综合影响。
@@ -184,11 +213,13 @@
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-030 D-007 修订定稿：公共协议骨架 + 独立适配器
+
 - **决策**：正式作废 D-007 原表述"Provider 差异仅在 baseURL/model/headers"；定稿为**公共协议骨架（chat/chatStream/abort/capabilities）+ 每 Provider 独立适配器（可覆写请求头/模型映射/流式解析/工具调用格式/错误格式/usage 差异）+ D-021 能力探针验证**。
 - **关系标注**：D-007（v1.2 修订版）为接口定义，D-021 为能力验证机制，D-030 记录本次修订关系。
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-031 Phase 4 Provider 可用性判定与降级（不因单家失败阻塞 MVP）
+
 - **决策**：
   - **代码完成度要求**：三个 Provider 适配器 + Mock 测试**必须全部完成**（不受真实端点可用性影响）。
   - **真实端点要求**：MVP 只强制**至少一个文本 Provider + 一个视觉 Provider** 经真实探针可用。
@@ -198,6 +229,7 @@
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-032 GitHub API 限流按 resource 分桶 + 禁持续指数重试
+
 - **决策**：
   - 区分 `core` / `search` / `code_search` 三类独立配额（GitHub 匿名限额各不相同），按 `X-RateLimit-Resource` 头归桶。
   - 每桶读取 `X-RateLimit-Remaining` / `X-RateLimit-Reset` 与 `Retry-After` 头维护本地节流状态。
@@ -207,6 +239,7 @@
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-033 数据清除三分
+
 - **决策**：Options 页提供三个**独立**清除操作：
   1. 清除会话/偏好（**不删除**任何 Provider Key）；
   2. 单独删除某 Provider 的 API Key（经 credential-store delete）；
@@ -216,6 +249,7 @@
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-034 DeepSeek 模型策略（精确化 D-007 联网核实结论）
+
 - **决策**：
   - **精确事实（联网核实 2026-07-24，来源：DeepSeek 官方 API Change Log）**：`deepseek-chat` 与 `deepseek-reasoner` 别名于 **2026-07-24 15:59 UTC 起完全停用**（此前过渡期分别映射到 `deepseek-v4-flash` 的非思考/思考模式）。**DeepSeek Provider 不得依赖这两个别名**。
   - DeepSeek 官方端点**推荐预填模型：`deepseek-v4-flash`**（成本低、速度快、简单 Agent 任务表现足够）；同时保留 **`deepseek-v4-pro`** 供复杂任务选择（模型下拉可选）。
@@ -223,11 +257,13 @@
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-035 manifest 最低浏览器版本
+
 - **决策**：manifest 声明 `"minimum_chrome_version": "114"`。
 - **理由**：Side Panel API 需 Chrome ≥114；`storage.local.setAccessLevel` 需 ≥102，114 一并覆盖。声明后低版本浏览器直接拒装，避免运行时才发现 API 缺失。
 - 状态：冻结 ｜ 2026-07-24
 
 ## D-036 Phase 0 截图换算与最小权限定稿
+
 - **决策**：
   - 截图坐标使用 `scaleX = capturedWidth / viewport.cssWidth`、`scaleY = capturedHeight / viewport.cssHeight`，矩形各分量分别乘对应比例并四舍五入，随后 clamp 到截图边界。
   - `getBoundingClientRect()` 产生的视口坐标不扣 scroll、不做 GitHub 固定页头补偿。
@@ -236,12 +272,14 @@
 - 状态：已验证 ｜ 2026-07-24
 
 ## D-037 CRXJS/Vite 多入口 basename 唯一化
+
 - **决策**：MV3 Background 与 Content 构建入口使用唯一 basename：`service-worker.ts` / `content-script.ts`；当前 CRXJS 2.7.1 + Vite 8.1.5 生产构建关闭 sourcemap。
 - **理由**：实测两个入口都名为 `index.ts` 时，CRXJS 产物名碰撞会让 `service-worker-loader.js` 错误导入 Content bundle；开启 sourcemap 时 Content IIFE 尾部会被拼入 `sourceMappingURL` 行注释导致语法错误。唯一入口名与关闭 sourcemap 后，实际 loader、注入、SW 消息和截图链路全部通过。
 - **范围**：仅构建兼容调整，不改变模块职责、权限、安全边界或 MVP。
 - 状态：已验证 ｜ 2026-07-24
 
 ## D-038 OpenRouter 视觉 fallback
+
 - **决策**：
   - OpenRouter 文本默认保留 `~openai/gpt-latest`；视觉默认/fallback 使用 `openrouter/free`。
   - 视觉探针先验证已配置型号；若报错或返回空内容，则尝试明确 fallback。fallback 通过后保存实际视觉型号，后续 Panel 不再继续使用已失败型号。
@@ -251,6 +289,7 @@
 - 状态：已验证 ｜ 2026-07-24
 
 ## D-039 DeepSeek V4 默认使用非思考模式
+
 - **决策**：
   - DeepSeek 适配器对 `deepseek-v4-flash` / `deepseek-v4-pro` 请求显式发送 `thinking: { type: "disabled" }`；v1 不把 Thinking 隐式作为默认能力。
   - Options 增加单 Provider 能力复测入口；指定单家时只调用该 Provider，并保留其他 Provider 已持久化的探针结果。
@@ -261,6 +300,7 @@
 - 状态：已验证 ｜ 2026-07-24
 
 ## D-040 Side Panel 产品入口、连接代际与输入语义
+
 - **决策**：
   - 单击扩展 action 或执行 `Alt+Shift+G` 时，直接对当前标签调用 `chrome.sidePanel.open()`；Phase 0 技术探针不再复用产品打开入口，只能由明确探针消息触发。
   - Panel 的长连接回调与当前 React effect 代际绑定；effect 清理后到达的旧 `onDisconnect` 不得覆盖新连接状态。
@@ -271,6 +311,7 @@
 - 状态：已验证 ｜ 2026-07-24
 
 ## D-041 MV3 Port 断线自动恢复
+
 - **决策**：
   - Panel 将 Background port 的 `onDisconnect` 视为可恢复状态，而不是会话终态；先标记离线，再自动建立新 port。
   - 重连从 250ms 开始指数退避，最高 5s；任一时刻只允许一个重连计时器。重连成功后归零退避次数，并由新 Service Worker 连接重新下发 Provider 状态。
@@ -282,6 +323,7 @@
 - 状态：已验证 ｜ 2026-07-24
 
 ## D-042 助手回答安全 Markdown/GFM 渲染
+
 - **决策**：
   - 助手回答使用固定版本 `react-markdown@10.1.0` + `remark-gfm@4.0.1` 渲染标题、段落、列表、强调、引用、代码和表格；用户消息保持纯文本。
   - 禁用原始 HTML；图片不创建 `<img>`、只显示“远程图片已阻止”占位；链接不创建可点击 `<a>`、只显示带目标提示的文本。
@@ -292,6 +334,7 @@
 - 状态：代码已验证 ｜ 2026-07-24
 
 ## D-043 会话集合、页面关联与有限历史
+
 - **决策**：
   - Background 以版本化 `sessions:v1` 集合独占会话持久化；Panel 不直接读写会话，只接收经 zod 校验的 `SESSION_STATE` 投影。
   - 当前 URL 精确匹配优先；同仓库 SPA/页面切换继续最近会话并更新 `pageUrl/pageType`；跨仓库自动隔离为新会话。此规则消解 ARCHITECTURE 3.6 与 3.10 对“同仓库但页面类型变化”的歧义，以 repository 作为会话关联主边界。
@@ -302,6 +345,7 @@
 - 状态：代码已验证 ｜ 2026-07-24
 
 ## D-044 偏好运行时约束与全清内存复位
+
 - **决策**：
   - `preferences:v1` 读写均经 zod 严格校验；`downloads` 只允许 `confirm|deny`，`accountChanges` 只允许字面量 `deny`，非法持久数据回退安全默认值，非法写入直接拒绝。
   - D-033“清除全部本地数据”先经 credential-store 批量删除三个 Provider Key，再清空其余 local storage；随后通知 Background 清除内存中的探针、禁用状态和手动路由。
@@ -311,6 +355,7 @@
 - 状态：代码已验证 ｜ 2026-07-24
 
 ## D-045 点击选择事件边界与 SPA 失效
+
 - **决策**：
   - Content `PickController` 在捕获阶段监听 pointermove/click/keydown；高亮叠层 `pointer-events:none`，只有用户完成选择时才 `preventDefault` 并停止原页面点击。Escape、Panel 取消、SPA 失效或 Panel 断开均退出并清理。
   - 嵌套节点归一到最近的链接、按钮或表单控件；SelectedElement 只保留 allowlist 属性，password input 不读取 value。
@@ -322,6 +367,7 @@
 - 状态：代码已验证 ｜ 2026-07-24
 
 ## D-046 区域结构充分性与可信截图预算
+
 - **决策**：
   - Content 与 Background 共用确定性结构充分性规则：提取文字 ≥80 字符、任一代码块 ≥8 字符、或链接+按钮 ≥2，满足任一即只发结构化文本；否则 `needsVision=true`。消息 zod 校验布尔值与内容一致，防止意外触发或跳过付费视觉。
   - Content 只上报结构、视口矩形、viewport/scroll/dpr/zoom 与 `sourceUrl`；Background 截图前重新校验活动 GitHub tab URL，使用 D-036 比例法换算且不扣 scroll。
@@ -333,6 +379,7 @@
 - 状态：代码已验证 ｜ 2026-07-24
 
 ## D-047 中文搜索采用确定性本地转换与持久化分桶
+
 - **决策**：
   - Phase 8 中文搜索先用本地确定性转换器把自然语言编译为 GitHub query；支持 `language/stars/topic/repo/is/label/pushed/archived` 等 MVP 限定词，并保留严格只读的转换 Prompt 契约供未来扩展。当前搜索不调用 AI Provider，不产生隐藏模型费用。
   - `searchRepos/searchIssues` 作为只读工具经 zod 严格参数校验，只访问固定 `https://api.github.com/search/repositories|issues`；响应投影和 Panel 消息均限制字段、条数与长度。
@@ -344,6 +391,7 @@
 - 状态：初始实现已验证；“不调用 Provider”部分后由 D-060 经用户授权修订，其余限流与只读边界继续有效 ｜ 2026-07-28
 
 ## D-048 仓库分析采用事实层与解释层分离
+
 - **决策**：
   - `RepositoryAnalysisCard` 为固定本地 Schema。Star/Fork/Watch、Release、日期、归档、许可证、Issue/PR 与语言比例属于**事实层**，只能由公开 DOM/匿名 GitHub API 写入；Provider 只生成用途、平台、安装建议、难度、风险与下一步，最终组装时不能覆盖事实字段。
   - core 聚合固定访问仓库详情、languages、latest release、open pulls；`open_issues_count - openPullRequests` 得到开放 Issue。完整结果内存缓存 5 分钟；部分失败保留已取得事实，限流缓存不超过 retryAt，core 阻断时直接使用 DOM。
@@ -355,6 +403,7 @@
 - 状态：代码与真实匿名 API 已验证 ｜ 2026-07-24
 
 ## D-049 安全策略集中到脱敏、消息与工具三个执行 seam
+
 - **决策**：
   - `sanitizer` 扩展为字符串模式与结构化敏感键名双层遮蔽，覆盖常见 API/GitHub/云密钥、Authorization、JWT、URL 凭据、私钥、env、Cookie/密码与 PII；循环对象安全终止，发现类型按类别汇总。消息 Router 复用相同敏感键名判定，普通消息中的嵌套凭据字段在 handler 前拒绝。
   - 全部冻结只读工具统一进入 `ToolRegistry`：工具名白名单、每工具 strict zod Schema、执行器注册和确认策略在同一 seam 完成。`SearchToolRegistry` 仅开放搜索子集；GitHub 导航精确限制为 HTTPS `github.com`，外链必须为不含 URL userinfo 的 HTTPS 且逐次确认；写操作、账号操作和下载工具不注册。
@@ -366,6 +415,7 @@
 - 状态：代码已验证 ｜ 2026-07-24
 
 ## D-050 Phase 11 浏览器验收采用隔离 fixture E2E 与可校验本地包
+
 - **决策**：
   - Playwright E2E 加载真实 `dist` MV3 扩展和项目锁定的 Chrome for Testing，临时 profile 仅位于 Git 忽略的 `probe-artifacts/`。`github.com` 与 `api.github.com` 请求在浏览器上下文中用固定 fixture 响应，确保不依赖账号、实时网络或匿名限额，也不调用 AI Provider。
   - Options 页真实用户点击必须先成功执行 `chrome.sidePanel.open()`。因当前 Chrome for Testing 不把原生 Side Panel target 暴露为 Playwright `Page`，自动 DOM 断言使用同一扩展进程的 Panel 文档；Background/Content/storage/消息链与生产 bundle 不替换。原生 Side Panel 交互保留给唯一人工批量复核。
@@ -377,6 +427,7 @@
 - 状态：自动验收已验证，待人工批量体验复核 ｜ 2026-07-24
 
 ## D-051 对话问题在 Session 与 Provider seam 之前统一脱敏
+
 - **决策**：`PanelBridge` 校验 `PANEL_MESSAGE` 后立即对用户问题执行一次 `sanitizeText`；SessionStore 准备/持久化、Panel 会话快照和 Provider runtime 都只接收脱敏结果。Panel 的乐观原文状态随后由 Background 返回的脱敏 Session 快照替换。
 - **理由**：ContextBuilder 原本能保证 Provider 请求体脱敏，但 SessionStore 位于其之前；用户若误把凭据粘进提问，原文可能进入本地持久化。把脱敏前移到消息桥公共 seam，可同时保护持久化和出站，而不让 SessionStore 导入 Provider/凭据逻辑。
 - **证据**：安全测试从 `PanelBridge.dispatch` 验证 Session question、Provider question 与回推状态均无假 Key 明文；Playwright E2E 发送假 Key 后，`chrome.storage.local` 和 Panel 重载结果均只有 `‹REDACTED:API_KEY›`。
@@ -384,6 +435,7 @@
 - 状态：代码与浏览器 E2E 已验证 ｜ 2026-07-24
 
 ## D-052 Phase 11 人工复核补丁统一问答状态与紧凑交互
+
 - **决策**：
   - System Prompt 增加回答风格契约：结论先行、只保留必要依据，普通回答默认控制在 400 个中文字符内；复杂任务最多 6 个短要点，用户明确要求教程、详细解释或完整代码时才展开。禁止寒暄、复述问题、重复结论、泛化总结与礼貌收尾，但准确性和必要不确定性说明优先。
   - 分析区与问答区都可独立收起/展开。点击/框选成功后，Panel 显示明确的“下一步：输入问题”操作，展开问答并聚焦输入框。
@@ -396,6 +448,7 @@
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-27
 
 ## D-053 仓库分析以受限文件证据为主，问答与会话删除逐次确认
+
 - **决策**：
   - 一键分析除原有 API 事实外，使用固定 `api.github.com/repos/{owner}/{repo}/contents` 路径读取根目录、最多 2 个高信号源码目录，并从中选择最多 3 个清单/入口/源码文件。候选文件 API 大小必须 ≤24KB，只解码前 4KB 文本；锁文件、测试/文档/依赖目录和不安全路径不读取，原始片段不持久化。卡片先展示目录、文件路径、角色与确定性内容线索；语言比例降为最多 5 项的次要信息。
   - 关键文件片段经 sanitizer 后，只作为明确标记的不可信 user 数据交给 Provider；System Prompt 要求用途、入口、安装与难度优先基于实际检查的文件证据，不能只复述仓库简介。私有/无权限页仍在任何 GitHub API 或 Provider 请求前零出站。
@@ -407,6 +460,7 @@
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-27
 
 ## D-054 仓库分析默认展示 README 项目速览，事实元数据折叠
+
 - **决策**：
   - README 在 D-053 既有“最多 3 文件、单文件 ≤24KB、文本 ≤4KB”配额内获得最高选择优先级；不增加目录深度、文件数或正文量。Contents API 与 DOM 同时提供 README 时，优先使用路径、大小和响应身份均经 Background 校验的 API 片段。
   - `RepositoryAnalysisCard` 增加固定 `quickScan`：README 概括、主要功能、配置/运行、简单实现线索及来源。Provider Prompt 要求用简练中文生成这些字段；为兼容 Provider 漏字段或非法 JSON，本地仍从 Markdown 首段/功能章节、README 安装命令、清单脚本/依赖、目录和入口定义生成确定性降级。
@@ -417,6 +471,7 @@
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28
 
 ## D-055 多语言 README 去重、HTML 证据提取与 Provider 部分结果合并
+
 - **决策**：
   - D-053 的最多 3 文件配额内只允许 1 份 README；优先根目录默认 README，其次根目录中文/其他本地化 README，最后才考虑嵌套 README。剩余名额继续用于配置、入口或源码文件。文件详情响应除路径身份外再次校验声明大小仍在 `(0, 24KB]`。
   - README 本地提取跳过 banner、badge、居中导航和 Unicode 替换字符；除 Markdown 功能章节外，识别 `<table><tr><td>` 形式的功能名称与说明。分析卡不展示原始 HTML。
@@ -427,6 +482,7 @@
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28
 
 ## D-056 中文仓库速览优先本地化证据并在展示层拒绝英文叙述
+
 - **决策**：
   - 当根目录同时存在默认 README 与 `README.zh` / `README.zh-CN` / `README.zh-Hans` / `README.zh-Hant` 时，中文 README 优先；随后才是根目录默认、其他本地化及嵌套说明。仍只读取一份 README，不改变 D-053 文件预算。
   - 本地用途说明优先采用可靠中文仓库简介或中文 README 概括；英文 description 不得覆盖已取得的中文 README。若 Provider 不可用且只有外文证据，展示明确中文降级说明，不把外文段落冒充中文速览。
@@ -437,6 +493,7 @@
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28
 
 ## D-057 仓库分析分为新手总结、详细介绍与原文件摘要
+
 - **决策**：
   - `RepositoryAnalysisCard` 明确分为三个语义层：`overview` 是 Provider 重新组织后的新手总结，`details` 是较完整的中文解释，`sourceSummary` 只保存本地确定性提取的 README、配置与实现证据。Provider 输出不得覆盖 `sourceSummary`。
   - Panel 仅默认展示“总结速览”；“详细介绍”“原项目文件摘要”和“仓库事实”均默认折叠。总结速览只显示 1–2 句说明与 2–3 个直接价值要点，不展示目录、脚本或依赖清单；Schema 对总结和单个要点分别设 180/60 字符硬上限。
@@ -448,6 +505,7 @@
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28
 
 ## D-058 仓库分析按字段恢复并将原文件摘要收敛为证据索引
+
 - **决策**：
   - Provider JSON 改为按字段通过 `RepositoryInsightPatch` 校验并累积有效结果；单个 `overview` 或其他字段失败时保留首轮已合格的详细介绍，第二次请求只补写失败字段。最多两次请求的既有上限不变；最终仍缺 `overview` 时，可从已通过的用途、功能、风险与下一步派生受限速览。
   - Provider Prompt 明确按“用户能做什么、适合什么场景、必要原理”的中文顺序组织内容；用途限一句、README 总结限 2–4 句、功能限 4 项、配置/实现各限 3 项。对“随你所在”“闭环学习”“跨会话回溯”“多终端后端”等已复现的生硬直译表达按字段拒绝并要求白话改写。
@@ -459,6 +517,7 @@
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28
 
 ## D-059 中文搜索不依赖当前页面解析完成
+
 - **决策**：
   - 用户在独立搜索区主动输入的中文描述可直接进入本地转换器和公开 GitHub Search API，不再把 Content Script 已返回完整 `PageContext` 作为前置条件。
   - 当前页面信息只用于 search 限流后的可选本地 DOM 结果；页面解析暂不可用时以 `page: undefined` 执行搜索。请求已被取消时不得继续，仍沿用原取消信号。
@@ -470,6 +529,7 @@
 - 状态：代码与浏览器 E2E 已验证，待人工复核 ｜ 2026-07-28
 
 ## D-060 中文搜索采用受限 AI 意图解析与本地编译的混合方案
+
 - **决策**：
   - 经用户明确授权，D-047 的“搜索不调用 AI Provider”修订为混合方案：每次搜索优先调用一次当前文本 Provider，把中文描述解析为受限 `SearchIntent`；不可用、请求失败或 Schema 不合格时不重试，立即使用本地确定性转换。
   - Provider 输入只含经 sanitizer 处理的搜索描述、用户指定目标类型和当前日期，不含 PageContext、会话历史、选区或仓库文件。输出使用 strict zod 白名单，只允许关键词、语言、Star、Topic、仓库、Issue 状态/标签、更新时间与归档条件；拒绝 URL、路径、Header、工具名、任意 query 片段和多余字段。
@@ -481,6 +541,7 @@
 - 状态：代码与浏览器 E2E 已验证，待真实 Provider 人工复核 ｜ 2026-07-28
 
 ## D-061 Panel 使用统一视觉控件且操作栏不得覆盖内容
+
 - **决策**：
   - Panel 以 emerald 作为唯一主操作色，次要操作统一为中性描边按钮；输入框、卡片、状态提示和区块间距使用同一套尺寸、圆角、边框、阴影与 focus 状态。点击元素与框选区域仍是两个独立功能，但不再用蓝色/紫色制造无意义的视觉层级。
   - 所有折叠入口统一使用同一 SVG chevron 的旋转状态；会话和问答删除统一使用 SVG 垃圾桶、确认与取消图标，保留原有可访问名称、二次确认和禁用规则，不再使用浏览器默认三角、`>`/`∨`、emoji 或文字 `✓/×` 混搭。
@@ -492,6 +553,7 @@
 - 状态：代码与隔离 Chrome 已验证，待真实 Chrome 长期使用复核 ｜ 2026-07-29
 
 ## D-062 标签页切换只关闭当前全局 Side Panel，不改变可靠打开路径
+
 - **决策**：
   - 保留扩展 action、快捷键和 Options 探针在用户手势中直接调用 `chrome.sidePanel.open()` 的既有路径；不得在 `open()` 前等待 `sidePanel.setOptions()`。
   - Background 监听 `tabs.onActivated`；Chrome 141+ 存在 `sidePanel.close()` 时，按事件提供的 `windowId` 关闭本扩展当前窗口的全局 Side Panel。API 不存在时直接返回，因此不提高 `minimum_chrome_version`，也不新增 `tabs` 权限。
@@ -502,6 +564,7 @@
 - 状态：任务 1 已由隔离 Chrome 149 验证；任务 2–4 按选做降级规则跳过 ｜ 2026-07-30
 
 ## D-063 八家固定 Provider Catalog、逐家 Host 授权与无密钥设置 JSON
+
 - **决策**：
   - 经项目负责人 2026-08-03 明确授权，固定 Provider 目录由 DeepSeek / UUAPI / OpenRouter 扩展为 DeepSeek / UUAPI / OpenRouter / OpenAI / Anthropic / Google Gemini / 阿里云百炼 Qwen / SiliconFlow。所有 endpoint 由 `provider-catalog` 固定，用户只能填写 Key 和 model，不能输入 Base URL、Host 或 endpoint。
   - 为兼容既有安装，原三家继续使用静态 Host 权限；新增五家只声明各自精确 `optional_host_permissions`。Options 保存 Key 前请求该家 origin，拒绝时零写入；Background 在读取 Key 前再次断言权限；删除 Key 后释放该家可选权限。
@@ -514,6 +577,7 @@
 - 状态：代码与无凭据自动验收通过；因浏览器自动化安全策略不能访问 `chrome://extensions`，待用户重载扩展后用已保存 Key 做一次单 Provider 复测 ｜ 2026-08-03
 
 ## D-064 Background 对每个 Panel Port 实施出站生命周期门控
+
 - **决策**：
   - 每个通过来源校验的 Panel Port 建立独立 `PortMessenger`；Background→Panel 的 Provider 状态、Session/Pick/Region/Search/分析状态、流事件和请求响应全部经同一门控发送，不允许异步分支直接调用 `port.postMessage`。
   - `onDisconnect` 首先将门控标记为断开并取消该连接的页面 hydration；其后到达的旧异步结果直接丢弃，不尝试向失效 Port 发送。
@@ -524,6 +588,7 @@
 - 状态：代码、隔离 Chrome 与真实 Chrome 均已验证；关闭/重开 Panel 与切换标签页后未新增 disconnected-port 错误 ｜ 2026-08-20
 
 ## D-065 中文搜索对异常远端字段与 AI 降级实施有界恢复
+
 - **决策**：
   - GitHub Search API 返回的仓库 `description` 是不可信可选文本。超过既有 2,000 字符展示上限时只丢弃该字段，保留仓库标题、链接、Star、语言与时间等有效结果；不得放宽上限，也不得因单个可选字段异常拒绝整批结果。
   - 搜索链路遇到 Zod 响应错误时，Panel 只显示固定中文错误，不暴露 `origin/code/path` 等内部 Schema 细节。
@@ -535,6 +600,7 @@
 - 状态：代码、隔离 Chrome 与真实 Chrome 均已验证；截图原句及 AI 失败本地降级通过 ｜ 2026-08-20
 
 ## D-066 Panel 采用四分段导航与定稿视觉 Token
+
 - **决策**：
   - Panel 主内容按“页面提问 / 仓库分析 / 中文搜索 / 问答”四个固定分段切换，同一时刻只展示一个功能区；首次打开默认进入“页面提问”。点击或框选完成后的“下一步”仍会自动切入问答并聚焦输入框，分段切换不重置分析、搜索、会话或草稿状态。
   - D-061 的 emerald 主色修订为定稿主色 `#176b87`；背景、表面、正文、次要文字和边框分别使用 `#f7f9fc`、`#ffffff`、`#172238`、`#65738a`、`#d5dce7`，基础字号 14px、圆角 8px、主要间距 10px、低强度阴影。408px 是设计复核目标宽度，实际 Side Panel 宽度继续由 Chrome 和用户控制，不在页面内强制锁宽。
@@ -546,6 +612,7 @@
 - 状态：正式代码、隔离 Chrome 与真实 Chrome 均已验证；四分段导航与定稿视觉复核通过 ｜ 2026-08-20
 
 ## D-067 Options 以文本/视觉两张角色卡组织固定 Provider 配置
+
 - **决策**：
   - Options 的 Provider 主配置区只保留“文本 Model”和“视觉 Model”两张角色卡。每张卡先选择固定 Catalog 内的 Provider，再呈现该家的 API Key、固定 endpoint、运行状态、对应角色的 model 和单家能力测试；同一家 Provider 在两张卡中共用既有 Key 与 model 绑定。
   - 文本列表包含 v1.3 的八家固定 Provider；视觉列表排除已知仅文本的 DeepSeek。设置页以“ChatGPT（OpenAI API）”“Claude（Anthropic API）”帮助用户对应产品名与实际 API，但内部 Provider ID、适配器和权限边界保持 `openai` / `anthropic` 不变。
@@ -558,6 +625,7 @@
 - 状态：代码、隔离 Chrome 与真实 Chrome 均已验证；Options 六项与 DeepSeek 单 Provider `available` 通过 ｜ 2026-08-20
 
 ## D-068 常用 Provider 扩展、UUAPI 兼容降级与受限 custom 端点
+
 - **决策**：
   - 经项目负责人 2026-08-20 明确授权，常用目录新增 GLM、Kimi、Grok 的官方固定 HTTPS 端点；UUAPI 适配器、旧配置和凭据保留，但从新的 Options/Panel 候选隐藏。
   - 只提供一个 `custom` OpenAI-compatible 条目。用户填写 HTTPS Base URL 或完整 Chat Completions URL、Key 与 model；Key 继续使用独立 credential-store，配置 JSON 只允许导入导出非秘密 URL/model。
@@ -569,6 +637,7 @@
 - 状态：Phase 12 自动验收完成；新增路线真实能力待用户自愿配置 Key 后按需探针，不阻塞既有 MVP ｜ 2026-08-20
 
 ## D-069 公开源码采用 MIT License 并在首次 Push 前移除历史个人邮箱
+
 - **决策**：
   - 经项目负责人 2026-08-20 明确授权，项目以 MIT License 公开到 `CC667-space/GitHelper-CN`；根目录提供面向使用者的 README 与标准 MIT License。
   - 首次公开 Push 前，把全部历史提交的 author/committer email 统一改为 `283176701+CC667-space@users.noreply.github.com`，保留提交作者名、内容、时间和提交信息；仓库后续提交也使用该 noreply 邮箱。
@@ -580,6 +649,7 @@
 - 状态：Phase 13 已完成，公开仓库与首次 Push 已验证 ｜ 2026-08-20
 
 ## D-070 GitHub Release 使用可校验 ZIP，并移除正式运行时开发探针
+
 - **决策**：
   - 经项目负责人 2026-08-21 明确授权，暂停 Chrome Web Store 上架，Phase 14 发布首个 GitHub Release `v0.1.0`。资产限定为 `GitHelper-CN-v0.1.0-chrome.zip` 与对应 SHA-256 文件；ZIP 解压后由 Chrome 开发者模式“加载已解压的扩展程序”，不发布或暗示一键 CRX。
   - 正式 Background/Content/Options 删除已完成的 Phase 0 技术探针消息、截图校准处理、页面不可见触发器和“本地技术验证”。Options 同时移除开发阶段的批量真实探针卡；每个 Provider 卡内的“测试 Key 与模型”继续保留，仍是用户确认当前 Key/model 能力的必要入口。
@@ -591,6 +661,7 @@
 - 状态：Phase 14 与 GitHub Release `v0.1.0` 已完成并核验 ｜ 2026-08-21
 
 ## D-071 普通问答实时解析当前 DOM，并隔离 README 与仓库简介证据
+
 - **决策**：
   - `PAGE_INFO_REQUEST` 每次直接解析当前 DOM，不再优先使用 Content Script 启动或 SPA watcher 刷新时生成的 `currentPageContext`。SPA watcher 继续负责 URL 变化与选择态清理，但同 URL 动态内容的新鲜度由用户提问时的实时解析保证。
   - repo parser 在既有 `#readme article` / `#readme` 后增加仓库根页限定的 `main article.markdown-body`，兼容 2026-08-21 实际 GitHub 仓库页的 README 容器；读取上限仍为 8,000 字符。
@@ -602,6 +673,7 @@
 - 状态：已完成；309 项常规测试、typecheck、lint、build、安全扫描与隔离 Chrome 149 E2E 均通过 ｜ 2026-08-21
 
 ## D-072 Side Panel 字号三档与按标签页的短期搜索连续性
+
 - **决策**：
   - `UserPreferences` 增加 `panelFontSize: 14 | 16 | 18`，新安装默认 16px；旧偏好读取时只补入 16px，不重置技术水平、解释偏好或操作策略。Options 保存后，已打开 Panel 通过可信 `storage.onChanged` 立即应用。
   - 中文搜索只在成功后，把脱敏搜索描述、目标类型和有限结果按活动 `tabId` 写入 `chrome.storage.session`。每个标签页只保留最近一次，全局最多 10 项，2 小时后过期；Panel 重开只恢复快照，不调用 Provider 或 GitHub API。显式“清除本次结果”、清除会话/偏好或清除全部数据都会删除相应快照。
@@ -612,6 +684,7 @@
 - 状态：本地实现与自动验收完成，待长期真实使用反馈 ｜ 2026-08-21
 
 ## D-073 `v0.1.1` 只发布 D-071/D-072，并复用既有可校验 Release 流水线
+
 - **决策**：
   - 经项目负责人 2026-08-21 在基本验收后明确授权，把 D-071 当前页面问答上下文修复与 D-072 字号/搜索连续性优化发布为 GitHub Release `v0.1.1`。
   - `package.json` 与 manifest 同步升级为 `0.1.1`；安装资产继续限定为 `GitHelper-CN-v0.1.1-chrome.zip` 和对应 SHA-256 文件。Release 为公开、非 draft、非 prerelease，tag 指向通过全部发布门禁的版本提交。
@@ -622,6 +695,7 @@
 - 状态：`v0.1.1` 版本提交、Push、注释 tag、latest Release 与两项资产 digest 均已核验 ｜ 2026-08-21
 
 ## D-074 公开仓库采用最小安全配置，并让测试哨兵避开静态密钥形状
+
 - **决策**：
   - sanitizer 的 Google Key 测试值改为运行时分段拼接；测试仍把完整值送入 sanitizer 并断言原文被遮蔽，但源码不再保存可被静态扫描识别为公开 Key 的连续字符串。既有 Secret scanning 告警保持 `used_in_tests` 的已关闭状态，不为虚构哨兵改写 Git 历史。
   - 根 `SECURITY.md` 是唯一安全报告政策，列出当前维护版本，并把安全问题引导到 GitHub Private vulnerability reporting；公开 Issue、真实凭据、Cookie、个人数据和完整浏览器配置不得作为复现材料提交。
@@ -631,3 +705,17 @@
 - **范围**：Phase 14 后续仓库维护；不修改产品功能、Provider、Chrome 权限/Host、Key 存储、GitHub 读写能力或发布资产，不建立自动依赖更新流程。
 - **证据**：typecheck、lint、316 项常规测试、build、安全扫描与隔离 Chrome 149 E2E 全部通过；CodeQL 首次 JavaScript/TypeScript 分析告警 0；生产工作区、`dist`、全部 Git 历史提交和禁止路径的意外凭据命中 0。
 - 状态：已完成并获项目负责人确认 ｜ 2026-08-26
+
+## D-075 分层审计维护采用状态绑定、后端确认与确定性发布门禁
+
+- **决策**：
+  - Provider 探针结果升级为带绑定信息的 v2 状态：凭据每次写入生成不含秘密的 revision，恢复结果时同时核对 credential revision、文本/视觉 Model ID，以及 custom Provider Base URL。任一绑定变化都会使旧探针结论失效，不能继续显示为可用。
+  - `search` / `navigation` 的 `operationPolicy: confirm` 由 Background 实际执行：Panel 只能通过可信连接提交单次确认，未确认请求不调用 GitHub API、不打开页面。Panel Port 还必须同时匹配固定名称、当前扩展 ID 和 Panel 页面路径，拒绝同名 Content Port。
+  - Provider Catalog 仅更新截至 2026-08-29 已由官方资料核对的模型建议值；不覆盖已保存 Model ID，不把目录建议当作能力事实，也不改变 endpoint、权限或凭据路径。
+  - 依赖锁修复已知公告：`brace-expansion` 固定为 5.0.9，锁文件更新到已修复的 `undici` 7.29.0、`postcss` 8.5.26 与 `nanoid` 3.3.18。仓库统一 LF / Prettier，构建时从实际生产依赖生成 `THIRD_PARTY_NOTICES.txt`，并把根 MIT License 与第三方许可一同装入扩展。
+  - 发布 ZIP 使用固定条目顺序和 1980-01-01 时间戳，连续构建必须得到相同 SHA-256。新增 Windows CI 只复用既有 audit、license、typecheck、lint、format、test、build、安全扫描和打包门禁；本地未授权轮次不因此自动 Push 或发布。
+  - E2E 隔离 Chrome 的启动也纳入 `try/finally`，浏览器启动失败时仍清理临时 profile；审计发现的旧 `probe-artifacts/chrome-profile*` 仅作为可重建测试数据清除，Playwright 浏览器缓存保留。
+- **理由**：分层检查确认了依赖公告、过期探针复用、仅前端展示确认、同名 Port 接入、许可证遗漏、ZIP 不可复现和失败启动残留 profile 等实际缺口。把修复放在既有状态、消息、构建与测试接缝，可直接消除问题而不扩展产品功能或安全权限。
+- **范围**：Phase 14 后续本地维护；不新增 Provider、Chrome 权限/Host、GitHub Token/写操作、持久数据类别或发布渠道，不读取真实 Key。本轮不 Push、不创建 tag 或 Release；远端 `v0.1.1` 资产保持不变。
+- **证据**：完整门禁与凭据审计记录于 STATUS；当前生产源码、`dist`、20 条目 ZIP 和 43 个历史提交的生产路径均无密钥形态命中。测试/脚本中的命中均为显式安全哨兵，未进入生产构建。
+- 状态：本地实现与自动验收完成，待后续明确授权决定是否同步远端 ｜ 2026-08-30

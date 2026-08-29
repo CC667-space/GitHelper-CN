@@ -86,6 +86,40 @@ describe('Panel Port 生命周期', () => {
     expect(disconnectedPosts).toEqual([]);
   });
 
+  it('拒绝同名但来自 Content Script 的 Port，且不启动任何初始化', () => {
+    let connectListener: ((port: chrome.runtime.Port) => void) | undefined;
+    vi.stubGlobal('chrome', {
+      runtime: {
+        id: 'abcdefghijklmnopabcdefghijklmnop',
+        onConnect: {
+          addListener(listener: (port: chrome.runtime.Port) => void) {
+            connectListener = listener;
+          },
+        },
+      },
+      storage: { session: {} },
+    });
+    const runtime = {
+      views: vi.fn(async () => []),
+      abort: vi.fn(() => false),
+    } as unknown as ProviderRuntime;
+    registerPanelPortBridge(runtime);
+    const disconnect = vi.fn();
+    const port = {
+      name: PANEL_PORT_NAME,
+      sender: {
+        id: chrome.runtime.id,
+        url: 'https://github.com/octocat/demo',
+      },
+      disconnect,
+    } as unknown as chrome.runtime.Port;
+
+    connectListener?.(port);
+
+    expect(disconnect).toHaveBeenCalledOnce();
+    expect(runtime.views).not.toHaveBeenCalled();
+  });
+
   it('重开 Panel 时只从 session 恢复当前标签页搜索，不重新调用搜索能力', async () => {
     let connectListener: ((port: chrome.runtime.Port) => void) | undefined;
     const posted: Array<{ type?: string; payload?: unknown }> = [];

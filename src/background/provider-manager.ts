@@ -76,6 +76,19 @@ export class ProviderManager {
     state.disabledReason = reason;
   }
 
+  clearProbe(providerId: ProviderId): void {
+    const state = this.requireState(providerId);
+    state.probe = undefined;
+    state.disabled = false;
+    state.disabledReason = undefined;
+  }
+
+  clearAllProbes(): void {
+    for (const providerId of this.providers.keys()) {
+      this.clearProbe(providerId);
+    }
+  }
+
   reset(): void {
     this.manualOverrideId = undefined;
     for (const providerId of this.providers.keys()) {

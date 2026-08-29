@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { PROVIDER_CATALOG, providerCatalogEntry } from '../../src/lib/provider-catalog';
+import {
+  PROVIDER_CATALOG,
+  PROVIDER_CATALOG_VERIFIED_AT,
+  providerCatalogEntry,
+} from '../../src/lib/provider-catalog';
 
 describe('Provider catalog', () => {
   it('暴露十家常用内置服务、一个受限 custom，并把 UUAPI 标记为 legacy', () => {
+    expect(PROVIDER_CATALOG_VERIFIED_AT).toBe('2026-08-29');
     expect(PROVIDER_CATALOG.map((provider) => provider.id)).toEqual([
       'deepseek',
       'openrouter',
@@ -50,8 +55,8 @@ describe('Provider catalog', () => {
       defaultTextModel: 'gemini-3.6-flash',
       defaultVisionModel: 'gemini-3.6-flash',
       modelSuggestions: {
-        text: ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite'],
-        vision: ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite'],
+        text: ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'],
+        vision: ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'],
       },
     });
     expect(providerCatalogEntry('qwen')).toMatchObject({
@@ -60,8 +65,8 @@ describe('Provider catalog', () => {
       defaultTextModel: 'qwen-plus',
       defaultVisionModel: 'qwen-vl-plus',
       modelSuggestions: {
-        text: ['qwen3.7-max', 'qwen3.7-plus', 'qwen3.6-flash'],
-        vision: ['qwen3.7-plus', 'qwen3.6-flash', 'qwen3-vl-plus'],
+        text: ['qwen3.8-max', 'qwen3.7-plus', 'qwen3.7-flash'],
+        vision: ['qwen3.8-max', 'qwen3.7-plus', 'qwen3.7-flash'],
       },
     });
     expect(providerCatalogEntry('siliconflow')).toMatchObject({
@@ -83,6 +88,10 @@ describe('Provider catalog', () => {
     });
     expect(providerCatalogEntry('kimi').apiHost).toBe('https://api.moonshot.cn');
     expect(providerCatalogEntry('grok').apiHost).toBe('https://api.x.ai');
+    expect(providerCatalogEntry('grok').modelSuggestions).toEqual({
+      text: ['grok-4.6', 'grok-4.5', 'grok-4.3'],
+      vision: ['grok-4.6', 'grok-4.5', 'grok-4.3'],
+    });
     expect(providerCatalogEntry('custom')).toMatchObject({
       apiHost: '',
       apiPath: '',

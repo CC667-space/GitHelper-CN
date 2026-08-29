@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { ProviderId } from '../lib/types';
 import { providerCatalogEntry } from '../lib/provider-catalog';
 import type { SearchTarget } from '../lib/github-search';
+import type { PanelOperationConfirmationState } from '../lib/bridge-protocol';
 import { connectPanel, type PanelConnection } from './connection';
 import { MarkdownMessage } from './MarkdownMessage';
 import { usePanelStore } from './store';
@@ -151,6 +152,7 @@ export function PanelApp({
   const [pendingTurnDeleteId, setPendingTurnDeleteId] = useState<string>();
   const [pendingSessionDeleteId, setPendingSessionDeleteId] = useState<string>();
   const [focusComposerRequested, setFocusComposerRequested] = useState(false);
+  const [pendingOperation, setPendingOperation] = useState<PanelOperationConfirmationState>();
   const {
     connected,
     draft,
@@ -213,6 +215,7 @@ export function PanelApp({
       applyRegionState,
       applySearchState,
       applyRepositoryAnalysisState,
+      setPendingOperation,
     );
     connection.current = activeConnection;
     return () => {
@@ -290,6 +293,27 @@ export function PanelApp({
   function focusQuestionInput(): void {
     setActiveSection('qa');
     setFocusComposerRequested(true);
+  }
+
+  function confirmPendingOperation(): void {
+    if (!pendingOperation) {
+      return;
+    }
+    if (pendingOperation.action === 'search') {
+      connection.current?.search?.(
+        pendingOperation.naturalLanguage,
+        pendingOperation.target,
+        pendingOperation.providerId,
+        true,
+      );
+    } else {
+      connection.current?.openGitHubPage?.(
+        pendingOperation.url,
+        pendingOperation.disposition,
+        true,
+      );
+    }
+    setPendingOperation(undefined);
   }
 
   return (
@@ -406,6 +430,36 @@ export function PanelApp({
           </button>
         ))}
       </nav>
+
+      {pendingOperation ? (
+        <aside
+          className="m-2.5 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-950 shadow-[0_2px_8px_rgba(23,34,56,0.08)]"
+          data-testid="operation-confirmation"
+        >
+          <p className="font-medium">
+            {pendingOperation.action === 'search'
+              ? '确认执行本次公开 GitHub 搜索？'
+              : `确认${pendingOperation.disposition === 'background' ? '在后台' : ''}打开此 GitHub 页面？`}
+          </p>
+          <p className="mt-1 break-all text-amber-900">
+            {pendingOperation.action === 'search'
+              ? pendingOperation.naturalLanguage
+              : pendingOperation.url}
+          </p>
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              className={secondaryButtonClass}
+              onClick={() => setPendingOperation(undefined)}
+              type="button"
+            >
+              取消
+            </button>
+            <button className={primaryButtonClass} onClick={confirmPendingOperation} type="button">
+              确认一次
+            </button>
+          </div>
+        </aside>
+      ) : null}
 
       <section
         aria-labelledby="panel-tab-context"

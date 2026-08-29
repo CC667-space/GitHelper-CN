@@ -126,6 +126,7 @@ export const panelSearchRequestSchema = z
     naturalLanguage: z.string().trim().min(1).max(500),
     target: searchTargetSchema,
     providerId: providerIdSchema.optional(),
+    confirmed: z.literal(true).optional(),
   })
   .strict();
 export const panelSearchClearSchema = z.object({}).strict();
@@ -133,8 +134,29 @@ export const panelOpenGitHubPageSchema = z
   .object({
     url: githubWebUrlSchema,
     disposition: z.enum(['foreground', 'background']).default('foreground'),
+    confirmed: z.literal(true).optional(),
   })
   .strict();
+
+export const panelOperationConfirmationStateSchema = z.discriminatedUnion('action', [
+  z
+    .object({
+      action: z.literal('search'),
+      requestId: z.string().min(1).max(128),
+      naturalLanguage: z.string().min(1).max(500),
+      target: searchTargetSchema,
+      providerId: providerIdSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('navigation'),
+      requestId: z.string().min(1).max(128),
+      url: githubWebUrlSchema,
+      disposition: z.enum(['foreground', 'background']),
+    })
+    .strict(),
+]);
 
 export const panelAnalyzeRepositoryRequestSchema = z
   .object({
@@ -359,6 +381,11 @@ export const panelSessionStateSchema = z
 
 export const optionsProviderStateRequestSchema = z.object({}).strict();
 export const optionsResetLocalStateRequestSchema = z.object({}).strict();
+export const optionsInvalidateProbesRequestSchema = z
+  .object({
+    providerId: providerIdSchema.optional(),
+  })
+  .strict();
 export const optionsRunProbesRequestSchema = z
   .object({
     providerId: providerIdSchema.optional(),
@@ -372,6 +399,7 @@ export type SelectedElementPayload = z.infer<typeof selectedElementSchema>;
 export type RegionOutcome = z.infer<typeof regionOutcomeSchema>;
 export type PanelRegionState = z.infer<typeof panelRegionStateSchema>;
 export type PanelSearchRequest = z.infer<typeof panelSearchRequestSchema>;
+export type PanelOperationConfirmationState = z.infer<typeof panelOperationConfirmationStateSchema>;
 export type PanelSearchState = z.infer<typeof panelSearchStateSchema>;
 export type PanelRepositoryAnalysisState = z.infer<typeof panelRepositoryAnalysisStateSchema>;
 export type PageInfo = z.infer<typeof pageInfoSchema>;

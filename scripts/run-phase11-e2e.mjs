@@ -120,24 +120,25 @@ function apiHeaders(resource = 'core') {
   };
 }
 
-const context = await chromium.launchPersistentContext(profilePath, {
-  executablePath: chromium.executablePath(),
-  headless: false,
-  ignoreDefaultArgs: ['--disable-extensions'],
-  args: [
-    `--disable-extensions-except=${extensionPath}`,
-    `--load-extension=${extensionPath}`,
-    '--no-first-run',
-    '--disable-default-apps',
-    '--disable-component-update',
-    '--disable-background-timer-throttling',
-    '--window-size=1440,1000',
-  ],
-  viewport: null,
-});
-
+let context;
 const pageErrors = [];
 try {
+  context = await chromium.launchPersistentContext(profilePath, {
+    executablePath: chromium.executablePath(),
+    headless: false,
+    ignoreDefaultArgs: ['--disable-extensions'],
+    args: [
+      `--disable-extensions-except=${extensionPath}`,
+      `--load-extension=${extensionPath}`,
+      '--no-first-run',
+      '--disable-default-apps',
+      '--disable-component-update',
+      '--disable-background-timer-throttling',
+      '--window-size=1440,1000',
+    ],
+    viewport: null,
+  });
+
   await context.route('https://github.com/**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -660,7 +661,7 @@ try {
     })}`,
   );
 } finally {
-  await context.close();
+  await context?.close();
   const expectedPrefix = `${artifactsPath}${sep}`;
   assert(profilePath.startsWith(expectedPrefix), '拒绝删除 probe-artifacts 之外的临时 profile');
   await rm(profilePath, { recursive: true, force: true });

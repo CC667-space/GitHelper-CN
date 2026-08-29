@@ -16,6 +16,7 @@ export const PROVIDER_IDS = [
 ] as const;
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 export const providerIdSchema = z.enum(PROVIDER_IDS);
+export const PROVIDER_CATALOG_VERIFIED_AT = '2026-08-29';
 
 export interface ProviderCatalogEntry {
   id: ProviderId;
@@ -116,8 +117,8 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     defaultTextModel: 'gemini-3.6-flash',
     defaultVisionModel: 'gemini-3.6-flash',
     modelSuggestions: {
-      text: ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite'],
-      vision: ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite'],
+      text: ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'],
+      vision: ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'],
     },
     connectionNote: '当前使用 Google 官方 OpenAI 兼容接口。',
   },
@@ -133,8 +134,8 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     defaultTextModel: 'qwen-plus',
     defaultVisionModel: 'qwen-vl-plus',
     modelSuggestions: {
-      text: ['qwen3.7-max', 'qwen3.7-plus', 'qwen3.6-flash'],
-      vision: ['qwen3.7-plus', 'qwen3.6-flash', 'qwen3-vl-plus'],
+      text: ['qwen3.8-max', 'qwen3.7-plus', 'qwen3.7-flash'],
+      vision: ['qwen3.8-max', 'qwen3.7-plus', 'qwen3.7-flash'],
     },
     connectionNote: '使用只需 API Key 的百炼共享端点；模型 ID 可按账号可用范围修改。',
   },
@@ -198,8 +199,8 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     defaultTextModel: 'grok-4.5',
     defaultVisionModel: 'grok-4.5',
     modelSuggestions: {
-      text: ['grok-4.5', 'grok-4.3', 'grok-build-0.1'],
-      vision: ['grok-4.5', 'grok-4.3'],
+      text: ['grok-4.6', 'grok-4.5', 'grok-4.3'],
+      vision: ['grok-4.6', 'grok-4.5', 'grok-4.3'],
     },
   },
   {

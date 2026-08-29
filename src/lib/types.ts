@@ -97,6 +97,8 @@ export interface UserPreferences {
 export interface ProviderCredential {
   providerId: ProviderId;
   apiKey: string;
+  /** 非秘密修订号，用于让能力探针与保存 Key 的具体版本绑定。 */
+  revision?: string;
 }
 
 export interface ProviderCapabilities {

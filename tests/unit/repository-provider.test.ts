@@ -78,25 +78,39 @@ function stubStorage(structuredOutput: boolean): void {
           key === 'provider:probes:v1'
             ? {
                 'provider:probes:v1': {
-                  schemaVersion: 1,
+                  schemaVersion: 2,
                   results: {
                     deepseek: {
-                      providerId: 'deepseek',
-                      text: true,
-                      streaming: true,
-                      abort: true,
-                      vision: false,
-                      toolCalls: false,
-                      structuredOutput,
-                      usage: true,
-                      errorFormat: true,
-                      rateLimitFormat: true,
-                      probedAt: '2026-07-24T00:00:00.000Z',
+                      summary: {
+                        providerId: 'deepseek',
+                        text: true,
+                        streaming: true,
+                        abort: true,
+                        vision: false,
+                        toolCalls: false,
+                        structuredOutput,
+                        usage: true,
+                        errorFormat: true,
+                        rateLimitFormat: true,
+                        probedAt: '2026-07-24T00:00:00.000Z',
+                      },
+                      binding: {
+                        credentialRevision: 'test-revision',
+                        textModel: 'deepseek-v4-flash',
+                      },
                     },
                   },
                 },
               }
-            : {},
+            : key === 'credential:provider:deepseek'
+              ? {
+                  'credential:provider:deepseek': {
+                    providerId: 'deepseek',
+                    apiKey: 'deepseek-test-key',
+                    revision: 'test-revision',
+                  },
+                }
+              : {},
         ),
         set: vi.fn(),
       },
