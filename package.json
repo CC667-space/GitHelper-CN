@@ -18,7 +18,7 @@
     "notices:generate": "node scripts/generate-third-party-notices.mjs",
     "scan:build": "node scripts/scan-build-safety.mjs",
     "test:e2e": "node scripts/run-phase11-e2e.mjs",
-    "package:extension": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-extension.ps1",
+    "package:extension": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/package-extension.ps1",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

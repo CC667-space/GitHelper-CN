@@ -28,6 +28,7 @@ describe('GitHub Release runtime hardening', () => {
     };
 
     expect(packageJson.scripts?.['probe:phase0']).toBeUndefined();
+    expect(packageJson.scripts?.['package:extension']).toMatch(/^pwsh\s/);
   });
 
   it('发布包使用固定时间戳并包含项目及生产依赖许可证', () => {
