@@ -37,11 +37,17 @@
 - `dist`：密钥形态命中 0。
 - 20 条目发布 ZIP：密钥形态命中 0。
 - Git 跟踪的 `.env`、私钥/证书、凭据 JSON、`dist`、`artifacts` 或浏览器 profile 路径：0。
-- 全部 45 个历史提交：11 个命中路径全部位于测试或 E2E 脚本中的显式安全哨兵；生产路径命中 0。
+- Push 前全部 46 个历史提交：11 个命中路径全部位于测试或 E2E 脚本中的显式安全哨兵；生产路径命中 0。
 - 本轮未读取 Chrome 保存区，也未调用真实 Provider。
 
 ## 远程发布
 
 - 目标仓库：`https://github.com/CC667-space/GitHelper-CN`
 - 目标 Release：`https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.2`
-- 状态：本地发布门禁已通过；待创建版本提交并 Push，版本提交的 Quality workflow 成功后再创建 tag、Release 并核验远程资产。
+- 版本提交：`4bec9165f65f048c281ee3fc444ab120a7a1552a`；已普通 fast-forward Push 到 `origin/main`。
+- Quality workflow：run `33290563985` 成功，verify job 全步骤通过；`https://github.com/CC667-space/GitHelper-CN/actions/runs/33290563985`。
+- 注释 tag：`v0.1.2`；tag 对象 `ad1fa0621495317499ef06711179feb7e94166bb` 解引用到版本提交 `4bec9165f65f048c281ee3fc444ab120a7a1552a`。
+- Release：ID `379171811`；公开、非 draft、非 prerelease，且为当前 latest。
+- 远程 ZIP：201,583 bytes；digest `sha256:bdf18380e112013c7b43352db184f113f46b1e31e2fb15680e772fbe72be276d`，与本地一致。
+- 远程校验文件：97 bytes；digest `sha256:58a174c0842360be60ba2185ca89199bd4e582f66ff3ca5a2958b9104c5dff02`，与本地一致。
+- 状态：GitHub Release `v0.1.2` 发布与远程资产核验完成；Chrome Web Store 继续暂停。

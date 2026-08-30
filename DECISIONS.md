@@ -729,4 +729,4 @@
   - README、用户指南与 Release Notes 明确说明：旧探针 Schema 会失效，但不会删除已保存 Key；Provider 显示未验证时需要用户按需重新运行单家测试。
 - **理由**：公开安装版 `v0.1.1` 尚不包含已经合并并通过远端 Quality 的依赖修复、状态新鲜度和后端安全护栏。复用 D-075 的确定性 ZIP、许可证与 CI 流程，可以让安装包与当前受维护源码一致，而不引入新的产品能力或权限面。
 - **范围**：只发布既有维护成果及其版本、文档和证据；不新增 Chrome 权限/Host、Provider、真实 Provider 请求、GitHub 写能力、CRX、Chrome Web Store 或其他发布渠道。
-- 状态：本地发布门禁、确定性打包与凭据审计已通过；待完成版本提交、远端 Quality、tag、Release 与资产核验 ｜ 2026-08-30
+- 状态：版本提交 `4bec916`、远端 Quality run `33290563985`、注释 tag、latest Release 与两项资产 digest 均已核验 ｜ 2026-08-30
