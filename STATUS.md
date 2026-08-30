@@ -6,7 +6,7 @@
 
 ## 当前阶段
 
-**Phase 14 — GitHub Release `v0.1.1`、仓库安全加固（D-074）与已同步远端的分层审计维护（D-075）均已完成。**
+**Phase 14 — GitHub Release `v0.1.2` 已获授权，正在执行版本化门禁与发布（D-076）。**
 
 ## 已完成
 
@@ -339,10 +339,17 @@
   - 凭据审计覆盖当前文件、`dist`、20 条目 ZIP 与全部 43 个历史提交：生产路径密钥形态命中 0；测试/脚本 8 个命中路径均为显式安全哨兵。未读取真实 Key
   - `9b6b41c` 已普通 Push 到 `origin/main`；远端 Dependabot 重新分析后 open 告警为 0，未创建 tag 或 Release，既有 `v0.1.1` 资产不变
   - 在 Quality 首次远端运行中，install/audit/license/typecheck/lint/format/test/build/scan 均通过，只有打包步骤因 GitHub runner 的 legacy Windows PowerShell 5.1 无 BOM UTF-8 解析差异而失败；入口已最小修正为 PowerShell 7 `pwsh`，并增加回归断言
+- [x] **Phase 14 — GitHub Release `v0.1.2` 本地发布验收（2026-08-30，D-076）完成**：
+  - `package.json`、manifest、README、用户指南、发布说明和权威记录已同步到 `0.1.2`；范围仅含 D-074/D-075 与 Windows CI 修复，未新增产品功能、Chrome 权限/Host 或 Provider
+  - frozen install、389 条 lockfile supply-chain policy、零依赖告警、110 个生产依赖/31 组许可证文本再生成零差异、typecheck、lint、全仓 format 与 `git diff --check` 全部通过
+  - Vitest 60 files / 326 tests 通过（另 1 file / 1 live test 默认跳过）；匿名 GitHub live test 启用后 1/1 通过
+  - build（421 modules）、构建扫描与隔离 Chrome 149 E2E 通过；E2E Provider 请求 0、页面错误 0
+  - 20 条目确定性 ZIP 连续两次 SHA-256 均为 `bdf18380e112013c7b43352db184f113f46b1e31e2fb15680e772fbe72be276d`；ZIP 201,583 bytes，校验文件 97 bytes
+  - 凭据审计覆盖当前生产源码、`dist`、ZIP、禁止跟踪路径与全部 45 个历史提交：生产路径命中 0；历史 11 个命中路径全部为测试/E2E 安全哨兵。未读取真实 Key
 
 ## 下一任务
 
-**等待后续真实使用反馈；源码已同步，公开安装版仍为 `v0.1.1`，Chrome Web Store 上架继续暂停。**
+**创建并最终复核 `v0.1.2` 版本提交，按授权 Push；远端 Quality 成功后创建并核验 tag、Release 与两项资产。Chrome Web Store 继续暂停。**
 
 ## 已登记的后续优化
 
@@ -350,24 +357,24 @@
 
 ## 阶段进度表
 
-| Phase                                     | 状态                                              |
-| ----------------------------------------- | ------------------------------------------------- |
-| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成                                         |
-| 1 仓库结构 + 扩展骨架                     | ✅ 已完成                                         |
-| 1.5 安全地基                              | ✅ 已完成                                         |
-| 2 Side Panel + 消息通信                   | ✅ 已完成                                         |
-| 3 页面识别 + 上下文 + SPA                 | ✅ 已完成                                         |
-| 4 Provider + 能力探针 + 对话 + 手动切换   | ✅ 已完成                                         |
-| 5 Session + 偏好 + 容量淘汰               | ✅ 已完成                                         |
-| 6 点击提问（MVP 必达）                    | ✅ 已完成                                         |
-| 7 框选 + 视觉（MVP 必达）                 | ✅ 已完成                                         |
-| 8 NL 搜索（MVP 必达）                     | ✅ 已完成                                         |
-| 9 一键仓库分析                            | ✅ 已完成                                         |
-| 10 安全加固 + 红队测试                    | ✅ 已完成                                         |
-| 11 测试 + 打包 + MVP 验收                 | ✅ 已完成，v1 MVP 达标                            |
-| 12 Provider 目录扩展 + 受限 custom 端点   | ✅ 已完成自动验收                                 |
-| 13 GitHub 公开开源发布                    | ✅ 已完成                                         |
-| 14 GitHub Release 加固与发布              | ✅ 已完成；D-075 已同步且远端 Quality gate 已启用 |
+| Phase                                     | 状态                                       |
+| ----------------------------------------- | ------------------------------------------ |
+| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成                                  |
+| 1 仓库结构 + 扩展骨架                     | ✅ 已完成                                  |
+| 1.5 安全地基                              | ✅ 已完成                                  |
+| 2 Side Panel + 消息通信                   | ✅ 已完成                                  |
+| 3 页面识别 + 上下文 + SPA                 | ✅ 已完成                                  |
+| 4 Provider + 能力探针 + 对话 + 手动切换   | ✅ 已完成                                  |
+| 5 Session + 偏好 + 容量淘汰               | ✅ 已完成                                  |
+| 6 点击提问（MVP 必达）                    | ✅ 已完成                                  |
+| 7 框选 + 视觉（MVP 必达）                 | ✅ 已完成                                  |
+| 8 NL 搜索（MVP 必达）                     | ✅ 已完成                                  |
+| 9 一键仓库分析                            | ✅ 已完成                                  |
+| 10 安全加固 + 红队测试                    | ✅ 已完成                                  |
+| 11 测试 + 打包 + MVP 验收                 | ✅ 已完成，v1 MVP 达标                     |
+| 12 Provider 目录扩展 + 受限 custom 端点   | ✅ 已完成自动验收                          |
+| 13 GitHub 公开开源发布                    | ✅ 已完成                                  |
+| 14 GitHub Release 加固与发布              | 🔄 `v0.1.2` 已授权，版本化门禁与发布进行中 |
 
 ## 待处理的强制确认节点
 
@@ -383,11 +390,12 @@
 - ✅ GitHub Release `v0.1.0`、既有 `origin` Push 与 tag（用户已明确授权；远程发布与资产 digest 核验完成）
 - ✅ GitHub Release `v0.1.1`、既有 `origin` Push 与 tag（用户已明确授权；远程发布与资产 digest 核验完成）
 - ✅ GitHub 仓库安全设置与本轮 `origin/main` Push（用户已明确授权；不创建新 Release）
+- ✅ GitHub Release `v0.1.2`、既有 `origin` Push 与 tag（用户已明确授权；待执行并核验）
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
 
-当前无阻塞。Phase 0–14、D-071/D-072/D-074 与 GitHub Release `v0.1.1` 均已完成，D-075 已同步 `origin/main`；Chrome Web Store 上架是明确暂停的后续路线，不是当前阻塞项。
+当前无阻塞。`v0.1.2` 正按授权执行本地门禁与远程发布；Chrome Web Store 上架是明确暂停的后续路线，不是当前阻塞项。
 
 ## 变更记录
 
@@ -451,3 +459,4 @@
 - 2026-08-26：完成 D-074 仓库安全加固；修复测试 Key 形状哨兵并补充私密漏洞报告政策，启用 PVR、Dependabot/其 Malware alerts、CodeQL Default setup，复核既有 Push protection 与已关闭测试告警；316 项常规测试及完整静态/构建/安全/E2E/凭据审计通过，本轮不创建新 Release。
 - 2026-08-30：完成 D-075 分层审计维护；修复依赖公告、过期探针绑定、操作确认后端强制、Panel Port 来源校验、模型建议目录、全仓格式、第三方许可、确定性打包、CI 与临时 Chrome profile 清理；326 项常规测试及完整静态/构建/安全/E2E/凭据审计通过。仅创建本地提交，不 Push、不创建 tag 或 Release。
 - 2026-08-30：`9b6b41c` 已普通 Push 到 `origin/main`，未创建 tag/Release；远端 Dependabot open 告警归零。首次 Quality 运行仅打包失败，证实为 legacy Windows PowerShell 5.1 对 UTF-8/LF 脚本的解析差异；打包入口改用 `pwsh` 并加入回归断言，其余远端门禁均已通过。
+- 2026-08-30：项目负责人授权把 D-074/D-075 与 Windows CI PowerShell 7 入口修复发布为 `v0.1.2`；版本、文档和发布证据开始按既有可校验 ZIP 流程更新，Chrome Web Store 继续暂停。

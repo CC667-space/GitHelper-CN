@@ -11,7 +11,7 @@ export default defineManifest({
   manifest_version: 3,
   name: 'GitHelper-CN',
   description: '面向中文 GitHub 新手的本地 Side Panel AI 助手。',
-  version: '0.1.1',
+  version: '0.1.2',
   minimum_chrome_version: '114',
   icons,
   action: {

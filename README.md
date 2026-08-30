@@ -2,7 +2,7 @@
 
 面向中文 GitHub 新手的本地 Chrome Side Panel AI 助手。它在公开 GitHub 页面旁提供中文问答、页面内容提问、自然语言搜索和仓库速览，帮助用户理解项目；不会替用户执行 GitHub 写操作。
 
-> 当前版本：`0.1.1`。Chrome Web Store 上架仍暂停；GitHub Release 提供可下载 ZIP，解压后通过 Chrome 开发者模式加载。
+> 当前版本：`0.1.2`。Chrome Web Store 上架仍暂停；GitHub Release 提供可下载 ZIP，解压后通过 Chrome 开发者模式加载。
 
 ## 快速上手：安装 GitHub Release
 
@@ -12,8 +12,8 @@
 
 打开 [最新 GitHub Release](https://github.com/CC667-space/GitHelper-CN/releases/latest)，在 **Assets** 中下载：
 
-- `GitHelper-CN-v0.1.1-chrome.zip`：扩展安装包
-- `GitHelper-CN-v0.1.1-SHA256SUMS.txt`：可选的完整性校验值
+- `GitHelper-CN-v0.1.2-chrome.zip`：扩展安装包
+- `GitHelper-CN-v0.1.2-SHA256SUMS.txt`：可选的完整性校验值
 
 不要下载 GitHub 自动生成的 `Source code (zip)` 代替扩展包；源码压缩包不能直接加载为扩展。
 
@@ -22,10 +22,10 @@
 在 ZIP 所在目录打开 PowerShell：
 
 ```powershell
-Get-FileHash .\GitHelper-CN-v0.1.1-chrome.zip -Algorithm SHA256
+Get-FileHash .\GitHelper-CN-v0.1.2-chrome.zip -Algorithm SHA256
 ```
 
-输出的 Hash 应与 `GitHelper-CN-v0.1.1-SHA256SUMS.txt` 中的值一致。校验不一致时不要加载该文件，请重新从本仓库 Release 下载。
+输出的 Hash 应与 `GitHelper-CN-v0.1.2-SHA256SUMS.txt` 中的值一致。校验不一致时不要加载该文件，请重新从本仓库 Release 下载。
 
 ### 3. 解压到固定目录
 
@@ -83,6 +83,8 @@ API Key 由用户自行向 Provider 获取，可能产生 Provider 侧费用。�
 3. 清空旧解压目录中的扩展文件，再把新 ZIP 解压到**同一路径**；不要把新文件叠加到旧的哈希资源上。
 4. 打开 `chrome://extensions/`，在 GitHelper-CN 卡片点击“重新加载”。
 5. 打开一个 GitHub 页面，确认设置和会话仍符合预期。
+
+`v0.1.2` 收紧了能力探针的新鲜度校验。升级后若 Provider 暂时显示“未验证”，已保存 Key 并未被删除；请在 Options 对相应 Provider 重新点击一次“测试 Key 与模型”。
 
 不要先点击“移除扩展程序”，除非你接受 Chrome 可能清除该扩展的本地会话、偏好和已保存 Key。更新前可在 Options 导出不含 Key 的 Model 配置 JSON；API Key 不会被导出。
 
@@ -147,7 +149,7 @@ pnpm package:extension
 
 - Phase 0–12：MVP、真实体验复核和 Provider 扩展已完成
 - Phase 13：公开源码与首次 GitHub Push 已完成
-- Phase 14：GitHub Release 与维护版发布已完成，当前版本见 [`v0.1.1`](https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.1)
+- Phase 14：GitHub Release 与维护版发布已完成，当前版本见 [`v0.1.2`](https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.2)
 - Chrome Web Store：明确暂停，不在 Phase 14 范围内
 
 ## License

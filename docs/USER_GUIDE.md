@@ -14,11 +14,11 @@
 不需要 Node.js 或源码构建：
 
 1. 打开 [最新 GitHub Release](https://github.com/CC667-space/GitHelper-CN/releases/latest)。
-2. 在 Assets 下载 `GitHelper-CN-v0.1.1-chrome.zip`。不要把 GitHub 自动生成的 `Source code (zip)` 当作扩展包。
-3. 可同时下载 `GitHelper-CN-v0.1.1-SHA256SUMS.txt`，并在 PowerShell 运行：
+2. 在 Assets 下载 `GitHelper-CN-v0.1.2-chrome.zip`。不要把 GitHub 自动生成的 `Source code (zip)` 当作扩展包。
+3. 可同时下载 `GitHelper-CN-v0.1.2-SHA256SUMS.txt`，并在 PowerShell 运行：
 
    ```powershell
-   Get-FileHash .\GitHelper-CN-v0.1.1-chrome.zip -Algorithm SHA256
+   Get-FileHash .\GitHelper-CN-v0.1.2-chrome.zip -Algorithm SHA256
    ```
 
    输出应与校验文件一致。
@@ -51,8 +51,8 @@ pnpm package:extension
 
 它会生成：
 
-- `artifacts\GitHelper-CN-v0.1.1-chrome.zip`
-- `artifacts\GitHelper-CN-v0.1.1-SHA256SUMS.txt`
+- `artifacts\GitHelper-CN-v0.1.2-chrome.zip`
+- `artifacts\GitHelper-CN-v0.1.2-SHA256SUMS.txt`
 
 使用前先解压，再让 Chrome 加载解压后的目录；不要把 ZIP 直接选作“已解压的扩展程序”。
 
@@ -62,13 +62,15 @@ pnpm package:extension
 
 下载新版本后，把新包完整解压到原来的固定路径，再在扩展卡片点击“重新加载”。不要把新包简单叠加到旧目录，否则旧的哈希资源可能残留。除非愿意丢失本地数据，否则不要先点击“移除扩展程序”。
 
+从 `v0.1.1` 升级到 `v0.1.2` 后，旧能力探针状态会因新鲜度绑定升级而失效；这不会删除已保存 Key。若 Provider 显示“未验证”，请在对应卡片重新点击一次“测试 Key 与模型”。
+
 ## 3. 配置 Provider
 
 1. 在 `chrome://extensions/` 找到 GitHelper-CN。
 2. 打开“扩展程序选项”。
 3. “Provider 与 API Key”只有“文本 Model”和“视觉 Model”两张配置卡。先在卡内选择 Provider；DeepSeek 仅支持文本，不会出现在视觉列表中。
 4. 为所选 Provider 填写并保存 API Key。两张卡共用同一家 Provider 已保存的 Key；除兼容保留的静态权限路线外，首次保存时 Chrome 只请求该 Provider 的精确 API Host 权限。拒绝授权则不会保存 Key；保存成功后输入框立即清空，页面只显示末 4 位掩码。
-5. 从对应角色的候选列表选择 Model，或选择“自行填写 Model ID”后输入账号实际可用的 ID，再点击“保存模型配置”。候选列表是 2026-08-20 依据官方目录核对的便捷预设，不代表账号一定有权限，也不替代真实能力探针。
+5. 从对应角色的候选列表选择 Model，或选择“自行填写 Model ID”后输入账号实际可用的 ID，再点击“保存模型配置”。候选列表是 2026-08-29 依据官方目录核对的便捷预设，不代表账号一定有权限，也不替代真实能力探针。
 6. 点击卡内“测试 Key 与模型”。该操作只测试当前所选 Provider，可能发送少量文本、流式、取消、工具、结构化输出或视觉请求并产生少量费用；正式设置页不提供批量探针。
 
 固定端点：

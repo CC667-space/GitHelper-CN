@@ -9,6 +9,7 @@
 > v1.6（2026-08-21）：普通问答的 PAGE_INFO_REQUEST 改为实时解析当前 DOM；补充 README 当前容器、证据来源与有限读取边界（D-071）。
 > v1.7（2026-08-21）：记录 Side Panel 字号偏好、按标签页短期搜索快照与 `v0.1.1` 复用既有 Release 流水线（D-072/D-073）。
 > v1.8（2026-08-29）：记录探针绑定与失效、Panel Port 精确来源、操作确认执行点、模型目录核对日期，以及许可证/确定性 ZIP/CI 门禁（D-075）。
+> v1.9（2026-08-30）：记录 `v0.1.2` 继续复用确定性 ZIP、许可证、凭据审计和远端 Quality 门禁（D-076）。
 
 ---
 
@@ -659,7 +660,7 @@ strict zod payload 与 64KB 信封限制；UI 的垃圾桶只进入待确认态�
 
 ---
 
-## 9. GitHub Release 构建边界（v1.8，D-070/D-073/D-075）
+## 9. GitHub Release 构建边界（v1.9，D-070/D-073/D-075/D-076）
 
 ```
 提交源码 + public/icons
@@ -678,5 +679,6 @@ strict zod payload 与 64KB 信封限制；UI 的垃圾桶只进入待确认态�
 - 打包阶段拒绝 `.env`、凭据命名、私钥/证书、source map 和日志类条目，并断言四档图标及两份法律文件存在。
 - `artifacts/` 不进入 Git；仅在完整门禁与凭据审计通过后上传到对应 GitHub Release。
 - `.github/workflows/quality.yml` 使用项目固定的 Node/pnpm 版本，在 Windows 依次执行 frozen install、audit、许可证再生成差异检查、typecheck、lint、format、test、build、安全扫描和打包；本地工作树通过不等于远端 workflow 已运行。
+- `v0.1.2` 的版本提交必须先由上述远端 Quality workflow 成功验证，再创建 tag 和 Release；远端仍只上传确定性 ZIP 与其 SHA-256 文件。
 - Phase 0 的截图/存储技术探针已完成并保留书面证据，但其 Background 原始消息入口、Content DOM 触发器和 Options 技术验证 UI 不进入正式 Release。Provider 的单卡“测试 Key 与模型”是用户必要配置能力，继续保留。
 - Chrome Web Store、CRX 签名和其他商店不属于该流水线。

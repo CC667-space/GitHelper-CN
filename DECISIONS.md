@@ -719,3 +719,14 @@
 - **范围**：Phase 14 后续本地维护；不新增 Provider、Chrome 权限/Host、GitHub Token/写操作、持久数据类别或发布渠道，不读取真实 Key。本轮不 Push、不创建 tag 或 Release；远端 `v0.1.1` 资产保持不变。
 - **证据**：完整门禁与凭据审计记录于 STATUS；当前生产源码、`dist`、20 条目 ZIP 和 43 个历史提交的生产路径均无密钥形态命中。测试/脚本中的命中均为显式安全哨兵，未进入生产构建。
 - 状态：实现已同步 `origin/main`；远端 Windows Quality gate 已启用，打包入口固定使用 PowerShell 7 以保持 UTF-8/LF 脚本解析一致 ｜ 2026-08-30
+
+## D-076 `v0.1.2` 只发布 D-074/D-075 与 Windows CI 修复
+
+- **决策**：
+  - 经项目负责人 2026-08-30 明确授权，把 D-074 仓库安全加固、D-075 分层审计维护和 `b70b28e` 的 Windows CI PowerShell 7 入口修复发布为 GitHub Release `v0.1.2`。
+  - `package.json` 与 manifest 同步升级为 `0.1.2`；安装资产继续限定为 `GitHelper-CN-v0.1.2-chrome.zip` 和对应 SHA-256 文件。Release 必须公开、非 draft、非 prerelease 并设为 latest，tag 指向通过全部门禁的版本提交。
+  - Push 前重新执行 frozen install、依赖/许可证/代码/测试/build/E2E/确定性打包门禁，并复核当前源码、全部 Git 历史、`dist` 与 ZIP 无真实凭据；版本提交的远端 Quality workflow 成功后才创建 tag 和 Release。
+  - README、用户指南与 Release Notes 明确说明：旧探针 Schema 会失效，但不会删除已保存 Key；Provider 显示未验证时需要用户按需重新运行单家测试。
+- **理由**：公开安装版 `v0.1.1` 尚不包含已经合并并通过远端 Quality 的依赖修复、状态新鲜度和后端安全护栏。复用 D-075 的确定性 ZIP、许可证与 CI 流程，可以让安装包与当前受维护源码一致，而不引入新的产品能力或权限面。
+- **范围**：只发布既有维护成果及其版本、文档和证据；不新增 Chrome 权限/Host、Provider、真实 Provider 请求、GitHub 写能力、CRX、Chrome Web Store 或其他发布渠道。
+- 状态：本地发布门禁、确定性打包与凭据审计已通过；待完成版本提交、远端 Quality、tag、Release 与资产核验 ｜ 2026-08-30

@@ -2,7 +2,7 @@
 
 > 本文件是全项目的**单一事实来源与最高约束**。任何执行阶段不得静默违反本文件。
 > 修改本文件 = 基线变更，必须由项目负责人（下称"你"）确认。
-> 状态：**已冻结 v1.6** ｜ 初次冻结：2026-07-23 ｜ 修订：2026-08-21（v1.1–v1.6 定向修订，见文末变更记录）
+> 状态：**已冻结 v1.7** ｜ 初次冻结：2026-07-23 ｜ 修订：2026-08-30（v1.1–v1.7 定向修订，见文末变更记录）
 
 ---
 
@@ -155,8 +155,8 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 - v1 **不上架** Chrome Web Store；该路线继续暂停，不属于 GitHub Release。
 - 经项目负责人 2026-08-21 明确授权，v1 可在既有公开仓库发布版本化 GitHub Release。安装资产为根目录含 `manifest.json` 的 ZIP 与对应 SHA-256 校验文件；用户解压后通过 Chrome 开发者模式“加载已解压的扩展程序”。不得把它描述为稳定版 Chrome 可一键安装的 CRX。
 - 保持 MV3 通用；Chrome 为唯一主测试目标。
-- 项目负责人已于 2026-08-21 分别授权 Phase 14 的 `v0.1.0` 首发与 `v0.1.1` 维护版。`v0.1.1` 只包含 D-071/D-072 已验收补丁，继续使用版本化 ZIP + SHA-256 的既有发布边界。
-- `v0.1.1` 之后的新版本 Release、Chrome Web Store 上架、其他商店或新的公开发布渠道仍是独立确认节点。
+- 项目负责人已分别授权 Phase 14 的 `v0.1.0` 首发、`v0.1.1` 功能维护版与 `v0.1.2` 安全维护版。`v0.1.2` 只发布 D-074/D-075 及 Windows CI 打包入口修复，继续使用版本化 ZIP + SHA-256 的既有发布边界。
+- `v0.1.2` 之后的新版本 Release、Chrome Web Store 上架、其他商店或新的公开发布渠道仍是独立确认节点。
 
 ---
 
@@ -199,7 +199,7 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 - 任何会产生新增付费成本的选择
 - 扩大到 D-068 已授权固定 Provider 与受限 custom 规则之外的 Chrome Host 权限，或放宽 custom URL/精确授权边界
 - 发送敏感数据 / 不可逆数据删除
-- 新增 Git Remote / Force Push / 新建远程仓库 / Chrome Web Store 上架 / Phase 14 `v0.1.0` 与 `v0.1.1` 之外的公开发布；两版所需的既有 `origin` Push、tag 与 GitHub Release 均已获定向授权
+- 新增 Git Remote / Force Push / 新建远程仓库 / Chrome Web Store 上架 / Phase 14 `v0.1.0`、`v0.1.1` 与 `v0.1.2` 之外的公开发布；三版所需的既有 `origin` Push、tag 与 GitHub Release 均已获定向授权
 - 若匿名 GitHub API 限额被证实阻塞 MVP → 评估引入细粒度 Token（基线变更）
 - 若未来需要私有仓库支持 → 独立基线变更评估
 - 出现与本基线实质冲突、或多方向抉择无法按既有原则代决
@@ -226,3 +226,4 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 - **v1.4（2026-08-20）**：经项目负责人明确授权，加入 GLM / Kimi / Grok 官方端点和一个受限 custom OpenAI-compatible Provider；UUAPI 降为旧配置兼容并移出常用选择器。custom 只允许经校验的 HTTPS URL，使用未授予的可选 Host 候选声明和用户手势中的精确 Host 授权；Key 仍独立存储且不进入 JSON。既有 GitHub 功能、写操作禁令、默认文本路线与 MVP 可用性门槛**未变**（D-068）。
 - **v1.5（2026-08-21）**：经项目负责人明确授权，暂停 Chrome Web Store 上架并改为发布 GitHub Release `v0.1.0`。发布物限定为可校验的扩展 ZIP，用户解压后用开发者模式加载；Phase 14 同步清除正式运行时中的 Phase 0 调试入口与批量能力探针 UI，保留单 Provider“测试 Key 与模型”。产品功能、Provider/权限、安全边界与 BYOK 数据流**未变**（D-070）。
 - **v1.6（2026-08-21）**：经项目负责人在 D-071/D-072 基本验收后明确授权发布 `v0.1.1` 维护版。该版只纳入普通问答 PageContext 新鲜度修复、字号三档及按标签页的短期搜索连续性；继续使用既有 ZIP + SHA-256 流水线，不新增权限、Host、Provider 调用、长期搜索历史或 Chrome Web Store 发布（D-073）。
+- **v1.7（2026-08-30）**：经项目负责人明确授权发布 `v0.1.2` 安全维护版。该版只封装 D-074/D-075 与 Windows CI PowerShell 7 入口修复，复用确定性 ZIP + SHA-256 流水线；不新增产品功能、Chrome 权限/Host、真实 Provider 请求、GitHub 写能力或 Chrome Web Store 工作（D-076）。

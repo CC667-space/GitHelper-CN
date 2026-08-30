@@ -10,6 +10,7 @@
 > v1.6（2026-08-21）：新增普通问答实时 PageContext、README 当前 DOM、证据来源与读取边界回归（D-071）。
 > v1.7（2026-08-21）：补充 D-072 字号/搜索快照回归与 `v0.1.1` 版本化 Release 复核（D-073）。
 > v1.8（2026-08-29）：补充依赖审计、探针绑定、操作确认、Panel Port 来源、模型目录日期、全仓格式及确定性含许可证打包门禁（D-075）。
+> v1.9（2026-08-30）：补充 `v0.1.2` 版本提交、远端 Quality、tag、Release 与两项资产 digest 核验（D-076）。
 
 ---
 
@@ -149,7 +150,7 @@
 | 11    | 全测试绿、打包可加载、S1-S5 证据齐全（前置：Phase 6/7/8 已完成）｜ **人工：S1-S5 批量体验复核**                                                                                                                                                                                                                                                                                                                        |
 | 12    | GLM/Kimi/Grok/custom Mock、安全、动态 Host、迁移、UUAPI legacy、构建与 E2E 全过；无新 Key 不阻塞                                                                                                                                                                                                                                                                                                                       |
 | 13    | MIT 公开源码、历史邮箱隐私处理、全历史凭据审计、公开仓库与首次 Push 通过                                                                                                                                                                                                                                                                                                                                               |
-| 14    | 正式运行时无开发探针入口；图标完整；README 快速上手完整；typecheck/lint/变更源文件 Prettier check/`git diff --check`/test/build/安全扫描/E2E/打包/凭据审计全过；`v0.1.0` 与获授权的 `v0.1.1` Release 均只含可核对的 ZIP/SHA256 资产                                                                                                                                                                                    |
+| 14    | 正式运行时无开发探针入口；图标完整；README 快速上手完整；typecheck/lint/format/`git diff --check`/test/build/安全扫描/E2E/确定性打包/凭据审计全过；获授权的 `v0.1.0`/`v0.1.1`/`v0.1.2` Release 均只含可核对的 ZIP/SHA256 资产；`v0.1.2` 版本提交的远端 Quality 成功                                                                                                                                                    |
 
 ---
 
