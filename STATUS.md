@@ -6,7 +6,7 @@
 
 ## 当前阶段
 
-**Phase 14 — GitHub Release `v0.1.2` 已完成并通过远程核验（D-076）；Chrome Web Store 继续暂停。**
+**Phase 14 — GitHub Release `v0.1.2` 已完成并通过远程核验（D-076）；D-077 本地维护补丁已通过完整门禁，尚未 Push。Chrome Web Store 继续暂停。**
 
 ## 已完成
 
@@ -348,10 +348,16 @@
   - 凭据审计覆盖当前生产源码、`dist`、ZIP、禁止跟踪路径与 Push 前全部 46 个历史提交：生产路径命中 0；历史 11 个命中路径全部为测试/E2E 安全哨兵。未读取真实 Key
   - 版本提交 `4bec916` 已 fast-forward Push；远端 Quality run `33290563985` 全步骤成功，注释 tag `v0.1.2` 解引用到该版本提交
   - 公开 Release 已设为 latest 且不是 draft/prerelease；远程仅含 ZIP 201,583 bytes 与 SHA-256 文件 97 bytes，两项 GitHub digest 均与本地一致：`https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.2`
+- [x] **Phase 14 后续维护 — Vitest 公告修复与模型目录刷新（2026-09-13，D-077）完成本地验收**：
+  - `vitest` 由 4.1.10 定向更新到同主版本修复版 4.1.11；`pnpm audit --audit-level moderate` 返回零已知漏洞，三条同源 Dependabot 告警对应的受影响版本已退出锁文件
+  - Provider Catalog 核对日期更新到 2026-09-13，定向刷新 OpenAI、Anthropic、Gemini、Qwen、SiliconFlow 与 Grok 的默认值/候选；既有已保存 Model ID 保持优先，不迁移、不覆盖
+  - 定向 Catalog/设置/UI 19 项测试通过；完整门禁为 typecheck、lint、全仓 format、Vitest 60 files / 326 tests（另 1 file / 1 live test 默认跳过）、build（421 modules）、构建安全扫描与隔离 Chrome 149 E2E 全过
+  - E2E Provider 请求 0、页面异常 0；20 条目本地 ZIP 连续两次 SHA-256 均为 `121ca0c697294a67198e23c60ade3e81a190ad1f1d4b38dd8df2cb9e0a14291b`
+  - 未读取真实 Key，未新增 Provider、endpoint、Host/Chrome 权限，未升级产品版本，未 Push、未创建 tag 或 Release；公开安装版仍为 `v0.1.2`
 
 ## 下一任务
 
-**等待后续真实使用反馈；公开安装版为 `v0.1.2`。Chrome Web Store 上架继续暂停，任何 `v0.1.2` 之后的 Release 需另行确认。**
+**D-077 已完成本地维护与验收，等待项目负责人明确决定是否 Push；公开安装版仍为 `v0.1.2`。Chrome Web Store 上架继续暂停，任何 `v0.1.2` 之后的 Release 需另行确认。**
 
 ## 已登记的后续优化
 
@@ -397,7 +403,7 @@
 
 ## 阻塞
 
-当前无阻塞。GitHub Release `v0.1.2` 已完成；Chrome Web Store 上架是明确暂停的后续路线，不是当前阻塞项。
+当前无实现阻塞。D-077 已在本地通过完整门禁；Push 属于强制确认节点，未获本轮授权前不执行。GitHub Release `v0.1.2` 已完成；Chrome Web Store 上架继续暂停。
 
 ## 变更记录
 
@@ -463,3 +469,4 @@
 - 2026-08-30：`9b6b41c` 已普通 Push 到 `origin/main`，未创建 tag/Release；远端 Dependabot open 告警归零。首次 Quality 运行仅打包失败，证实为 legacy Windows PowerShell 5.1 对 UTF-8/LF 脚本的解析差异；打包入口改用 `pwsh` 并加入回归断言，其余远端门禁均已通过。
 - 2026-08-30：项目负责人授权把 D-074/D-075 与 Windows CI PowerShell 7 入口修复发布为 `v0.1.2`；版本、文档和发布证据开始按既有可校验 ZIP 流程更新，Chrome Web Store 继续暂停。
 - 2026-08-30：`4bec916` 已 Push，远端 Quality run `33290563985` 全步骤成功；注释 tag `v0.1.2` 指向该版本提交，公开 latest Release 与 ZIP/SHA-256 两项资产已上传，名称、大小和 GitHub digest 均与本地一致。Chrome Web Store 继续暂停。
+- 2026-09-13：完成 D-077 本地维护；Vitest 4.1.11 消除三条同源开发依赖公告，Provider Catalog 定向刷新到 2026-09-13 且不覆盖已保存 Model ID；326 项常规测试及完整静态/构建/安全/E2E/确定性打包门禁通过。未读取真实 Key，未 Push、未创建 tag 或 Release。

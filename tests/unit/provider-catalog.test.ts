@@ -8,7 +8,7 @@ import {
 
 describe('Provider catalog', () => {
   it('暴露十家常用内置服务、一个受限 custom，并把 UUAPI 标记为 legacy', () => {
-    expect(PROVIDER_CATALOG_VERIFIED_AT).toBe('2026-08-29');
+    expect(PROVIDER_CATALOG_VERIFIED_AT).toBe('2026-09-13');
     expect(PROVIDER_CATALOG.map((provider) => provider.id)).toEqual([
       'deepseek',
       'openrouter',
@@ -30,12 +30,12 @@ describe('Provider catalog', () => {
       apiHost: 'https://api.openai.com',
       apiPath: '/v1/chat/completions',
       hostPermission: 'optional',
-      defaultTextModel: 'gpt-5-mini',
-      defaultVisionModel: 'gpt-5-mini',
+      defaultTextModel: 'gpt-5.6-terra',
+      defaultVisionModel: 'gpt-5.6-terra',
       intermediary: false,
       modelSuggestions: {
-        text: ['gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.6-sol'],
-        vision: ['gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.6-sol'],
+        text: ['gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna'],
+        vision: ['gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna'],
       },
     });
 
@@ -43,6 +43,8 @@ describe('Provider catalog', () => {
       settingsLabel: 'Claude（Anthropic API）',
       apiHost: 'https://api.anthropic.com',
       apiPath: '/v1/chat/completions',
+      defaultTextModel: 'claude-sonnet-5',
+      defaultVisionModel: 'claude-sonnet-5',
       modelSuggestions: {
         text: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5'],
         vision: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5'],
@@ -52,30 +54,31 @@ describe('Provider catalog', () => {
     expect(providerCatalogEntry('gemini')).toMatchObject({
       apiHost: 'https://generativelanguage.googleapis.com',
       apiPath: '/v1beta/openai/chat/completions',
-      defaultTextModel: 'gemini-3.6-flash',
-      defaultVisionModel: 'gemini-3.6-flash',
+      defaultTextModel: 'gemini-3.8-flash',
+      defaultVisionModel: 'gemini-3.8-flash',
       modelSuggestions: {
-        text: ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'],
-        vision: ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'],
+        text: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite'],
+        vision: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite'],
       },
     });
     expect(providerCatalogEntry('qwen')).toMatchObject({
       apiHost: 'https://dashscope.aliyuncs.com',
       apiPath: '/compatible-mode/v1/chat/completions',
-      defaultTextModel: 'qwen-plus',
-      defaultVisionModel: 'qwen-vl-plus',
+      defaultTextModel: 'qwen3.8-flash',
+      defaultVisionModel: 'qwen3.8-flash',
       modelSuggestions: {
-        text: ['qwen3.8-max', 'qwen3.7-plus', 'qwen3.7-flash'],
-        vision: ['qwen3.8-max', 'qwen3.7-plus', 'qwen3.7-flash'],
+        text: ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.7-plus'],
+        vision: ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.7-plus'],
       },
     });
     expect(providerCatalogEntry('siliconflow')).toMatchObject({
       apiHost: 'https://api.siliconflow.cn',
       apiPath: '/v1/chat/completions',
-      defaultTextModel: 'Pro/zai-org/GLM-5.1',
+      defaultTextModel: 'zai-org/GLM-5.2',
+      defaultVisionModel: 'Qwen/Qwen3.8-27B',
       modelSuggestions: {
         text: ['zai-org/GLM-5.2', 'Pro/zai-org/GLM-5.1', 'moonshotai/Kimi-K2.7-Code'],
-        vision: ['Qwen/Qwen3.6-35B-A3B', 'Qwen/Qwen3.6-27B', 'Qwen/Qwen3.5-397B-A17B'],
+        vision: ['Qwen/Qwen3.8-27B', 'Qwen/Qwen3.6-35B-A3B', 'Qwen/Qwen3.6-27B'],
       },
     });
 
@@ -88,6 +91,10 @@ describe('Provider catalog', () => {
     });
     expect(providerCatalogEntry('kimi').apiHost).toBe('https://api.moonshot.cn');
     expect(providerCatalogEntry('grok').apiHost).toBe('https://api.x.ai');
+    expect(providerCatalogEntry('grok')).toMatchObject({
+      defaultTextModel: 'grok-4.6',
+      defaultVisionModel: 'grok-4.6',
+    });
     expect(providerCatalogEntry('grok').modelSuggestions).toEqual({
       text: ['grok-4.6', 'grok-4.5', 'grok-4.3'],
       vision: ['grok-4.6', 'grok-4.5', 'grok-4.3'],

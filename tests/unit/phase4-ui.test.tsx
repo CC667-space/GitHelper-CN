@@ -194,9 +194,9 @@ describe('Phase 4 trusted UI', () => {
     expect(within(textCard).getByLabelText('ChatGPT（OpenAI API） API Key')).toBeTruthy();
 
     const modelSelector = within(textCard).getByLabelText('文本 Model 候选');
+    expect(within(modelSelector).getByRole('option', { name: 'gpt-6-astra' })).toBeTruthy();
     expect(within(modelSelector).getByRole('option', { name: 'gpt-5.6-terra' })).toBeTruthy();
     expect(within(modelSelector).getByRole('option', { name: 'gpt-5.6-luna' })).toBeTruthy();
-    expect(within(modelSelector).getByRole('option', { name: 'gpt-5.6-sol' })).toBeTruthy();
     await user.selectOptions(modelSelector, '__custom__');
     const customModel = within(textCard).getByLabelText('自行填写文本 Model ID');
     await user.type(customModel, 'account/custom-model');

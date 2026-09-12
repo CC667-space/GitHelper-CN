@@ -36,8 +36,8 @@ describe('Provider settings', () => {
 
     expect(settings.providers.deepseek.textModel).toBe('my-deepseek-model');
     expect(settings.providers.openai).toEqual({
-      textModel: 'gpt-5-mini',
-      visionModel: 'gpt-5-mini',
+      textModel: 'gpt-5.6-terra',
+      visionModel: 'gpt-5.6-terra',
     });
     expect(settings.schemaVersion).toBe(2);
     expect(settings.providers.glm.textModel).toBe('glm-5.2');

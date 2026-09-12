@@ -16,7 +16,7 @@ export const PROVIDER_IDS = [
 ] as const;
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 export const providerIdSchema = z.enum(PROVIDER_IDS);
-export const PROVIDER_CATALOG_VERIFIED_AT = '2026-08-29';
+export const PROVIDER_CATALOG_VERIFIED_AT = '2026-09-13';
 
 export interface ProviderCatalogEntry {
   id: ProviderId;
@@ -79,11 +79,11 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     visibility: 'common',
     supportsVisionSelection: true,
     intermediary: false,
-    defaultTextModel: 'gpt-5-mini',
-    defaultVisionModel: 'gpt-5-mini',
+    defaultTextModel: 'gpt-5.6-terra',
+    defaultVisionModel: 'gpt-5.6-terra',
     modelSuggestions: {
-      text: ['gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.6-sol'],
-      vision: ['gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.6-sol'],
+      text: ['gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna'],
+      vision: ['gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna'],
     },
     connectionNote: '需要 OpenAI API Key；ChatGPT 登录或订阅不能代替 API Key。',
   },
@@ -97,8 +97,8 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     visibility: 'common',
     supportsVisionSelection: true,
     intermediary: false,
-    defaultTextModel: 'claude-sonnet-4-6',
-    defaultVisionModel: 'claude-sonnet-4-6',
+    defaultTextModel: 'claude-sonnet-5',
+    defaultVisionModel: 'claude-sonnet-5',
     modelSuggestions: {
       text: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5'],
       vision: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5'],
@@ -114,11 +114,11 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     visibility: 'common',
     supportsVisionSelection: true,
     intermediary: false,
-    defaultTextModel: 'gemini-3.6-flash',
-    defaultVisionModel: 'gemini-3.6-flash',
+    defaultTextModel: 'gemini-3.8-flash',
+    defaultVisionModel: 'gemini-3.8-flash',
     modelSuggestions: {
-      text: ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'],
-      vision: ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'],
+      text: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite'],
+      vision: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite'],
     },
     connectionNote: '当前使用 Google 官方 OpenAI 兼容接口。',
   },
@@ -131,11 +131,11 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     visibility: 'common',
     supportsVisionSelection: true,
     intermediary: false,
-    defaultTextModel: 'qwen-plus',
-    defaultVisionModel: 'qwen-vl-plus',
+    defaultTextModel: 'qwen3.8-flash',
+    defaultVisionModel: 'qwen3.8-flash',
     modelSuggestions: {
-      text: ['qwen3.8-max', 'qwen3.7-plus', 'qwen3.7-flash'],
-      vision: ['qwen3.8-max', 'qwen3.7-plus', 'qwen3.7-flash'],
+      text: ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.7-plus'],
+      vision: ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.7-plus'],
     },
     connectionNote: '使用只需 API Key 的百炼共享端点；模型 ID 可按账号可用范围修改。',
   },
@@ -148,10 +148,11 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     visibility: 'common',
     supportsVisionSelection: true,
     intermediary: true,
-    defaultTextModel: 'Pro/zai-org/GLM-5.1',
+    defaultTextModel: 'zai-org/GLM-5.2',
+    defaultVisionModel: 'Qwen/Qwen3.8-27B',
     modelSuggestions: {
       text: ['zai-org/GLM-5.2', 'Pro/zai-org/GLM-5.1', 'moonshotai/Kimi-K2.7-Code'],
-      vision: ['Qwen/Qwen3.6-35B-A3B', 'Qwen/Qwen3.6-27B', 'Qwen/Qwen3.5-397B-A17B'],
+      vision: ['Qwen/Qwen3.8-27B', 'Qwen/Qwen3.6-35B-A3B', 'Qwen/Qwen3.6-27B'],
     },
     connectionNote: '模型上下线与能力可能变化；可在模型框中填写账号当前可用的模型 ID。',
   },
@@ -196,8 +197,8 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     visibility: 'common',
     supportsVisionSelection: true,
     intermediary: false,
-    defaultTextModel: 'grok-4.5',
-    defaultVisionModel: 'grok-4.5',
+    defaultTextModel: 'grok-4.6',
+    defaultVisionModel: 'grok-4.6',
     modelSuggestions: {
       text: ['grok-4.6', 'grok-4.5', 'grok-4.3'],
       vision: ['grok-4.6', 'grok-4.5', 'grok-4.3'],

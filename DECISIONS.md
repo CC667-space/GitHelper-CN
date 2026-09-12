@@ -730,3 +730,15 @@
 - **理由**：公开安装版 `v0.1.1` 尚不包含已经合并并通过远端 Quality 的依赖修复、状态新鲜度和后端安全护栏。复用 D-075 的确定性 ZIP、许可证与 CI 流程，可以让安装包与当前受维护源码一致，而不引入新的产品能力或权限面。
 - **范围**：只发布既有维护成果及其版本、文档和证据；不新增 Chrome 权限/Host、Provider、真实 Provider 请求、GitHub 写能力、CRX、Chrome Web Store 或其他发布渠道。
 - 状态：版本提交 `4bec916`、远端 Quality run `33290563985`、注释 tag、latest Release 与两项资产 digest 均已核验 ｜ 2026-08-30
+
+## D-077 同主版本修复 Vitest 公告，并定向刷新 Provider 模型目录
+
+- **决策**：
+  - 将开发依赖 `vitest` 从 `4.1.10` 更新到同一主版本的 `4.1.11`，修复 GHSA-82fw-gwwq-j7x9 / CVE-2026-84373 所述的开发服务器路径穿越与任意本地文件读取问题；不连带升级测试框架主版本或其他无关依赖。
+  - Provider Catalog 的官方目录核对日期更新为 2026-09-13。只定向更新 OpenAI、Anthropic、Gemini、Qwen、SiliconFlow 与 Grok 的默认值/候选值；DeepSeek、OpenRouter、GLM、Kimi 的当前目录保持不变。
+  - 已保存的 Model ID 继续优先于 Catalog 默认值，不做存储迁移或覆盖；新默认值只用于缺失配置。候选仍允许“自行填写 Model ID”，真实可用性仍以用户账号权限和单 Provider 能力测试为准。
+  - 不新增 Provider、endpoint、Host 权限、Chrome 权限或实验能力；不读取真实 Key。DeepSeek 实验视觉路线和非通用高成本模型不进入默认候选，避免把目录维护扩大为产品能力变更。
+- **理由**：Dependabot 的三条告警来自同一个已修复的 Vitest 直接开发依赖链，最小修复版本即可消除风险。模型名称会随服务商目录变化，定向刷新便捷预设可以减少新配置失败，但不能替用户改变现有选择或把目录存在误当作真实能力。
+- **证据**：`pnpm audit --audit-level moderate` 返回零已知漏洞；Catalog/设置/UI 定向测试 19/19 通过，完整 Vitest 60 files / 326 tests 通过（另 1 file / 1 live test 默认跳过）。typecheck、lint、全仓 format、build（421 modules）、构建安全扫描、隔离 Chrome 149 E2E 与 20 条目确定性 ZIP 均通过；连续两次 ZIP SHA-256 均为 `121ca0c697294a67198e23c60ade3e81a190ad1f1d4b38dd8df2cb9e0a14291b`。E2E Provider 请求 0、页面异常 0。
+- **范围**：Phase 14 后续本地维护；不升级产品版本，不 Push，不创建 tag 或 Release，不改变公开 `v0.1.2` 资产。
+- 状态：本地实现与完整门禁完成，等待后续明确授权决定是否同步远端 ｜ 2026-09-13
