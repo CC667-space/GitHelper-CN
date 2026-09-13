@@ -31,6 +31,17 @@ describe('GitHub Release runtime hardening', () => {
     expect(packageJson.scripts?.['package:extension']).toMatch(/^pwsh\s/);
   });
 
+  it('Windows Quality workflow 使用 Node 24 运行时的官方 Action 主版本', () => {
+    const qualityWorkflow = readProjectFile('.github/workflows/quality.yml');
+
+    expect(qualityWorkflow).toContain('uses: actions/checkout@v7');
+    expect(qualityWorkflow).toContain('uses: pnpm/action-setup@v6');
+    expect(qualityWorkflow).toContain('uses: actions/setup-node@v7');
+    expect(qualityWorkflow).not.toMatch(
+      /uses:\s+(?:actions\/(?:checkout|setup-node)|pnpm\/action-setup)@v4/,
+    );
+  });
+
   it('发布包使用固定时间戳并包含项目及生产依赖许可证', () => {
     const packageScript = readProjectFile('scripts/package-extension.ps1');
     const thirdPartyNotices = readProjectFile('THIRD_PARTY_NOTICES.txt');

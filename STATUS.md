@@ -6,7 +6,7 @@
 
 ## 当前阶段
 
-**Phase 14 — GitHub Release `v0.1.2` 已完成并通过远程核验（D-076）；D-077 维护补丁已同步 `origin/main` 并通过远程门禁。Chrome Web Store 继续暂停。**
+**Phase 14 — GitHub Release `v0.1.3` 本地发布门禁已通过（D-077/D-078/D-079），等待按既有授权完成版本提交、远端门禁、tag、Release 与资产核验。Chrome Web Store 继续暂停。**
 
 ## 已完成
 
@@ -348,7 +348,7 @@
   - 凭据审计覆盖当前生产源码、`dist`、ZIP、禁止跟踪路径与 Push 前全部 46 个历史提交：生产路径命中 0；历史 11 个命中路径全部为测试/E2E 安全哨兵。未读取真实 Key
   - 版本提交 `4bec916` 已 fast-forward Push；远端 Quality run `33290563985` 全步骤成功，注释 tag `v0.1.2` 解引用到该版本提交
   - 公开 Release 已设为 latest 且不是 draft/prerelease；远程仅含 ZIP 201,583 bytes 与 SHA-256 文件 97 bytes，两项 GitHub digest 均与本地一致：`https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.2`
-- [x] **Phase 14 后续维护 — Vitest 公告修复与模型目录刷新（2026-09-13，D-077）完成本地验收**：
+- [x] **Phase 14 后续维护 — Vitest 公告修复与模型目录刷新（2026-09-13，D-077）完成本地与远程验收**：
   - `vitest` 由 4.1.10 定向更新到同主版本修复版 4.1.11；`pnpm audit --audit-level moderate` 返回零已知漏洞，三条同源 Dependabot 告警对应的受影响版本已退出锁文件
   - Provider Catalog 核对日期更新到 2026-09-13，定向刷新 OpenAI、Anthropic、Gemini、Qwen、SiliconFlow 与 Grok 的默认值/候选；既有已保存 Model ID 保持优先，不迁移、不覆盖
   - 定向 Catalog/设置/UI 19 项测试通过；完整门禁为 typecheck、lint、全仓 format、Vitest 60 files / 326 tests（另 1 file / 1 live test 默认跳过）、build（421 modules）、构建安全扫描与隔离 Chrome 149 E2E 全过
@@ -356,10 +356,19 @@
   - Push 前复核生产源码、`dist`、本次新增行、本地 ZIP 与禁止跟踪路径，敏感形态命中均为 0；两处测试文件只含本次修改前已有的安全哨兵，新增敏感形态行 0
   - 项目负责人明确授权后，`c7a7183` 已普通 Push 到 `origin/main`；远端 Quality run `34709340617` 与 CodeQL run `34709340585` 成功，Dependabot 与 Code scanning 的 Open 告警均为 0
   - 未读取真实 Key，未新增 Provider、endpoint、Host/Chrome 权限，未升级产品版本，未创建 tag 或 Release；公开安装版仍为 `v0.1.2`
+- [x] **Phase 14 — GitHub Release `v0.1.3` 本地发布验收（2026-09-13，D-078/D-079）完成**：
+  - 项目负责人已人工确认 D-077 模型列表并授权发布 `v0.1.3`；`package.json`、manifest、README、用户指南、发布说明和权威记录已同步到 `0.1.3`
+  - GitHub 官方 Release 与 `action.yml` 核对确认：`actions/checkout@v7`、`actions/setup-node@v7`、`pnpm/action-setup@v6` 均声明 `node24`；Quality workflow 仅替换这三个引用，既有 Windows、Node/pnpm、权限和质量步骤不变
+  - Action 运行时回归先以旧 `@v4` 稳定失败，修改后 5/5 通过；完整 Vitest 为 60 files / 327 tests 通过，另 1 file / 1 live test 默认跳过；匿名 GitHub live test 1/1 通过
+  - 项目锁定的 pnpm 11.17.0 frozen install 通过，依赖 store 完整；`pnpm audit --audit-level moderate` 零已知漏洞；110 个生产依赖/31 组许可证文本再生成零差异
+  - typecheck、lint、全仓 format、`git diff --check`、build（421 modules）、构建安全扫描与隔离 Chrome 149 E2E 全过；E2E Provider 请求 0、页面异常 0，`dist/manifest.json` 版本为 `0.1.3`
+  - Chrome 权限与 Host 清单相对 `v0.1.2` 未变化；20 条目确定性 ZIP 连续两次 SHA-256 均为 `d4f9694eeeeea66754b5796eb9cbda59738d34bc45f18477aee34e1616b96009`，ZIP 201,567 bytes，校验文件 97 bytes
+  - 凭据审计覆盖当前生产源码、`dist`、本次新增行、ZIP、禁止跟踪路径与全部 49 个历史提交：生产/新增/构建/ZIP 意外敏感形态命中 0；历史 8 个唯一命中路径均为测试或 E2E 安全哨兵；未读取真实 Key
+  - 版本提交、远端 Quality/CodeQL、弃用警告消失、注释 tag、latest Release 与两项资产 digest 尚待按本次授权连续完成
 
 ## 下一任务
 
-**D-077 已完成本地与远程验收；等待后续真实使用反馈。公开安装版仍为 `v0.1.2`。Chrome Web Store 上架继续暂停，任何 `v0.1.2` 之后的 Release 需另行确认。**
+**创建并 Push `v0.1.3` 版本提交；确认远端 Quality/CodeQL 成功且三个 Action 不再产生 Node.js 20 弃用警告后，创建注释 tag 与公开 latest Release，上传并核验 ZIP/SHA-256 两项资产，再提交远程发布证据。**
 
 ## 已登记的后续优化
 
@@ -367,24 +376,24 @@
 
 ## 阶段进度表
 
-| Phase                                     | 状态                                 |
-| ----------------------------------------- | ------------------------------------ |
-| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成                            |
-| 1 仓库结构 + 扩展骨架                     | ✅ 已完成                            |
-| 1.5 安全地基                              | ✅ 已完成                            |
-| 2 Side Panel + 消息通信                   | ✅ 已完成                            |
-| 3 页面识别 + 上下文 + SPA                 | ✅ 已完成                            |
-| 4 Provider + 能力探针 + 对话 + 手动切换   | ✅ 已完成                            |
-| 5 Session + 偏好 + 容量淘汰               | ✅ 已完成                            |
-| 6 点击提问（MVP 必达）                    | ✅ 已完成                            |
-| 7 框选 + 视觉（MVP 必达）                 | ✅ 已完成                            |
-| 8 NL 搜索（MVP 必达）                     | ✅ 已完成                            |
-| 9 一键仓库分析                            | ✅ 已完成                            |
-| 10 安全加固 + 红队测试                    | ✅ 已完成                            |
-| 11 测试 + 打包 + MVP 验收                 | ✅ 已完成，v1 MVP 达标               |
-| 12 Provider 目录扩展 + 受限 custom 端点   | ✅ 已完成自动验收                    |
-| 13 GitHub 公开开源发布                    | ✅ 已完成                            |
-| 14 GitHub Release 加固与发布              | ✅ `v0.1.2` 已发布并完成远程资产核验 |
+| Phase                                     | 状态                                     |
+| ----------------------------------------- | ---------------------------------------- |
+| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成                                |
+| 1 仓库结构 + 扩展骨架                     | ✅ 已完成                                |
+| 1.5 安全地基                              | ✅ 已完成                                |
+| 2 Side Panel + 消息通信                   | ✅ 已完成                                |
+| 3 页面识别 + 上下文 + SPA                 | ✅ 已完成                                |
+| 4 Provider + 能力探针 + 对话 + 手动切换   | ✅ 已完成                                |
+| 5 Session + 偏好 + 容量淘汰               | ✅ 已完成                                |
+| 6 点击提问（MVP 必达）                    | ✅ 已完成                                |
+| 7 框选 + 视觉（MVP 必达）                 | ✅ 已完成                                |
+| 8 NL 搜索（MVP 必达）                     | ✅ 已完成                                |
+| 9 一键仓库分析                            | ✅ 已完成                                |
+| 10 安全加固 + 红队测试                    | ✅ 已完成                                |
+| 11 测试 + 打包 + MVP 验收                 | ✅ 已完成，v1 MVP 达标                   |
+| 12 Provider 目录扩展 + 受限 custom 端点   | ✅ 已完成自动验收                        |
+| 13 GitHub 公开开源发布                    | ✅ 已完成                                |
+| 14 GitHub Release 加固与发布              | 🚧 `v0.1.3` 本地门禁通过，待远程发布核验 |
 
 ## 待处理的强制确认节点
 
@@ -401,11 +410,12 @@
 - ✅ GitHub Release `v0.1.1`、既有 `origin` Push 与 tag（用户已明确授权；远程发布与资产 digest 核验完成）
 - ✅ GitHub 仓库安全设置与本轮 `origin/main` Push（用户已明确授权；不创建新 Release）
 - ✅ GitHub Release `v0.1.2`、既有 `origin` Push 与 tag（用户已明确授权；远程发布与资产 digest 核验完成）
+- ✅ GitHub Release `v0.1.3`、既有 `origin` Push 与 tag（用户已明确授权；当前正按完整门禁执行）
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
 
-当前无阻塞。D-077 已同步 `origin/main` 并通过远端 Quality、CodeQL 与安全告警复核。GitHub Release `v0.1.2` 已完成；Chrome Web Store 上架继续暂停。
+当前无阻塞。`v0.1.3` 本地发布门禁已通过，远端 Push/tag/Release 已获本轮明确授权并待执行；Chrome Web Store 上架继续暂停。
 
 ## 变更记录
 
@@ -473,3 +483,4 @@
 - 2026-08-30：`4bec916` 已 Push，远端 Quality run `33290563985` 全步骤成功；注释 tag `v0.1.2` 指向该版本提交，公开 latest Release 与 ZIP/SHA-256 两项资产已上传，名称、大小和 GitHub digest 均与本地一致。Chrome Web Store 继续暂停。
 - 2026-09-13：完成 D-077 本地维护；Vitest 4.1.11 消除三条同源开发依赖公告，Provider Catalog 定向刷新到 2026-09-13 且不覆盖已保存 Model ID；326 项常规测试及完整静态/构建/安全/E2E/确定性打包门禁通过。未读取真实 Key，未 Push、未创建 tag 或 Release。
 - 2026-09-13：项目负责人授权同步 D-077；Push 前敏感信息复核通过，`c7a7183` 已普通 Push 到 `origin/main`。远端 Quality `34709340617`、CodeQL `34709340585` 成功，Dependabot 与 Code scanning 的 Open 告警均为 0；未创建 tag 或 Release。
+- 2026-09-13：项目负责人确认模型列表并授权发布 `v0.1.3`；D-078 将三个 Quality Action 更新到官方 Node 24 运行时主版本，本地完整质量、安全、匿名 live、隔离 Chrome E2E、凭据审计与确定性打包门禁通过，待执行版本提交、远端门禁、tag、Release 和资产核验。

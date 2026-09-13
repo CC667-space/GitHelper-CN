@@ -11,6 +11,7 @@
 > v1.7（2026-08-21）：补充 D-072 字号/搜索快照回归与 `v0.1.1` 版本化 Release 复核（D-073）。
 > v1.8（2026-08-29）：补充依赖审计、探针绑定、操作确认、Panel Port 来源、模型目录日期、全仓格式及确定性含许可证打包门禁（D-075）。
 > v1.9（2026-08-30）：补充 `v0.1.2` 版本提交、远端 Quality、tag、Release 与两项资产 digest 核验（D-076）。
+> v1.10（2026-09-13）：补充 `v0.1.3` 的 Node 24 Action 回归、完整门禁、远端 Quality/CodeQL、tag、Release 与资产 digest 核验（D-078/D-079）。
 
 ---
 
@@ -54,7 +55,7 @@
 - context-builder：只含允许字段、不含整页；普通回答的简练/无废话风格契约在 System Prompt 中固定，且明确准确性优先；项目简介不得作为 README 证据，缺失只能表述为“当前未读取到”
 - messaging：信封版本/请求 ID、Schema 校验、超载荷拒绝、超时
 - release-hardening：正式 Background/Content/Options 不含 Phase 0 原始入口、页面调试触发器或开发专用区；Options 保留单 Provider 测试；manifest/action 引用 16/32/48/128 四档本地图标
-- release engineering：生产依赖许可证清单与 `pnpm licenses --prod` 数量一致且含实际文本；ZIP 含 `LICENSE`/`THIRD_PARTY_NOTICES.txt`、固定条目顺序/时间戳，重复 build/package 的 SHA-256 一致；CI 固定 Node/pnpm 并覆盖完整质量门禁
+- release engineering：生产依赖许可证清单与 `pnpm licenses --prod` 数量一致且含实际文本；ZIP 含 `LICENSE`/`THIRD_PARTY_NOTICES.txt`、固定条目顺序/时间戳，重复 build/package 的 SHA-256 一致；CI 固定 Node/pnpm 并覆盖完整质量门禁，checkout/setup-node/pnpm setup 使用声明 Node 24 运行时的官方稳定主版本
 
 ### 2. 组件测试（Vitest + Testing Library）
 
@@ -150,7 +151,7 @@
 | 11    | 全测试绿、打包可加载、S1-S5 证据齐全（前置：Phase 6/7/8 已完成）｜ **人工：S1-S5 批量体验复核**                                                                                                                                                                                                                                                                                                                        |
 | 12    | GLM/Kimi/Grok/custom Mock、安全、动态 Host、迁移、UUAPI legacy、构建与 E2E 全过；无新 Key 不阻塞                                                                                                                                                                                                                                                                                                                       |
 | 13    | MIT 公开源码、历史邮箱隐私处理、全历史凭据审计、公开仓库与首次 Push 通过                                                                                                                                                                                                                                                                                                                                               |
-| 14    | 正式运行时无开发探针入口；图标完整；README 快速上手完整；typecheck/lint/format/`git diff --check`/test/build/安全扫描/E2E/确定性打包/凭据审计全过；获授权的 `v0.1.0`/`v0.1.1`/`v0.1.2` Release 均只含可核对的 ZIP/SHA256 资产；`v0.1.2` 版本提交的远端 Quality 成功                                                                                                                                                    |
+| 14    | 正式运行时无开发探针入口；图标完整；README 快速上手完整；typecheck/lint/format/`git diff --check`/test/build/安全扫描/E2E/确定性打包/凭据审计全过；获授权的 `v0.1.0`/`v0.1.1`/`v0.1.2`/`v0.1.3` Release 均只含可核对的 ZIP/SHA256 资产；`v0.1.3` 版本提交的远端 Quality/CodeQL 成功，且 Quality 不再产生三个 Action 的 Node.js 20 弃用警告                                                                             |
 
 ---
 

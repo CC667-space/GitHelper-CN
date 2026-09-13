@@ -742,3 +742,25 @@
 - **证据**：`pnpm audit --audit-level moderate` 返回零已知漏洞；Catalog/设置/UI 定向测试 19/19 通过，完整 Vitest 60 files / 326 tests 通过（另 1 file / 1 live test 默认跳过）。typecheck、lint、全仓 format、build（421 modules）、构建安全扫描、隔离 Chrome 149 E2E 与 20 条目确定性 ZIP 均通过；连续两次 ZIP SHA-256 均为 `121ca0c697294a67198e23c60ade3e81a190ad1f1d4b38dd8df2cb9e0a14291b`。E2E Provider 请求 0、页面异常 0。实现提交 `c7a7183` 的远端 Quality run `34709340617` 与 CodeQL run `34709340585` 成功；Dependabot 与 Code scanning 的 Open 告警均为 0。
 - **范围**：Phase 14 后续维护；不升级产品版本，不创建 tag 或 Release，不改变公开 `v0.1.2` 资产。初始实现轮次不自动 Push；项目负责人随后明确授权，只同步既有 `origin/main`。
 - 状态：实现已同步 `origin/main`，远端 Quality、CodeQL 与安全告警复核通过 ｜ 2026-09-13
+
+## D-078 GitHub Actions 迁移到 Node 24 运行时的稳定主版本
+
+- **决策**：
+  - Quality workflow 将 `actions/checkout@v4`、`actions/setup-node@v4` 与 `pnpm/action-setup@v4` 分别更新为 `actions/checkout@v7`、`actions/setup-node@v7` 与 `pnpm/action-setup@v6`。
+  - 三个版本均于 2026-09-13 从各自官方 GitHub Release 与 `action.yml` 核对，运行时均声明 `node24`。工作流既有 Windows runner、Node 24、pnpm 11、权限和全部质量步骤保持不变。
+  - 回归测试固定三项主版本并拒绝旧 `@v4` 引用；远端 Quality 必须完整通过且不再产生这三项 Action 的 Node.js 20 弃用警告。
+- **理由**：GitHub 已把目标 Node 20 的旧 Action 强制改由 Node 24 运行并发出弃用警告。迁移官方稳定主版本可消除警告，也避免未来停止兼容时使 CI 失效；只更换 Action 运行时，不改变项目运行时或发布逻辑。
+- **官方依据**：`https://github.com/actions/checkout/releases/tag/v7.0.1`、`https://github.com/actions/setup-node/releases/tag/v7.0.0`、`https://github.com/pnpm/action-setup/releases/tag/v6.1.0`。
+- **范围**：只修改 `.github/workflows/quality.yml` 与对应回归测试；不改变扩展代码、依赖锁、Chrome 权限/Host、Provider、网络请求或发布资产内容。
+- 状态：本地回归已通过，待版本提交后的远端 Quality 验证 ｜ 2026-09-13
+
+## D-079 `v0.1.3` 只发布 D-077 与 D-078 维护成果
+
+- **决策**：
+  - 经项目负责人 2026-09-13 在模型列表人工确认后明确授权，把 D-077 的 Vitest 4.1.11 修复与 Provider 模型候选刷新、D-078 的 GitHub Actions Node 24 运行时迁移发布为 GitHub Release `v0.1.3`。
+  - `package.json` 与 manifest 同步升级为 `0.1.3`；安装资产继续限定为 `GitHelper-CN-v0.1.3-chrome.zip` 和对应 SHA-256 文件。Release 必须公开、非 draft、非 prerelease 并设为 latest，tag 指向通过全部门禁的版本提交。
+  - Push 前重新执行 frozen install、依赖/许可证/代码/测试/build/E2E/确定性打包门禁，并复核当前源码、全部 Git 历史、`dist` 与 ZIP 无真实凭据；版本提交的远端 Quality 与 CodeQL 成功后才创建 tag 和 Release。
+  - README、用户指南与 Release Notes 同步更新安装/同路径升级步骤。Chrome Web Store、CRX、其他仓库、后续版本与新渠道不在本次授权内。
+- **理由**：D-077 已通过本地、远端与人工模型目录确认，D-078 是消除现有 CI 弃用警告的最小维护修复。复用已有确定性 ZIP、许可证、凭据审计和远端门禁，可让公开安装版与受维护源码一致而不扩大产品或权限范围。
+- **范围**：只发布既有 D-077/D-078 成果及其版本、文档和证据；不调用真实 Provider，不读取已保存 Key，不新增 Chrome 权限、Host、GitHub 写功能、CRX 或 Chrome Web Store 工作。
+- 状态：已授权，待完整门禁、Push、tag、Release 与远程资产核验 ｜ 2026-09-13

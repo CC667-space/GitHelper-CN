@@ -11,6 +11,7 @@
 > v1.7（2026-08-21）：记录 D-072 字号/搜索连续性维护与获授权的 `v0.1.1` GitHub Release；Chrome Web Store 继续暂停（D-073）。
 > v1.8（2026-08-29）：记录 Phase 14 后续分层审计维护：依赖、探针、确认/Port、模型目录、格式、许可证、确定性打包与 CI（D-075）；不含远程发布。
 > v1.9（2026-08-30）：记录获授权的 `v0.1.2` 安全维护 Release，范围仅含 D-074/D-075 与 Windows CI 修复（D-076）。
+> v1.10（2026-09-13）：记录获授权的 `v0.1.3` 维护 Release，范围仅含 D-077 与 GitHub Actions Node 24 运行时修复（D-078/D-079）。
 
 ---
 
@@ -290,15 +291,23 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **升级提示**：旧探针 Schema 会失效但不删除已保存 Key；Provider 显示未验证时由用户按需重新运行单家“测试 Key 与模型”。
 - **范围**：不新增产品功能、Chrome 权限/Host、Provider、真实 Provider 请求、GitHub 写能力、CRX 或 Chrome Web Store 工作。
 
+### Phase 14 维护版 — `v0.1.3`（D-078/D-079）
+
+- **内容**：发布 D-077 的 Vitest 4.1.11 安全修复与 2026-09-13 Provider 模型候选刷新；把 Quality workflow 的 checkout/setup-node/pnpm setup 更新到声明 Node 24 运行时的稳定主版本，消除 Node.js 20 弃用警告。
+- **发布门禁**：frozen install、零依赖告警、许可证再生成零差异、typecheck、lint、全仓 format、`git diff --check`、全量测试、匿名 GitHub live test、build、安全扫描、隔离 Chrome E2E、连续两次确定性打包，以及源码/历史/`dist`/ZIP 凭据审计。
+- **远程验收**：版本提交与 `origin/main` 一致；Quality workflow 全步骤成功且不再产生三个 Action 的 Node.js 20 弃用警告；CodeQL 成功；注释 tag `v0.1.3` 指向版本提交；Release 公开、非 draft/prerelease 且设为 latest；只含 ZIP/SHA-256 两项资产，远端 digest 与本地一致。
+- **配置保障**：模型目录已由项目负责人人工确认；已保存 Model ID 继续优先，不迁移、不覆盖；本轮不读取真实 Key 或运行真实 Provider 探针。
+- **范围**：不新增产品功能、Chrome 权限/Host、Provider、真实 Provider 请求、GitHub 写能力、CRX 或 Chrome Web Store 工作。
+
 ---
 
-## 强制确认节点清单（v1.9）
+## 强制确认节点清单（v1.10）
 
 1. **Phase 4**：首次填入真实 AI Provider Key（凭据）—— 必需。
 2. **Phase 11**：MVP 批量体验复核（真实交互验收）—— 必需。
 3. **条件性**：匿名 GitHub API 限额被实测证明阻塞 MVP → 评估 Token（基线变更）；**所有**文本 Provider 或**所有**视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停。
 
-Phase 13 公开源码与 Phase 14 `v0.1.0`/`v0.1.1`/`v0.1.2` GitHub Release 已分别获得明确授权，不重复暂停；授权不覆盖 Chrome Web Store、Force Push、其他仓库或 `v0.1.2` 之后的版本发布。
+Phase 13 公开源码与 Phase 14 `v0.1.0`/`v0.1.1`/`v0.1.2`/`v0.1.3` GitHub Release 已分别获得明确授权，不重复暂停；授权不覆盖 Chrome Web Store、Force Push、其他仓库或 `v0.1.3` 之后的版本发布。
 
 **注意（D-031）**：单个 Provider 探针失败**不是**暂停节点——记录、禁用、继续。
 
