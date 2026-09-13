@@ -752,7 +752,7 @@
 - **理由**：GitHub 已把目标 Node 20 的旧 Action 强制改由 Node 24 运行并发出弃用警告。迁移官方稳定主版本可消除警告，也避免未来停止兼容时使 CI 失效；只更换 Action 运行时，不改变项目运行时或发布逻辑。
 - **官方依据**：`https://github.com/actions/checkout/releases/tag/v7.0.1`、`https://github.com/actions/setup-node/releases/tag/v7.0.0`、`https://github.com/pnpm/action-setup/releases/tag/v6.1.0`。
 - **范围**：只修改 `.github/workflows/quality.yml` 与对应回归测试；不改变扩展代码、依赖锁、Chrome 权限/Host、Provider、网络请求或发布资产内容。
-- 状态：本地回归已通过，待版本提交后的远端 Quality 验证 ｜ 2026-09-13
+- 状态：版本提交 `6caf7f9` 的远端 Quality run `34732210407` 全步骤通过，job annotations 为空且旧 Node.js 20 弃用提示零命中 ｜ 2026-09-13
 
 ## D-079 `v0.1.3` 只发布 D-077 与 D-078 维护成果
 
@@ -763,4 +763,4 @@
   - README、用户指南与 Release Notes 同步更新安装/同路径升级步骤。Chrome Web Store、CRX、其他仓库、后续版本与新渠道不在本次授权内。
 - **理由**：D-077 已通过本地、远端与人工模型目录确认，D-078 是消除现有 CI 弃用警告的最小维护修复。复用已有确定性 ZIP、许可证、凭据审计和远端门禁，可让公开安装版与受维护源码一致而不扩大产品或权限范围。
 - **范围**：只发布既有 D-077/D-078 成果及其版本、文档和证据；不调用真实 Provider，不读取已保存 Key，不新增 Chrome 权限、Host、GitHub 写功能、CRX 或 Chrome Web Store 工作。
-- 状态：已授权，待完整门禁、Push、tag、Release 与远程资产核验 ｜ 2026-09-13
+- 状态：版本提交、远端 Quality/CodeQL、注释 tag、公开 latest Release 与两项资产 digest 均已核验 ｜ 2026-09-13
