@@ -6,7 +6,7 @@
 
 ## 当前阶段
 
-**Phase 14 — GitHub Release `v0.1.4` 发布执行中；D-080 已通过自动门禁与 DeepSeek 文本/视觉真实探针确认。Chrome Web Store 继续暂停。**
+**Phase 14 — GitHub Release `v0.1.4` 已发布并完成远程资产核验。Chrome Web Store 继续暂停。**
 
 ## 已完成
 
@@ -373,17 +373,19 @@
   - 开发依赖锁更新到 `brace-expansion` 5.0.12、`source-map-js` 1.2.2、`undici` 7.30.0；`pnpm audit --audit-level moderate --json` 为 0
   - typecheck、lint、全仓 Prettier、Vitest 60 files / 327 tests（另 1 file / 1 live test 默认跳过）、build（421 modules）、构建安全扫描与隔离 Chrome 149 E2E 全过；Provider 请求 0、页面异常 0
   - 未读取真实 Key，未调用真实 Provider，未新增 Provider/endpoint/Chrome 权限或 Host；仅准备本地提交，未 Push、未创建 tag 或 Release
-- [ ] **Phase 14 — GitHub Release `v0.1.4` 发布验收（2026-10-07，D-081）执行中**：
+- [x] **Phase 14 — GitHub Release `v0.1.4` 发布验收（2026-10-07，D-081）完成**：
   - 项目负责人已确认当前构建的 DeepSeek `deepseek-flash` 文本与视觉探针均通过，并明确授权按既有流程发布 `v0.1.4`
   - 发布范围只含 D-080；版本、README、用户指南、发布说明和权威记录正在同步，不新增 Chrome 权限、Host、Provider 或产品功能
   - 本地门禁通过：frozen install、零依赖告警、许可证零差异、typecheck、lint、format、`git diff --check`、Vitest 60 files / 327 tests、匿名 GitHub live 1/1、build（421 modules）、安全扫描与隔离 Chrome 149 E2E
   - 20 条目确定性 ZIP 连续两次 SHA-256 均为 `19df37d6ec0f0b15370e740b7346f417dcd99a25a8231e1542badedd5680e4d3`，ZIP 201,496 bytes，校验文件 97 bytes；权限相对 `v0.1.3` 未扩大
   - 凭据审计覆盖生产源码、本次新增行、`dist`、ZIP、禁止跟踪路径与全部 Git 历史：生产/新增/构建/ZIP 意外敏感形态命中 0；历史 8 个唯一命中路径均为测试或 E2E 安全哨兵
-  - 待完成版本提交、远端 Quality/CodeQL、tag、Release、资产 digest 与安全告警核验
+  - 版本提交 `8a33e4b` 已普通 fast-forward Push；远端 Quality run `37597902173` 与 CodeQL run `37597901376` 成功，Quality annotations 为 0
+  - 注释 tag `v0.1.4` 解引用到版本提交；公开 Release `405577165` 为 latest、非 draft/prerelease，远端仅含 ZIP 201,496 bytes 与校验文件 97 bytes，两项 digest 均与本地一致：`https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.4`
+  - 发布后 Dependabot、Code scanning、Secret scanning 的 open 告警均为 0；完整证据见 `scripts/phase14-v0.1.4-release-evidence.md`
 
 ## 下一任务
 
-**连续执行 `v0.1.4` 的本地与远端发布门禁；全部通过后记录发布证据。Chrome Web Store 上架继续暂停。**
+**等待后续真实使用反馈。公开安装版为 `v0.1.4`；Chrome Web Store 上架继续暂停，后续版本或其他渠道需另行确认。**
 
 ## 已登记的后续优化
 
@@ -391,24 +393,24 @@
 
 ## 阶段进度表
 
-| Phase                                     | 状态                   |
-| ----------------------------------------- | ---------------------- |
-| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成              |
-| 1 仓库结构 + 扩展骨架                     | ✅ 已完成              |
-| 1.5 安全地基                              | ✅ 已完成              |
-| 2 Side Panel + 消息通信                   | ✅ 已完成              |
-| 3 页面识别 + 上下文 + SPA                 | ✅ 已完成              |
-| 4 Provider + 能力探针 + 对话 + 手动切换   | ✅ 已完成              |
-| 5 Session + 偏好 + 容量淘汰               | ✅ 已完成              |
-| 6 点击提问（MVP 必达）                    | ✅ 已完成              |
-| 7 框选 + 视觉（MVP 必达）                 | ✅ 已完成              |
-| 8 NL 搜索（MVP 必达）                     | ✅ 已完成              |
-| 9 一键仓库分析                            | ✅ 已完成              |
-| 10 安全加固 + 红队测试                    | ✅ 已完成              |
-| 11 测试 + 打包 + MVP 验收                 | ✅ 已完成，v1 MVP 达标 |
-| 12 Provider 目录扩展 + 受限 custom 端点   | ✅ 已完成自动验收      |
-| 13 GitHub 公开开源发布                    | ✅ 已完成              |
-| 14 GitHub Release 加固与发布              | ⏳ `v0.1.4` 发布执行中 |
+| Phase                                     | 状态                                 |
+| ----------------------------------------- | ------------------------------------ |
+| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成                            |
+| 1 仓库结构 + 扩展骨架                     | ✅ 已完成                            |
+| 1.5 安全地基                              | ✅ 已完成                            |
+| 2 Side Panel + 消息通信                   | ✅ 已完成                            |
+| 3 页面识别 + 上下文 + SPA                 | ✅ 已完成                            |
+| 4 Provider + 能力探针 + 对话 + 手动切换   | ✅ 已完成                            |
+| 5 Session + 偏好 + 容量淘汰               | ✅ 已完成                            |
+| 6 点击提问（MVP 必达）                    | ✅ 已完成                            |
+| 7 框选 + 视觉（MVP 必达）                 | ✅ 已完成                            |
+| 8 NL 搜索（MVP 必达）                     | ✅ 已完成                            |
+| 9 一键仓库分析                            | ✅ 已完成                            |
+| 10 安全加固 + 红队测试                    | ✅ 已完成                            |
+| 11 测试 + 打包 + MVP 验收                 | ✅ 已完成，v1 MVP 达标               |
+| 12 Provider 目录扩展 + 受限 custom 端点   | ✅ 已完成自动验收                    |
+| 13 GitHub 公开开源发布                    | ✅ 已完成                            |
+| 14 GitHub Release 加固与发布              | ✅ `v0.1.4` 已发布并完成远程资产核验 |
 
 ## 待处理的强制确认节点
 
@@ -426,12 +428,12 @@
 - ✅ GitHub 仓库安全设置与本轮 `origin/main` Push（用户已明确授权；不创建新 Release）
 - ✅ GitHub Release `v0.1.2`、既有 `origin` Push 与 tag（用户已明确授权；远程发布与资产 digest 核验完成）
 - ✅ GitHub Release `v0.1.3`、既有 `origin` Push 与 tag（用户已明确授权；远程发布与资产 digest 核验完成）
-- ✅ GitHub Release `v0.1.4`、既有 `origin` Push 与 tag（用户已明确授权；正在执行发布门禁）
+- ✅ GitHub Release `v0.1.4`、既有 `origin` Push 与 tag（用户已明确授权；远程发布与资产 digest 核验完成）
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
 
-当前无阻塞。D-080 自动门禁与 DeepSeek `deepseek-flash` 文本/视觉真实探针已通过；`v0.1.4` 发布按既有门禁执行，Chrome Web Store 上架继续暂停。
+当前无阻塞。GitHub Release `v0.1.4` 已完成本地与远程门禁、资产 digest 和安全告警核验；Chrome Web Store 上架继续暂停。
 
 ## 变更记录
 
@@ -503,3 +505,4 @@
 - 2026-09-13：`6caf7f9` 已 Push；远端 Quality `34732210407`、CodeQL `34732210021` 成功且旧 Node.js 20 弃用提示消失。注释 tag `v0.1.3` 指向版本提交，公开 latest Release 与 ZIP/SHA-256 两项资产已上传，名称、大小和 GitHub digest 均与本地一致；三类 GitHub open 安全告警均为 0。Chrome Web Store 继续暂停。
 - 2026-10-07：完成 D-080 本地维护；模型目录按新增/淘汰/低价保留策略更新，DeepSeek Flash 加入受探针约束的视觉候选，开发依赖告警清零；327 项常规测试与完整静态/构建/安全/E2E 门禁通过。未读取真实 Key，未 Push、未创建 tag 或 Release。
 - 2026-10-07：项目负责人确认当前构建的 DeepSeek `deepseek-flash` 文本与视觉探针均通过，并授权按既有流程发布 `v0.1.4`；发布范围仅含 D-080，Chrome Web Store 继续暂停。
+- 2026-10-07：`8a33e4b` 已 Push；远端 Quality `37597902173`、CodeQL `37597901376` 成功。注释 tag `v0.1.4` 指向版本提交，公开 latest Release 与 ZIP/SHA-256 两项资产已上传，名称、大小和 GitHub digest 均与本地一致；三类 GitHub open 安全告警均为 0。Chrome Web Store 继续暂停。

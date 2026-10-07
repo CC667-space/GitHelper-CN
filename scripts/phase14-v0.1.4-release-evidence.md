@@ -46,4 +46,14 @@
 
 ## 远程门禁与发布
 
-待本轮执行后填写。
+- 目标仓库：`https://github.com/CC667-space/GitHelper-CN`
+- 版本提交：`8a33e4bedf123e56c4b165a2b9fe5ca6c69ec03a`；已普通 fast-forward Push 到 `origin/main`。
+- Quality workflow：run `37597902173` 成功，verify job `112714891865` 全步骤通过，job annotations 为 `[]`。地址：`https://github.com/CC667-space/GitHelper-CN/actions/runs/37597902173`。
+- CodeQL：run `37597901376` 成功；`Analyze (javascript-typescript)` 与 `Analyze (actions)` 两个 job 均通过。地址：`https://github.com/CC667-space/GitHelper-CN/actions/runs/37597901376`。
+- 注释 tag：`v0.1.4`；tag 对象 `5d952003b681062e9cf2dd4029cc5a87dcf28827` 解引用到版本提交 `8a33e4bedf123e56c4b165a2b9fe5ca6c69ec03a`。
+- Release：ID `405577165`；公开、非 draft、非 prerelease，并由 `/releases/latest` 返回为当前 latest：`https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.4`。
+- 远程 ZIP：201,496 bytes；digest `sha256:19df37d6ec0f0b15370e740b7346f417dcd99a25a8231e1542badedd5680e4d3`，与本地一致。
+- 远程校验文件：97 bytes；digest `sha256:f140844b4f3631d0e4750ec8e3fa12e4b9f773875d5e7967c1b4c0d9e1c97162`，与本地一致。
+- Release 的显式资产只有上述 ZIP 与 SHA-256 文件两项，状态均为 `uploaded`。
+- 发布后 GitHub API 复核：Dependabot、Code scanning、Secret scanning 的 open 告警均为 0。
+- 状态：GitHub Release `v0.1.4` 发布与远程资产核验完成；Chrome Web Store 继续暂停。

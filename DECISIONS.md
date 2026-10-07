@@ -786,4 +786,4 @@
   - 已保存 Key、Model ID 与 custom URL 不读取、不迁移、不覆盖。只有这些绑定值实际变化时，对应旧探针状态才失效；本版不要求未变化的其他已验证 Provider 重新测试。
 - **理由**：D-080 已通过完整自动门禁，并由项目负责人确认本轮新增的 DeepSeek Flash 文本/视觉路线在真实环境可用。复用既有确定性 ZIP、许可证、凭据审计和远端门禁，可以让公开安装版与受维护源码一致，同时保持低价路线和既有用户配置。
 - **范围**：只发布既有 D-080 成果及其版本、文档和证据；不新增 Provider、endpoint、Chrome 权限/Host、GitHub 写功能、CRX 或 Chrome Web Store 工作，不由执行 Agent 读取真实 Key 或再次调用真实 Provider。
-- 状态：本地发布门禁与凭据审计已通过，待完成版本提交与远端发布门禁 ｜ 2026-10-07
+- 状态：版本提交、远端 Quality/CodeQL、注释 tag、公开 latest Release、两项资产 digest 与三类安全告警均已核验 ｜ 2026-10-07
