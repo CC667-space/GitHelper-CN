@@ -2,7 +2,7 @@
 
 > 本文件是全项目的**单一事实来源与最高约束**。任何执行阶段不得静默违反本文件。
 > 修改本文件 = 基线变更，必须由项目负责人（下称"你"）确认。
-> 状态：**已冻结 v1.9** ｜ 初次冻结：2026-07-23 ｜ 修订：2026-10-07（v1.1–v1.9 定向修订，见文末变更记录）
+> 状态：**已冻结 v1.10** ｜ 初次冻结：2026-07-23 ｜ 修订：2026-10-07（v1.1–v1.10 定向修订，见文末变更记录）
 
 ---
 
@@ -155,8 +155,8 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 - v1 **不上架** Chrome Web Store；该路线继续暂停，不属于 GitHub Release。
 - 经项目负责人 2026-08-21 明确授权，v1 可在既有公开仓库发布版本化 GitHub Release。安装资产为根目录含 `manifest.json` 的 ZIP 与对应 SHA-256 校验文件；用户解压后通过 Chrome 开发者模式“加载已解压的扩展程序”。不得把它描述为稳定版 Chrome 可一键安装的 CRX。
 - 保持 MV3 通用；Chrome 为唯一主测试目标。
-- 项目负责人已分别授权 Phase 14 的 `v0.1.0` 首发、`v0.1.1` 功能维护版、`v0.1.2` 安全维护版与 `v0.1.3` 维护版。`v0.1.3` 只发布 D-077 模型目录/开发依赖维护和 D-078 GitHub Actions Node 24 运行时修复，继续使用版本化 ZIP + SHA-256 的既有发布边界。
-- `v0.1.3` 之后的新版本 Release、Chrome Web Store 上架、其他商店或新的公开发布渠道仍是独立确认节点。
+- 项目负责人已分别授权 Phase 14 的 `v0.1.0` 首发、`v0.1.1` 功能维护版、`v0.1.2` 安全维护版、`v0.1.3` 与 `v0.1.4` 维护版。`v0.1.4` 只发布 D-080 的模型目录、DeepSeek Flash 视觉候选与开发依赖维护，继续使用版本化 ZIP + SHA-256 的既有发布边界。
+- `v0.1.4` 之后的新版本 Release、Chrome Web Store 上架、其他商店或新的公开发布渠道仍是独立确认节点。
 
 ---
 
@@ -199,7 +199,7 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 - 任何会产生新增付费成本的选择
 - 扩大到 D-068 已授权固定 Provider 与受限 custom 规则之外的 Chrome Host 权限，或放宽 custom URL/精确授权边界
 - 发送敏感数据 / 不可逆数据删除
-- 新增 Git Remote / Force Push / 新建远程仓库 / Chrome Web Store 上架 / Phase 14 `v0.1.0`、`v0.1.1`、`v0.1.2` 与 `v0.1.3` 之外的公开发布；四版所需的既有 `origin` Push、tag 与 GitHub Release 均已获定向授权
+- 新增 Git Remote / Force Push / 新建远程仓库 / Chrome Web Store 上架 / Phase 14 `v0.1.0`、`v0.1.1`、`v0.1.2`、`v0.1.3` 与 `v0.1.4` 之外的公开发布；五版所需的既有 `origin` Push、tag 与 GitHub Release 均已获定向授权
 - 若匿名 GitHub API 限额被证实阻塞 MVP → 评估引入细粒度 Token（基线变更）
 - 若未来需要私有仓库支持 → 独立基线变更评估
 - 出现与本基线实质冲突、或多方向抉择无法按既有原则代决
@@ -229,3 +229,4 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 - **v1.7（2026-08-30）**：经项目负责人明确授权发布 `v0.1.2` 安全维护版。该版只封装 D-074/D-075 与 Windows CI PowerShell 7 入口修复，复用确定性 ZIP + SHA-256 流水线；不新增产品功能、Chrome 权限/Host、真实 Provider 请求、GitHub 写能力或 Chrome Web Store 工作（D-076）。
 - **v1.8（2026-09-13）**：经项目负责人在模型列表人工确认后明确授权发布 `v0.1.3` 维护版。该版只封装 D-077 的 Vitest 修复与 Provider 模型候选刷新，以及 D-078 的 GitHub Actions Node 24 运行时迁移；复用确定性 ZIP + SHA-256 流水线，不新增产品功能、Chrome 权限/Host、真实 Provider 请求、GitHub 写能力或 Chrome Web Store 工作（D-079）。
 - **v1.9（2026-10-07）**：经项目负责人明确授权进行发布后的本地维护。模型目录采用“加入当前模型、移出新配置中的过时模型、保留低价模型、保留既有用户 Model ID”的策略；DeepSeek `deepseek-flash` 加入文本/视觉候选，实际能力仍由探针决定。同步修复开发依赖公告；不新增 Provider、endpoint、Chrome 权限/Host，不读取 Key，不自动 Push 或发布（D-080）。
+- **v1.10（2026-10-07）**：经项目负责人在 DeepSeek `deepseek-flash` 文本与视觉真实探针均通过后明确授权发布 `v0.1.4` 维护版。该版只封装 D-080，复用确定性 ZIP + SHA-256、远端 Quality/CodeQL 与凭据审计门禁；不新增 Provider、endpoint、Chrome 权限/Host、GitHub 写能力或 Chrome Web Store 工作（D-081）。

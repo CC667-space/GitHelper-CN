@@ -13,6 +13,7 @@
 > v1.9（2026-08-30）：记录获授权的 `v0.1.2` 安全维护 Release，范围仅含 D-074/D-075 与 Windows CI 修复（D-076）。
 > v1.10（2026-09-13）：记录获授权的 `v0.1.3` 维护 Release，范围仅含 D-077 与 GitHub Actions Node 24 运行时修复（D-078/D-079）。
 > v1.11（2026-10-07）：记录发布后的模型目录与开发依赖定向维护；不含 Push、tag 或 Release（D-080）。
+> v1.12（2026-10-07）：记录获授权的 `v0.1.4` 维护 Release，范围仅含 D-080（D-081）。
 
 ---
 
@@ -307,15 +308,23 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **门禁**：零依赖告警、typecheck、lint、format、全量测试、build、安全扫描、隔离 Chrome E2E 与 `git diff --check`。
 - **范围**：不新增 Provider、endpoint、Chrome 权限/Host，不读取真实 Key，不调用真实 Provider，不 Push、不创建 tag 或 Release。
 
+### Phase 14 维护版 — `v0.1.4`（D-081）
+
+- **内容**：发布 D-080 的模型目录新增/淘汰/低价保留维护、DeepSeek Flash 文本/视觉候选与开发依赖公告修复。
+- **发布门禁**：frozen install、零依赖告警、许可证再生成零差异、typecheck、lint、全仓 format、`git diff --check`、全量测试、匿名 GitHub live test、build、安全扫描、隔离 Chrome E2E、连续两次确定性打包，以及源码/历史/`dist`/ZIP 凭据审计。
+- **远程验收**：版本提交与 `origin/main` 一致；Quality 与 CodeQL 成功；注释 tag `v0.1.4` 指向版本提交；Release 公开、非 draft/prerelease 且设为 latest；只含 ZIP/SHA-256 两项资产，远端 digest 与本地一致；三类公开安全告警均为 0。
+- **配置保障**：项目负责人已在当前构建中人工确认 DeepSeek `deepseek-flash` 文本与视觉探针均通过；不读取 Key，不要求未变更 Key/Model/custom URL 的其他已验证 Provider 重测。
+- **范围**：不新增产品功能、Provider、endpoint、Chrome 权限/Host、GitHub 写能力、CRX 或 Chrome Web Store 工作。
+
 ---
 
-## 强制确认节点清单（v1.11）
+## 强制确认节点清单（v1.12）
 
 1. **Phase 4**：首次填入真实 AI Provider Key（凭据）—— 必需。
 2. **Phase 11**：MVP 批量体验复核（真实交互验收）—— 必需。
 3. **条件性**：匿名 GitHub API 限额被实测证明阻塞 MVP → 评估 Token（基线变更）；**所有**文本 Provider 或**所有**视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停。
 
-Phase 13 公开源码与 Phase 14 `v0.1.0`/`v0.1.1`/`v0.1.2`/`v0.1.3` GitHub Release 已分别获得明确授权，不重复暂停；授权不覆盖 Chrome Web Store、Force Push、其他仓库或 `v0.1.3` 之后的版本发布。
+Phase 13 公开源码与 Phase 14 `v0.1.0`/`v0.1.1`/`v0.1.2`/`v0.1.3`/`v0.1.4` GitHub Release 已分别获得明确授权，不重复暂停；授权不覆盖 Chrome Web Store、Force Push、其他仓库或 `v0.1.4` 之后的版本发布。
 
 **注意（D-031）**：单个 Provider 探针失败**不是**暂停节点——记录、禁用、继续。
 

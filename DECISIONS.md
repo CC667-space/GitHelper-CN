@@ -776,3 +776,14 @@
 - **范围**：Phase 14 发布后的本地维护；不新增 Provider、endpoint、Chrome 权限/Host、GitHub 写能力或数据类别，不读取真实 Key，不调用真实 Provider。本轮只创建本地提交，不 Push、不创建 tag 或 Release。
 - **证据**：`pnpm audit --audit-level moderate --json` 为 0；typecheck、lint、全仓 Prettier、Vitest 60 files / 327 tests 通过（另 1 file / 1 live test 默认跳过）；build 421 modules、构建安全扫描与隔离 Chrome 149 E2E 全过。E2E Provider 请求 0、页面异常 0。
 - 状态：本地实现与自动门禁完成，待真实环境按需复测受影响的 Provider；未 Push、未发布 ｜ 2026-10-07
+
+## D-081 `v0.1.4` 只发布 D-080 维护成果
+
+- **决策**：
+  - 经项目负责人 2026-10-07 在当前构建的 DeepSeek `deepseek-flash` 文本与视觉真实探针均通过后明确授权，把 D-080 的模型目录维护、DeepSeek Flash 视觉候选与开发依赖公告修复发布为 GitHub Release `v0.1.4`。
+  - `package.json` 与 manifest 同步升级为 `0.1.4`；安装资产继续限定为 `GitHelper-CN-v0.1.4-chrome.zip` 和对应 SHA-256 文件。Release 必须公开、非 draft、非 prerelease 并设为 latest，注释 tag 指向通过全部门禁的版本提交。
+  - Push 前重新执行 frozen install、依赖/许可证/代码/测试/build/E2E/确定性打包门禁，并复核当前源码、全部 Git 历史、`dist` 与 ZIP 无真实凭据；版本提交的远端 Quality 与 CodeQL 成功后才创建 tag 和 Release。
+  - 已保存 Key、Model ID 与 custom URL 不读取、不迁移、不覆盖。只有这些绑定值实际变化时，对应旧探针状态才失效；本版不要求未变化的其他已验证 Provider 重新测试。
+- **理由**：D-080 已通过完整自动门禁，并由项目负责人确认本轮新增的 DeepSeek Flash 文本/视觉路线在真实环境可用。复用既有确定性 ZIP、许可证、凭据审计和远端门禁，可以让公开安装版与受维护源码一致，同时保持低价路线和既有用户配置。
+- **范围**：只发布既有 D-080 成果及其版本、文档和证据；不新增 Provider、endpoint、Chrome 权限/Host、GitHub 写功能、CRX 或 Chrome Web Store 工作，不由执行 Agent 读取真实 Key 或再次调用真实 Provider。
+- 状态：本地发布门禁与凭据审计已通过，待完成版本提交与远端发布门禁 ｜ 2026-10-07

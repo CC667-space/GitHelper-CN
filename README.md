@@ -2,7 +2,7 @@
 
 面向中文 GitHub 新手的本地 Chrome Side Panel AI 助手。它在公开 GitHub 页面旁提供中文问答、页面内容提问、自然语言搜索和仓库速览，帮助用户理解项目；不会替用户执行 GitHub 写操作。
 
-> 当前版本：`0.1.3`。Chrome Web Store 上架仍暂停；GitHub Release 提供可下载 ZIP，解压后通过 Chrome 开发者模式加载。
+> 当前版本：`0.1.4`。Chrome Web Store 上架仍暂停；GitHub Release 提供可下载 ZIP，解压后通过 Chrome 开发者模式加载。
 
 ## 快速上手：安装 GitHub Release
 
@@ -12,8 +12,8 @@
 
 打开 [最新 GitHub Release](https://github.com/CC667-space/GitHelper-CN/releases/latest)，在 **Assets** 中下载：
 
-- `GitHelper-CN-v0.1.3-chrome.zip`：扩展安装包
-- `GitHelper-CN-v0.1.3-SHA256SUMS.txt`：可选的完整性校验值
+- `GitHelper-CN-v0.1.4-chrome.zip`：扩展安装包
+- `GitHelper-CN-v0.1.4-SHA256SUMS.txt`：可选的完整性校验值
 
 不要下载 GitHub 自动生成的 `Source code (zip)` 代替扩展包；源码压缩包不能直接加载为扩展。
 
@@ -22,10 +22,10 @@
 在 ZIP 所在目录打开 PowerShell：
 
 ```powershell
-Get-FileHash .\GitHelper-CN-v0.1.3-chrome.zip -Algorithm SHA256
+Get-FileHash .\GitHelper-CN-v0.1.4-chrome.zip -Algorithm SHA256
 ```
 
-输出的 Hash 应与 `GitHelper-CN-v0.1.3-SHA256SUMS.txt` 中的值一致。校验不一致时不要加载该文件，请重新从本仓库 Release 下载。
+输出的 Hash 应与 `GitHelper-CN-v0.1.4-SHA256SUMS.txt` 中的值一致。校验不一致时不要加载该文件，请重新从本仓库 Release 下载。
 
 ### 3. 解压到固定目录
 
@@ -84,7 +84,7 @@ API Key 由用户自行向 Provider 获取，可能产生 Provider 侧费用。�
 4. 打开 `chrome://extensions/`，在 GitHelper-CN 卡片点击“重新加载”。
 5. 打开一个 GitHub 页面，确认设置和会话仍符合预期。
 
-`v0.1.3` 更新了 Provider 的便捷模型候选并修复了测试依赖公告；不会覆盖已保存的 Model ID，也不会读取或迁移已保存 Key。若新候选不适用于你的账号，可继续手填原 Model ID。
+`v0.1.4` 按“加入当前模型、移出新配置中的过时模型、保留低价模型”再次维护了 Provider 候选，并让 DeepSeek `deepseek-flash` 可在文本或视觉卡片中选择；同时修复了开发依赖公告。升级不会覆盖已保存的 Model ID，也不会读取、迁移或删除已保存 Key。只有实际修改 Key、Model ID 或 custom URL 时，对应旧探针状态才会失效；若新候选不适用于你的账号，可继续手填原 Model ID。
 
 从 `v0.1.1` 或更早版本升级时，`v0.1.2` 引入的探针新鲜度校验仍会使旧探针状态显示为“未验证”；已保存 Key 不会被删除，可在 Options 对相应 Provider 重新点击一次“测试 Key 与模型”。
 
@@ -151,7 +151,7 @@ pnpm package:extension
 
 - Phase 0–12：MVP、真实体验复核和 Provider 扩展已完成
 - Phase 13：公开源码与首次 GitHub Push 已完成
-- Phase 14：GitHub Release 与维护版发布已完成，当前版本见 [`v0.1.3`](https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.3)
+- Phase 14：GitHub Release 与维护版发布已完成，当前版本见 [`v0.1.4`](https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.4)
 - Chrome Web Store：明确暂停，不在 Phase 14 范围内
 
 ## License
