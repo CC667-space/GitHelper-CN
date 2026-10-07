@@ -12,6 +12,7 @@
 > v1.8（2026-08-29）：能力探针必须绑定 Key 修订号/model/custom URL；Panel Port 精确校验来源；确认策略在 Background 执行；发布包含许可证且须确定性构建（D-075）。
 > v1.9（2026-08-30）：D-074/D-075 与 Windows CI 修复获授权作为 GitHub Release `v0.1.2` 发布；Chrome Web Store 继续暂停（D-076）。
 > v1.10（2026-09-13）：D-077/D-078 获授权作为 GitHub Release `v0.1.3` 发布；Chrome Web Store 继续暂停（D-079）。
+> v1.11（2026-10-07）：模型目录按新增/淘汰/低价保留策略维护，DeepSeek Flash 加入视觉候选；同步修复开发依赖公告（D-080）。
 
 ---
 
@@ -124,12 +125,12 @@ STATUS.md 是断点续跑唯一依据：每完成任务即更新；遇阻塞写�
 - **Provider 适配器（D-007R/D-030/D-031/D-063/D-068）**：公共协议骨架 + 每家独立适配器；新增路线必须有 Mock/安全测试；真实能力只认探针。单家探针失败记录+禁用不阻塞，全路线失败才暂停。
 - **能力探针（P0-6/D-021）**：Provider 能力必须经 Phase 4 探针验证后才可当事实使用；未探针能力降级处理。
 - **探针新鲜度（D-075）**：持久探针同时绑定凭据非秘密修订号、文本/视觉 model 与 custom URL；任一项变化须失效。旧 Schema 或绑定不一致不得恢复 Provider `available`。
-- **DeepSeek 模型（D-034）**：`deepseek-chat`/`deepseek-reasoner` 别名 2026-07-24 15:59 UTC 起停用，**不得使用**；推荐预填 `deepseek-v4-flash`，保留 `deepseek-v4-pro` 可选；模型名非冻结常量，不可用时提示改选，不阻塞。
+- **DeepSeek 模型（D-034/D-080）**：`deepseek-chat`/`deepseek-reasoner` 别名 2026-07-24 15:59 UTC 起停用，**不得使用**；新配置推荐预填低价 `deepseek-flash`，保留 `deepseek-v4-pro` 可选；已保存 Model ID 不自动覆盖；模型名非冻结常量，不可用时提示改选，不阻塞。
 - **截图职责与坐标（P0-4/D-029）**：Content 只上报选区视口坐标+视口 CSS 尺寸+滚动+缩放+dpr；截图由 SW `captureVisibleTab` + 裁剪；**换算公式由 Phase 0 探针 B 实测定稿**（首选截图像素/视口 CSS 比例法；getBoundingClientRect 是视口坐标，勿默认扣 scroll）。
 - GitHub 是 SPA（turbo 导航）：用 spa-watcher 监听路由变化 + 去抖 + 幂等入口，勿只在加载时解析一次。
 - 普通问答的 `PAGE_INFO_REQUEST` 必须实时解析当前 DOM，不得复用启动时 PageContext；repo 的 `pageSummary`/description 不是 README 证据，缺失只能说“当前未读取到”（D-071）。
 - **GitHub API 匿名限流（P0-7/D-032）**：按 resource 分桶（core/search/code_search），读 `X-RateLimit-Resource/Remaining/Reset` 与 `Retry-After`；限流后**禁止持续指数重试**，等 Reset 恢复；search 受限降级网页搜索/DOM；v1 无 Token、无私有仓库支持。
-- DeepSeek API 不支持图像：视觉请求必须路由到已配置且探针确认支持图像的 Provider，provider-manager 有 Capability 护栏。
+- DeepSeek `deepseek-flash` 可发送 OpenAI-compatible `image_url` 输入，但只有该 Key/Model 的视觉探针通过后才可用；`deepseek-v4-pro` 不声明视觉能力。provider-manager 继续用 Capability 护栏阻止未验证视觉路线。
 - Provider 手动切换优先级高于默认路由（用户明确要求）。
 - host 权限严格限域（github.com / api.github.com / 三 AI 厂商域名），禁用 `<all_urls>`；manifest 含 `minimum_chrome_version: "114"`（D-035）。
 - **工具限域（D-013R）**：openGitHubPage 仅 `https://github.com/*`；外链/下载分别逐次确认；一律拒绝 javascript/data/file/chrome 等非 https Scheme。

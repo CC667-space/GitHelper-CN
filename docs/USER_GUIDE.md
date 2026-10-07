@@ -70,9 +70,9 @@ pnpm package:extension
 
 1. 在 `chrome://extensions/` 找到 GitHelper-CN。
 2. 打开“扩展程序选项”。
-3. “Provider 与 API Key”只有“文本 Model”和“视觉 Model”两张配置卡。先在卡内选择 Provider；DeepSeek 仅支持文本，不会出现在视觉列表中。
+3. “Provider 与 API Key”只有“文本 Model”和“视觉 Model”两张配置卡。先在卡内选择 Provider；DeepSeek 的 `deepseek-flash` 可用于文本或视觉候选，`deepseek-v4-pro` 只作为文本候选。
 4. 为所选 Provider 填写并保存 API Key。两张卡共用同一家 Provider 已保存的 Key；除兼容保留的静态权限路线外，首次保存时 Chrome 只请求该 Provider 的精确 API Host 权限。拒绝授权则不会保存 Key；保存成功后输入框立即清空，页面只显示末 4 位掩码。
-5. 从对应角色的候选列表选择 Model，或选择“自行填写 Model ID”后输入账号实际可用的 ID，再点击“保存模型配置”。候选列表是 2026-09-13 依据官方目录核对的便捷预设，不代表账号一定有权限，也不替代真实能力探针。目录刷新不会覆盖已经保存的 Model ID；只有新配置或缺失配置才会使用新的默认值。
+5. 从对应角色的候选列表选择 Model，或选择“自行填写 Model ID”后输入账号实际可用的 ID，再点击“保存模型配置”。候选列表是 2026-10-07 依据官方目录核对的便捷预设：加入当前模型、移出新配置中的过时模型，同时保留低价路线。它不代表账号一定有权限，也不替代真实能力探针。目录刷新不会覆盖已经保存的 Model ID；只有新配置或缺失配置才会使用新的默认值。
 6. 点击卡内“测试 Key 与模型”。该操作只测试当前所选 Provider，可能发送少量文本、流式、取消、工具、结构化输出或视觉请求并产生少量费用；正式设置页不提供批量探针。
 
 固定端点：
@@ -99,7 +99,7 @@ UUAPI 不再出现在新选择器中；旧配置、Key 与适配器仍保留兼�
 
 默认路线建议：
 
-- 文本：DeepSeek `deepseek-v4-flash`
+- 文本：DeepSeek `deepseek-flash`（低价）
 - 视觉：使用任何已配置并通过真实探针的视觉 Provider/model；加入目录不等于能力已验证
 
 Options 下方的“高级 Model 配置 JSON”用于迁移 model 绑定和 custom 的非秘密 URL：
@@ -246,7 +246,7 @@ Options 提供三种相互独立的操作：
 
 ### DeepSeek 文本失败
 
-确认模型不是已停用的 `deepseek-chat` / `deepseek-reasoner`，优先使用 `deepseek-v4-flash`，再仅复测 DeepSeek。
+确认模型不是已停用的 `deepseek-chat` / `deepseek-reasoner`。新配置优先使用低价 `deepseek-flash`；已保存的旧 Model ID 不会被升级自动覆盖。修改模型后仅复测 DeepSeek。
 
 ### GitHub API 限流
 

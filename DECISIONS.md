@@ -56,9 +56,9 @@
 ## D-008 Provider 路由 + 手动切换（含用户补充）
 
 - **决策**：
-  - 默认路由：**文本 → DeepSeek**（成本最低）；**视觉 → UUAPI**（DeepSeek 不支持图像）；**兜底 → OpenRouter**。
+  - 默认路由：**文本 → DeepSeek**（成本最低）；原“视觉 → UUAPI”已由 D-038 的 OpenRouter 视觉默认与 D-080 的 DeepSeek Flash 视觉候选替代；视觉实际可用性始终以探针为准。
   - **手动切换（用户明确要求）**：设置页可**分别配置**"文本 Provider"和"视觉 Provider"；Side Panel 顶部提供 **Provider 下拉**，用户可随时手动指定当前对话使用哪家 + 哪个 model。**手动选择优先级高于默认路由**。
-  - 安全护栏：当用户手动把视觉请求指向不支持视觉的 Provider（如 DeepSeek）时，UI 明确提示并阻止发送，建议切换到视觉 Provider（不静默失败）。
+  - 安全护栏：当用户手动把视觉请求指向未通过视觉探针的 Provider/model 时，UI 明确提示并阻止发送，建议切换到已验证视觉路线（不静默失败）。
 - **理由**：成本/能力在 DeepSeek/UUAPI/OpenRouter 间因任务而异，自动路由只能给默认；把控制权交回用户，符合"真实优先"与可验证原则。
 - 状态：冻结 ｜ 2026-07-23
 
@@ -764,3 +764,15 @@
 - **理由**：D-077 已通过本地、远端与人工模型目录确认，D-078 是消除现有 CI 弃用警告的最小维护修复。复用已有确定性 ZIP、许可证、凭据审计和远端门禁，可让公开安装版与受维护源码一致而不扩大产品或权限范围。
 - **范围**：只发布既有 D-077/D-078 成果及其版本、文档和证据；不调用真实 Provider，不读取已保存 Key，不新增 Chrome 权限、Host、GitHub 写功能、CRX 或 Chrome Web Store 工作。
 - 状态：版本提交、远端 Quality/CodeQL、注释 tag、公开 latest Release 与两项资产 digest 均已核验 ｜ 2026-09-13
+
+## D-080 模型目录采用新增/淘汰/低价保留策略并同步最小依赖修复
+
+- **决策**：
+  - Provider Catalog 的官方资料核对日期更新为 2026-10-07。目录维护不做简单替换：加入当前模型、从新配置候选中移出过时模型，同时保留明确的低价路线；已保存 Model ID 继续优先，不迁移、不覆盖，仍可手填账号可用的 Model ID。
+  - OpenAI 新配置候选为 `gpt-6-astra`、默认 `gpt-6.1-sol` 与低价 `gpt-6-luna`；Anthropic 候选为 Sonnet/Opus/Fable 5 系列并保留低价 `claude-haiku-4-5`；Qwen 视觉候选加入 `qwen3.8-omni-flash`。Gemini、Kimi、Grok、OpenRouter 保持既有当前候选；GLM 因当前内置 endpoint 与已核对资料的 endpoint 不同、SiliconFlow 因模型可见性依账号变化，本轮不猜测更新。
+  - DeepSeek 新配置默认改为低价 `deepseek-flash`，文本保留 `deepseek-v4-pro`；`deepseek-flash` 复用公共 OpenAI-compatible `image_url` 请求组装并进入视觉选择器。`deepseek-chat` / `deepseek-reasoner` 继续硬拒绝；已保存的 `deepseek-v4-flash` 不自动改写。目录声明只表示可选，文本/视觉可用性仍必须由对应 Key、Model 和绑定状态的真实探针确认。
+  - 只刷新锁文件中的兼容开发依赖并把既有 `brace-expansion` override 从 5.0.9 提升到 5.0.12；最终锁定 `undici` 7.30.0、`source-map-js` 1.2.2、`brace-expansion` 5.0.12。未升级产品运行时直接依赖的主版本。
+- **理由**：模型目录需要降低新配置失败率，但高价模型不能挤掉低成本可用路线，也不能擅自改变用户已经验证过的 Model ID。DeepSeek 官方已将 `deepseek-flash` 作为低价、原生视觉路线，旧 Flash 名称已退役；以既有消息格式接入并继续要求真实探针，可以在不增加权限和 endpoint 的前提下提供该能力。依赖告警均来自开发/构建链，兼容锁更新即可消除，无需扩大升级范围。
+- **范围**：Phase 14 发布后的本地维护；不新增 Provider、endpoint、Chrome 权限/Host、GitHub 写能力或数据类别，不读取真实 Key，不调用真实 Provider。本轮只创建本地提交，不 Push、不创建 tag 或 Release。
+- **证据**：`pnpm audit --audit-level moderate --json` 为 0；typecheck、lint、全仓 Prettier、Vitest 60 files / 327 tests 通过（另 1 file / 1 live test 默认跳过）；build 421 modules、构建安全扫描与隔离 Chrome 149 E2E 全过。E2E Provider 请求 0、页面异常 0。
+- 状态：本地实现与自动门禁完成，待真实环境按需复测受影响的 Provider；未 Push、未发布 ｜ 2026-10-07

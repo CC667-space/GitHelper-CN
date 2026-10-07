@@ -2,7 +2,7 @@
 
 > 本文件是全项目的**单一事实来源与最高约束**。任何执行阶段不得静默违反本文件。
 > 修改本文件 = 基线变更，必须由项目负责人（下称"你"）确认。
-> 状态：**已冻结 v1.8** ｜ 初次冻结：2026-07-23 ｜ 修订：2026-09-13（v1.1–v1.8 定向修订，见文末变更记录）
+> 状态：**已冻结 v1.9** ｜ 初次冻结：2026-07-23 ｜ 修订：2026-10-07（v1.1–v1.9 定向修订，见文末变更记录）
 
 ---
 
@@ -102,12 +102,12 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 - **自定 Provider（D-068）**：用户可填写一个 HTTPS API Base URL 或完整 `chat/completions` URL、独立 Key 与文本/视觉 Model ID。拒绝 URL 凭据、query/fragment、非默认端口、localhost、私网/回环/链路本地/保留地址字面量和跨 origin 重定向。manifest 的 `https://*/*` 只是未授予的可选 Host 候选范围；保存时仅申请经校验的精确 Host，Background 请求前再次核对配置、权限与实际请求 origin。Content/Panel 不得提供任意 fetch URL。
 - **无密钥设置 JSON（D-063 / D-068）**：允许导入/导出 Provider model 绑定及 custom 的非秘密 URL 配置；严禁包含 API Key、Authorization、token 或其他凭据。内置 Provider 的 Host/endpoint 仍不可修改，JSON 不能创建白名单外 Provider。
 - **统一适配器 + 能力模型**：Provider 抽象走 OpenAI 兼容 `chat/completions`，但每个 Provider 必须声明显式 **Capability 模型**（streaming/vision/toolCalls/structuredOutput/usage/abort 等），未经能力探针验证的能力不得当作既定事实（D-021）。
-- **Provider 路由与模型策略（v1.2 修订，D-034；基于 2026-07-24 联网核实）**：
+- **Provider 路由与模型策略（D-034 / D-080；最近核对 2026-10-07）**：
   - **文本默认：DeepSeek**（成本最低）。**关键事实**：`deepseek-chat` / `deepseek-reasoner` 两个别名于 **2026-07-24 15:59 UTC 起完全停用**（官方 Change Log），此后请求即报错。**DeepSeek Provider 不得依赖这两个别名**。
-  - DeepSeek 官方端点推荐预填模型：**`deepseek-v4-flash`**（成本/速度/简单 Agent 任务表现均衡）；保留 **`deepseek-v4-pro`** 供复杂任务选择。**模型名不是冻结常量**——实际可用模型经 Provider 配置、模型列表接口（若可用）或能力探针确认；推荐模型不可用时提示用户改选其他模型，**不得阻塞整个扩展**。
+  - DeepSeek 官方端点推荐预填模型：**`deepseek-flash`**（低成本，支持文本与图像输入）；保留 **`deepseek-v4-pro`** 供复杂文本任务选择。已保存的旧 Model ID 不迁移、不覆盖；新配置不再建议已退役的 `deepseek-v4-flash`。**模型名不是冻结常量**——实际可用模型经 Provider 配置、模型列表接口（若可用）或能力探针确认；推荐模型不可用时提示用户改选其他模型，**不得阻塞整个扩展**。
   - **视觉默认与兜底：OpenRouter**。UUAPI 仅保留旧配置兼容，不参与新的默认路由或选择器。
   - OpenAI、Anthropic、Gemini、Qwen、SiliconFlow 是可选路线，不因加入目录而自动获得可用状态；具体文本/视觉能力必须由该 Key、该 model 的真实探针确认。
-  - **关键约束**：**DeepSeek API 目前不支持图像输入**。视觉请求只能路由到已配置且真实探针确认支持图像的 Provider。文本/视觉 Provider 可分别配置，Side Panel 支持手动切换（手动优先）。
+  - **关键约束**：DeepSeek 的 `deepseek-flash` 可作为视觉候选，但只有该 Key、该 Model 经真实视觉探针通过后才可用于视觉请求；`deepseek-v4-pro` 不声明视觉能力。其他视觉请求同样只能路由到已配置且真实探针确认支持图像的 Provider。文本/视觉 Provider 可分别配置，Side Panel 支持手动切换（手动优先）。
 - **可用性判定（D-031 / D-063 / D-068）**：已完成的 v1 MVP 门槛不因目录扩展重新打开。Phase 12 新增路线必须通过 Mock、安全和权限测试；真实能力仍只认实际探针。单个外部 Provider 探针失败只记录并禁用；**所有**现有文本路线或**所有**现有视觉路线均失败才暂停。
 - **数据流向的准确表述**：API Key 与请求数据（问题、必要上下文、选中内容）**仅发送到用户明确选择并授权的 API 端点**；旧 UUAPI、OpenRouter、SiliconFlow 和用户选择的 custom 服务可能将数据转交其上游模型供应商。**本扩展无法控制第三方端点后续如何处理数据**。设置页须展示：当前 Provider / API Host / 模型 / 数据将发往哪里 / 是否中转聚合 / 兼容层或共享端点提示。
 - 视觉调用前提示"将消耗视觉额度"，设置可全局关闭视觉。
@@ -228,3 +228,4 @@ Discussions / Projects / Gist / Actions 详情：v1 仅"能读基本信息"，�
 - **v1.6（2026-08-21）**：经项目负责人在 D-071/D-072 基本验收后明确授权发布 `v0.1.1` 维护版。该版只纳入普通问答 PageContext 新鲜度修复、字号三档及按标签页的短期搜索连续性；继续使用既有 ZIP + SHA-256 流水线，不新增权限、Host、Provider 调用、长期搜索历史或 Chrome Web Store 发布（D-073）。
 - **v1.7（2026-08-30）**：经项目负责人明确授权发布 `v0.1.2` 安全维护版。该版只封装 D-074/D-075 与 Windows CI PowerShell 7 入口修复，复用确定性 ZIP + SHA-256 流水线；不新增产品功能、Chrome 权限/Host、真实 Provider 请求、GitHub 写能力或 Chrome Web Store 工作（D-076）。
 - **v1.8（2026-09-13）**：经项目负责人在模型列表人工确认后明确授权发布 `v0.1.3` 维护版。该版只封装 D-077 的 Vitest 修复与 Provider 模型候选刷新，以及 D-078 的 GitHub Actions Node 24 运行时迁移；复用确定性 ZIP + SHA-256 流水线，不新增产品功能、Chrome 权限/Host、真实 Provider 请求、GitHub 写能力或 Chrome Web Store 工作（D-079）。
+- **v1.9（2026-10-07）**：经项目负责人明确授权进行发布后的本地维护。模型目录采用“加入当前模型、移出新配置中的过时模型、保留低价模型、保留既有用户 Model ID”的策略；DeepSeek `deepseek-flash` 加入文本/视觉候选，实际能力仍由探针决定。同步修复开发依赖公告；不新增 Provider、endpoint、Chrome 权限/Host，不读取 Key，不自动 Push 或发布（D-080）。

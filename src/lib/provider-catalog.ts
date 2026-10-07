@@ -16,7 +16,7 @@ export const PROVIDER_IDS = [
 ] as const;
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 export const providerIdSchema = z.enum(PROVIDER_IDS);
-export const PROVIDER_CATALOG_VERIFIED_AT = '2026-09-13';
+export const PROVIDER_CATALOG_VERIFIED_AT = '2026-10-07';
 
 export interface ProviderCatalogEntry {
   id: ProviderId;
@@ -45,12 +45,13 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     apiPath: '/chat/completions',
     hostPermission: 'required',
     visibility: 'common',
-    supportsVisionSelection: false,
+    supportsVisionSelection: true,
     intermediary: false,
-    defaultTextModel: 'deepseek-v4-flash',
+    defaultTextModel: 'deepseek-flash',
+    defaultVisionModel: 'deepseek-flash',
     modelSuggestions: {
-      text: ['deepseek-v4-flash', 'deepseek-v4-pro'],
-      vision: [],
+      text: ['deepseek-flash', 'deepseek-v4-pro'],
+      vision: ['deepseek-flash'],
     },
   },
   {
@@ -79,11 +80,11 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     visibility: 'common',
     supportsVisionSelection: true,
     intermediary: false,
-    defaultTextModel: 'gpt-5.6-terra',
-    defaultVisionModel: 'gpt-5.6-terra',
+    defaultTextModel: 'gpt-6.1-sol',
+    defaultVisionModel: 'gpt-6.1-sol',
     modelSuggestions: {
-      text: ['gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna'],
-      vision: ['gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna'],
+      text: ['gpt-6-astra', 'gpt-6.1-sol', 'gpt-6-luna'],
+      vision: ['gpt-6-astra', 'gpt-6.1-sol', 'gpt-6-luna'],
     },
     connectionNote: '需要 OpenAI API Key；ChatGPT 登录或订阅不能代替 API Key。',
   },
@@ -97,11 +98,11 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     visibility: 'common',
     supportsVisionSelection: true,
     intermediary: false,
-    defaultTextModel: 'claude-sonnet-5',
-    defaultVisionModel: 'claude-sonnet-5',
+    defaultTextModel: 'claude-sonnet-5-5',
+    defaultVisionModel: 'claude-sonnet-5-5',
     modelSuggestions: {
-      text: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5'],
-      vision: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5'],
+      text: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1', 'claude-haiku-4-5'],
+      vision: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1', 'claude-haiku-4-5'],
     },
     connectionNote: '当前使用 Anthropic 官方 OpenAI 兼容层；高级原生能力不在本版本范围内。',
   },
@@ -135,7 +136,7 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     defaultVisionModel: 'qwen3.8-flash',
     modelSuggestions: {
       text: ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.7-plus'],
-      vision: ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.7-plus'],
+      vision: ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.7-plus', 'qwen3.8-omni-flash'],
     },
     connectionNote: '使用只需 API Key 的百炼共享端点；模型 ID 可按账号可用范围修改。',
   },

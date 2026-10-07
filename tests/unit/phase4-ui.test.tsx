@@ -28,18 +28,18 @@ function provider(
         : id === 'uuapi'
           ? 'https://uuapi.net'
           : 'https://openrouter.ai',
-    textModel: id === 'deepseek' ? 'deepseek-v4-flash' : 'account-model',
-    visionModel: id === 'deepseek' ? undefined : 'account-vision-model',
+    textModel: id === 'deepseek' ? 'deepseek-flash' : 'account-model',
+    visionModel: id === 'deepseek' ? 'deepseek-flash' : 'account-vision-model',
     intermediary: id !== 'deepseek',
     availability,
     capabilities: {
       supportsStreaming: availability === 'available',
-      supportsVision: id !== 'deepseek' && availability === 'available',
+      supportsVision: availability === 'available',
       supportsToolCalls: false,
       supportsStructuredOutput: false,
       supportsUsage: false,
       supportsAbort: availability === 'available',
-      imageInputFormat: id === 'deepseek' ? 'none' : 'openai_image_url',
+      imageInputFormat: 'openai_image_url',
       toolCallStreamingFormat: 'none',
       errorResponseFormat: 'custom',
     },
@@ -157,8 +157,8 @@ describe('Phase 4 trusted UI', () => {
     const textProvider = within(providerSection).getByLabelText('文本 Provider');
     const visionProvider = within(providerSection).getByLabelText('视觉 Provider');
     expect(within(textProvider).getAllByRole('option')).toHaveLength(11);
-    expect(within(visionProvider).getAllByRole('option')).toHaveLength(10);
-    expect(within(visionProvider).queryByRole('option', { name: 'DeepSeek' })).toBeNull();
+    expect(within(visionProvider).getAllByRole('option')).toHaveLength(11);
+    expect(within(visionProvider).getByRole('option', { name: 'DeepSeek' })).toBeTruthy();
     expect(
       within(textProvider).getByRole('option', { name: 'ChatGPT（OpenAI API）' }),
     ).toBeTruthy();
@@ -195,8 +195,9 @@ describe('Phase 4 trusted UI', () => {
 
     const modelSelector = within(textCard).getByLabelText('文本 Model 候选');
     expect(within(modelSelector).getByRole('option', { name: 'gpt-6-astra' })).toBeTruthy();
-    expect(within(modelSelector).getByRole('option', { name: 'gpt-5.6-terra' })).toBeTruthy();
-    expect(within(modelSelector).getByRole('option', { name: 'gpt-5.6-luna' })).toBeTruthy();
+    expect(within(modelSelector).getByRole('option', { name: 'gpt-6.1-sol' })).toBeTruthy();
+    expect(within(modelSelector).getByRole('option', { name: 'gpt-6-luna' })).toBeTruthy();
+    expect(within(modelSelector).queryByRole('option', { name: 'gpt-5.6-terra' })).toBeNull();
     await user.selectOptions(modelSelector, '__custom__');
     const customModel = within(textCard).getByLabelText('自行填写文本 Model ID');
     await user.type(customModel, 'account/custom-model');

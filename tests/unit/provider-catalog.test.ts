@@ -8,7 +8,7 @@ import {
 
 describe('Provider catalog', () => {
   it('暴露十家常用内置服务、一个受限 custom，并把 UUAPI 标记为 legacy', () => {
-    expect(PROVIDER_CATALOG_VERIFIED_AT).toBe('2026-09-13');
+    expect(PROVIDER_CATALOG_VERIFIED_AT).toBe('2026-10-07');
     expect(PROVIDER_CATALOG.map((provider) => provider.id)).toEqual([
       'deepseek',
       'openrouter',
@@ -30,12 +30,12 @@ describe('Provider catalog', () => {
       apiHost: 'https://api.openai.com',
       apiPath: '/v1/chat/completions',
       hostPermission: 'optional',
-      defaultTextModel: 'gpt-5.6-terra',
-      defaultVisionModel: 'gpt-5.6-terra',
+      defaultTextModel: 'gpt-6.1-sol',
+      defaultVisionModel: 'gpt-6.1-sol',
       intermediary: false,
       modelSuggestions: {
-        text: ['gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna'],
-        vision: ['gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna'],
+        text: ['gpt-6-astra', 'gpt-6.1-sol', 'gpt-6-luna'],
+        vision: ['gpt-6-astra', 'gpt-6.1-sol', 'gpt-6-luna'],
       },
     });
 
@@ -43,11 +43,11 @@ describe('Provider catalog', () => {
       settingsLabel: 'Claude（Anthropic API）',
       apiHost: 'https://api.anthropic.com',
       apiPath: '/v1/chat/completions',
-      defaultTextModel: 'claude-sonnet-5',
-      defaultVisionModel: 'claude-sonnet-5',
+      defaultTextModel: 'claude-sonnet-5-5',
+      defaultVisionModel: 'claude-sonnet-5-5',
       modelSuggestions: {
-        text: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5'],
-        vision: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5'],
+        text: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1', 'claude-haiku-4-5'],
+        vision: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1', 'claude-haiku-4-5'],
       },
       hostPermission: 'optional',
     });
@@ -68,7 +68,7 @@ describe('Provider catalog', () => {
       defaultVisionModel: 'qwen3.8-flash',
       modelSuggestions: {
         text: ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.7-plus'],
-        vision: ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.7-plus'],
+        vision: ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.7-plus', 'qwen3.8-omni-flash'],
       },
     });
     expect(providerCatalogEntry('siliconflow')).toMatchObject({
@@ -82,7 +82,15 @@ describe('Provider catalog', () => {
       },
     });
 
-    expect(providerCatalogEntry('deepseek').modelSuggestions.vision).toEqual([]);
+    expect(providerCatalogEntry('deepseek')).toMatchObject({
+      supportsVisionSelection: true,
+      defaultTextModel: 'deepseek-flash',
+      defaultVisionModel: 'deepseek-flash',
+      modelSuggestions: {
+        text: ['deepseek-flash', 'deepseek-v4-pro'],
+        vision: ['deepseek-flash'],
+      },
+    });
     expect(providerCatalogEntry('glm')).toMatchObject({
       apiHost: 'https://open.bigmodel.cn',
       apiPath: '/api/paas/v4/chat/completions',

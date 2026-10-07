@@ -12,6 +12,7 @@
 > v1.8（2026-08-29）：记录 Phase 14 后续分层审计维护：依赖、探针、确认/Port、模型目录、格式、许可证、确定性打包与 CI（D-075）；不含远程发布。
 > v1.9（2026-08-30）：记录获授权的 `v0.1.2` 安全维护 Release，范围仅含 D-074/D-075 与 Windows CI 修复（D-076）。
 > v1.10（2026-09-13）：记录获授权的 `v0.1.3` 维护 Release，范围仅含 D-077 与 GitHub Actions Node 24 运行时修复（D-078/D-079）。
+> v1.11（2026-10-07）：记录发布后的模型目录与开发依赖定向维护；不含 Push、tag 或 Release（D-080）。
 
 ---
 
@@ -156,7 +157,7 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **目标**：八个固定 Provider 适配器全部完成（代码+Mock 测试）、能力经探针验证、可手动切换、文本对话流式闭环。
 - **任务**：
   1. `providers/base` 公共协议骨架（chat/chatStream/abort/capabilities，OpenAI 兼容组装）+ DeepSeek / UUAPI / OpenRouter / OpenAI / Anthropic / Gemini / Qwen / SiliconFlow **独立适配器**（D-007R/D-030/D-063；**固定 apiHost 预设，无自定义 Base URL**；model 可配置）。原三家沿用静态 Host，新增五家保存 Key 时逐家申请精确可选 Host 权限。
-  2. **DeepSeek 模型策略（D-034）**：不使用 `deepseek-chat`/`deepseek-reasoner` 别名（2026-07-24 15:59 UTC 已停用）；推荐预填 `deepseek-v4-flash`，下拉保留 `deepseek-v4-pro`；模型名非冻结常量，实际可用性经配置/模型列表接口/探针确认；推荐模型不可用 → 提示改选，不阻塞。
+  2. **DeepSeek 模型策略（D-034/D-080）**：不使用 `deepseek-chat`/`deepseek-reasoner` 别名（2026-07-24 15:59 UTC 已停用）；新配置推荐低价 `deepseek-flash`，文本保留 `deepseek-v4-pro`，视觉只建议 `deepseek-flash`；已保存 Model ID 不覆盖，实际可用性经探针确认；推荐模型不可用 → 提示改选，不阻塞。
   3. 每 Provider 声明 `ProviderCapabilities`；实现**能力探针**（D-021）：文本、流式、取消、图片输入、工具调用、结构化输出、错误/限流响应格式。探针结果写入 `capabilities.probedAt`，未验证能力不得使用。
   4. `provider-manager`：默认路由 + **手动覆盖优先** + Capability 护栏（needsVision 而 supportsVision=false → 阻止并提示）+ 不可用 Provider 禁用标记。
   5. `context-builder` 最小上下文（接 sanitizer）。
@@ -299,9 +300,16 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **配置保障**：模型目录已由项目负责人人工确认；已保存 Model ID 继续优先，不迁移、不覆盖；本轮不读取真实 Key 或运行真实 Provider 探针。
 - **范围**：不新增产品功能、Chrome 权限/Host、Provider、真实 Provider 请求、GitHub 写能力、CRX 或 Chrome Web Store 工作。
 
+### Phase 14 后续本地维护 — 模型目录与依赖（D-080）
+
+- **内容**：按官方资料更新 OpenAI、Anthropic、DeepSeek、Qwen 的便捷候选；新增当前模型、移出新配置中的过时模型并保留低价路线；为 DeepSeek Flash 接入既有视觉消息格式；刷新受公告影响的开发依赖锁。
+- **配置保障**：目录默认值只用于缺失配置；已保存 Model ID 不迁移、不覆盖。模型存在不等于账号可用，文本/视觉能力仍只认对应 Key/Model 的真实探针。
+- **门禁**：零依赖告警、typecheck、lint、format、全量测试、build、安全扫描、隔离 Chrome E2E 与 `git diff --check`。
+- **范围**：不新增 Provider、endpoint、Chrome 权限/Host，不读取真实 Key，不调用真实 Provider，不 Push、不创建 tag 或 Release。
+
 ---
 
-## 强制确认节点清单（v1.10）
+## 强制确认节点清单（v1.11）
 
 1. **Phase 4**：首次填入真实 AI Provider Key（凭据）—— 必需。
 2. **Phase 11**：MVP 批量体验复核（真实交互验收）—— 必需。

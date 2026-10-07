@@ -6,12 +6,12 @@
 
 ## 当前阶段
 
-**Phase 14 — GitHub Release `v0.1.3` 已完成并通过本地与远程核验（D-077/D-078/D-079）。Chrome Web Store 继续暂停。**
+**Phase 14 — GitHub Release `v0.1.3` 已完成；发布后的模型目录与依赖本地维护 D-080 已通过自动门禁。Chrome Web Store 继续暂停。**
 
 ## 已完成
 
 - [x] 需求确认（用户已回复"全部采用推荐默认值"，Q7 提供 DeepSeek/UUAPI/OpenRouter Key；补充要求 Provider 可手动切换）
-- [x] 联网核实：DeepSeek API 目前不支持图像输入、`deepseek-chat`/`deepseek-reasoner` 别名 2026-07-24 15:59 UTC 起停用（推荐改用 `deepseek-v4-flash`，D-034）；UUAPI 为 OpenAI 兼容中转（uuapi.net/v1）；`chrome.storage.local.setAccessLevel('TRUSTED_CONTEXTS')` 为 Chrome 官方 API
+- [x] 联网核实：`deepseek-chat`/`deepseek-reasoner` 别名 2026-07-24 15:59 UTC 起停用；截至 2026-10-07，低价 `deepseek-flash` 支持文本与图像输入，新配置推荐使用该模型并仍以真实探针为准（D-034/D-080）；UUAPI 为 OpenAI 兼容中转（uuapi.net/v1）；`chrome.storage.local.setAccessLevel('TRUSTED_CONTEXTS')` 为 Chrome 官方 API
 - [x] 冻结基线 `PROJECT_BASELINE.md`（v1.0，2026-07-23）
 - [x] 全部 8 份规划文件初版（2026-07-23）
 - [x] **v1.1 定向修订（2026-07-24，依据《修订任务单》P0-1–8 / C-1–3 / P1-1–4）**：
@@ -32,7 +32,7 @@
   - openPage 拆分 openGitHubPage/openExternalLink + 非 https Scheme 黑名单（D-013R）
   - 数据清除三分：会话偏好 / 单 Key / 全部（D-033）
   - manifest 增加 `minimum_chrome_version: "114"`（D-035）
-  - DeepSeek 模型策略：别名 2026-07-24 15:59 UTC 停用，推荐 `deepseek-v4-flash`，保留 `deepseek-v4-pro`，模型名非冻结常量（D-034）
+  - DeepSeek 模型策略：停用别名继续硬拒绝；新配置推荐低价 `deepseek-flash`，保留文本 `deepseek-v4-pro`，Flash 视觉能力须真实探针确认；已保存 Model ID 不覆盖（D-034/D-080）
 - [x] **v1.3 Provider 定向修订（2026-08-03，D-063）**：
   - 固定目录由 DeepSeek / UUAPI / OpenRouter 扩展为八家，新增 OpenAI / Anthropic / Gemini / Qwen / SiliconFlow；任意 Base URL 与自定义 Host 仍禁止
   - 原三家保留静态 Host 权限；新增五家只在保存对应 Key 时请求精确可选 Host，拒绝则 Key 零写入，删除 Key 后释放权限
@@ -367,10 +367,16 @@
   - 版本提交 `6caf7f9` 已普通 fast-forward Push；远端 Quality run `34732210407` 与 CodeQL run `34732210021` 成功，Quality annotations 为空且旧 Node.js 20 弃用提示零命中
   - 注释 tag `v0.1.3` 解引用到版本提交；公开 Release `387766263` 为 latest、非 draft/prerelease，远端仅含 ZIP 201,567 bytes 与校验文件 97 bytes，两项 digest 均与本地一致：`https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.3`
   - 发布后 Dependabot、Code scanning、Secret scanning 的 open 告警均为 0；完整证据见 `scripts/phase14-v0.1.3-release-evidence.md`
+- [x] **Phase 14 后续本地维护 — 模型目录与开发依赖（2026-10-07，D-080）完成自动验收**：
+  - Provider Catalog 按“新增当前模型、移出新配置中的过时模型、保留低价模型”定向更新 OpenAI、Anthropic、DeepSeek 与 Qwen；既有已保存 Model ID 不迁移、不覆盖
+  - DeepSeek 新配置默认改为低价 `deepseek-flash`，加入视觉候选并复用既有 `image_url` 组装；真实文本/视觉能力继续按 Key、Model 与绑定状态分别探针确认
+  - 开发依赖锁更新到 `brace-expansion` 5.0.12、`source-map-js` 1.2.2、`undici` 7.30.0；`pnpm audit --audit-level moderate --json` 为 0
+  - typecheck、lint、全仓 Prettier、Vitest 60 files / 327 tests（另 1 file / 1 live test 默认跳过）、build（421 modules）、构建安全扫描与隔离 Chrome 149 E2E 全过；Provider 请求 0、页面异常 0
+  - 未读取真实 Key，未调用真实 Provider，未新增 Provider/endpoint/Chrome 权限或 Host；仅准备本地提交，未 Push、未创建 tag 或 Release
 
 ## 下一任务
 
-**等待后续真实使用反馈。公开安装版为 `v0.1.3`；Chrome Web Store 上架继续暂停，任何 `v0.1.3` 之后的 Release 需另行确认。**
+**等待按需复测受影响的 Provider 与后续真实使用反馈。公开安装版仍为 `v0.1.3`；D-080 尚未 Push 或发布，Chrome Web Store 上架继续暂停，任何远程同步或 `v0.1.3` 之后的 Release 需另行确认。**
 
 ## 已登记的后续优化
 
@@ -417,7 +423,7 @@
 
 ## 阻塞
 
-当前无阻塞。GitHub Release `v0.1.3` 已完成本地、远端 workflow、tag、latest Release、资产 digest 与安全告警核验；Chrome Web Store 上架继续暂停。
+当前无阻塞。D-080 自动门禁已通过，真实 Provider 复测只在用户准备采用新 Model 时按需进行；GitHub Release `v0.1.3` 保持不变，Chrome Web Store 上架继续暂停。
 
 ## 变更记录
 
@@ -487,3 +493,4 @@
 - 2026-09-13：项目负责人授权同步 D-077；Push 前敏感信息复核通过，`c7a7183` 已普通 Push 到 `origin/main`。远端 Quality `34709340617`、CodeQL `34709340585` 成功，Dependabot 与 Code scanning 的 Open 告警均为 0；未创建 tag 或 Release。
 - 2026-09-13：项目负责人确认模型列表并授权发布 `v0.1.3`；D-078 将三个 Quality Action 更新到官方 Node 24 运行时主版本，本地完整质量、安全、匿名 live、隔离 Chrome E2E、凭据审计与确定性打包门禁通过，待执行版本提交、远端门禁、tag、Release 和资产核验。
 - 2026-09-13：`6caf7f9` 已 Push；远端 Quality `34732210407`、CodeQL `34732210021` 成功且旧 Node.js 20 弃用提示消失。注释 tag `v0.1.3` 指向版本提交，公开 latest Release 与 ZIP/SHA-256 两项资产已上传，名称、大小和 GitHub digest 均与本地一致；三类 GitHub open 安全告警均为 0。Chrome Web Store 继续暂停。
+- 2026-10-07：完成 D-080 本地维护；模型目录按新增/淘汰/低价保留策略更新，DeepSeek Flash 加入受探针约束的视觉候选，开发依赖告警清零；327 项常规测试与完整静态/构建/安全/E2E 门禁通过。未读取真实 Key，未 Push、未创建 tag 或 Release。

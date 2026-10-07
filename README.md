@@ -56,7 +56,7 @@ C:\Tools\GitHelper-CN\
 5. 在 password 输入框中填写该 Provider 的 API Key，点击“保存 Key”。保存后输入框会立即清空，只显示尾四位掩码。
 6. 点击卡内“测试 Key 与模型”。显示可用后即可进行文本问答、搜索和仓库分析。
 
-只有文本需求时不必配置视觉 Provider。DeepSeek 仅支持文本；框选内容确实需要图片理解时，再在“视觉 Model”卡片配置并测试支持视觉的 Provider。
+只有文本需求时不必配置视觉 Provider。DeepSeek 的 `deepseek-flash` 可作为低价视觉候选，但仍需在“视觉 Model”卡片单独选择并通过真实视觉探针；`deepseek-v4-pro` 仅作为文本候选。
 
 API Key 由用户自行向 Provider 获取，可能产生 Provider 侧费用。请使用专用、可撤销且设有额度上限的 Key；不要把真实 Key 放进聊天、Issue、截图、日志、URL 或高级配置 JSON。
 

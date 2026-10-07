@@ -11,6 +11,7 @@
 > v1.8（2026-08-29）：记录探针绑定与失效、Panel Port 精确来源、操作确认执行点、模型目录核对日期，以及许可证/确定性 ZIP/CI 门禁（D-075）。
 > v1.9（2026-08-30）：记录 `v0.1.2` 继续复用确定性 ZIP、许可证、凭据审计和远端 Quality 门禁（D-076）。
 > v1.10（2026-09-13）：记录 `v0.1.3` 复用既有 Release 门禁，并将 Quality workflow 的官方 Actions 迁移到 Node 24 运行时（D-078/D-079）。
+> v1.11（2026-10-07）：Provider Catalog 定向刷新当前/低价候选，DeepSeek Flash 复用既有 OpenAI-compatible 视觉消息格式；能力仍由探针判定（D-080）。
 
 ---
 

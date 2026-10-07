@@ -54,7 +54,8 @@ function stubStorage(): void {
                       },
                       binding: {
                         credentialRevision: 'test-revision',
-                        textModel: 'deepseek-v4-flash',
+                        textModel: 'deepseek-flash',
+                        visionModel: 'deepseek-flash',
                       },
                     },
                   },

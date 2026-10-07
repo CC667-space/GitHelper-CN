@@ -36,8 +36,8 @@ describe('Provider settings', () => {
 
     expect(settings.providers.deepseek.textModel).toBe('my-deepseek-model');
     expect(settings.providers.openai).toEqual({
-      textModel: 'gpt-5.6-terra',
-      visionModel: 'gpt-5.6-terra',
+      textModel: 'gpt-6.1-sol',
+      visionModel: 'gpt-6.1-sol',
     });
     expect(settings.schemaVersion).toBe(2);
     expect(settings.providers.glm.textModel).toBe('glm-5.2');
@@ -56,7 +56,10 @@ describe('Provider settings', () => {
     }`);
 
     expect(settings.providers.openai.textModel).toBe('gpt-4.1-mini');
-    expect(settings.providers.deepseek.textModel).toBe('deepseek-v4-flash');
+    expect(settings.providers.deepseek).toEqual({
+      textModel: 'deepseek-flash',
+      visionModel: 'deepseek-flash',
+    });
   });
 
   it('导出的 JSON 只包含模型和 custom 非秘密 URL，不包含凭据', () => {

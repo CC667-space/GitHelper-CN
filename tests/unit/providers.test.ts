@@ -32,7 +32,7 @@ const factories = [
   {
     id: 'deepseek',
     endpoint: 'https://api.deepseek.com/chat/completions',
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     create: (transport: ProviderTransport): Provider => new DeepSeekProvider(transport),
   },
   {
@@ -229,13 +229,13 @@ describe('Provider-specific behavior', () => {
     expect(body).not.toHaveProperty('max_tokens');
   });
 
-  it('DeepSeek V4 显式关闭默认思考模式以避免简单文本请求浪费输出预算', async () => {
+  it('DeepSeek Flash 显式关闭默认思考模式以避免简单文本请求浪费输出预算', async () => {
     const transport: ProviderTransport = {
       request: vi.fn(
         async () =>
           new Response(
             JSON.stringify({
-              model: 'deepseek-v4-flash',
+              model: 'deepseek-flash',
               choices: [{ message: { content: 'OK' }, finish_reason: 'stop' }],
             }),
             { status: 200, headers: { 'Content-Type': 'application/json' } },
@@ -244,7 +244,7 @@ describe('Provider-specific behavior', () => {
     };
     const provider = new DeepSeekProvider(transport);
 
-    await provider.chat(request('deepseek:non-thinking', 'deepseek-v4-flash'));
+    await provider.chat(request('deepseek:non-thinking', 'deepseek-flash'));
 
     const [, , init] = vi.mocked(transport.request).mock.calls[0]!;
     expect(JSON.parse(String(init.body))).toMatchObject({
@@ -252,19 +252,40 @@ describe('Provider-specific behavior', () => {
     });
   });
 
-  it('DeepSeek 拒绝停用别名和图像输入', async () => {
+  it('DeepSeek 拒绝已停用别名，并按 OpenAI image_url 格式发送 Flash 图像输入', async () => {
     const transport: ProviderTransport = {
       request: vi.fn(),
     };
     const provider = new DeepSeekProvider(transport);
     await expect(provider.chat(request('legacy', 'deepseek-chat'))).rejects.toThrow(/已停用/);
-    await expect(
-      provider.chat({
-        ...request('vision', 'deepseek-v4-flash'),
-        images: ['data:image/png;base64,AA=='],
-      }),
-    ).rejects.toThrow(/不支持图像/);
     expect(transport.request).not.toHaveBeenCalled();
+
+    vi.mocked(transport.request).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          model: 'deepseek-flash',
+          choices: [{ message: { content: '蓝色' }, finish_reason: 'stop' }],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    await provider.chat({
+      ...request('vision', 'deepseek-flash'),
+      images: ['data:image/png;base64,AA=='],
+    });
+    const [, , init] = vi.mocked(transport.request).mock.calls[0]!;
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      model: 'deepseek-flash',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'hello' },
+            { type: 'image_url', image_url: { url: 'data:image/png;base64,AA==' } },
+          ],
+        },
+      ],
+    });
   });
 
   it('各适配器将 HTTP 错误映射为可读类型', async () => {
