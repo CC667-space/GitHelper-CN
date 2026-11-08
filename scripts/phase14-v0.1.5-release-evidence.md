@@ -29,6 +29,7 @@
 - `pnpm scan:build`：通过；无 `eval`、`new Function` 或远程运行时脚本。
 - `pnpm test:e2e`：隔离 Chrome 149 通过；原生 Panel、标签页切换、仓库分析、README 延迟刷新、中文搜索、SPA、会话恢复和敏感哨兵均通过，Provider 请求 0、页面错误 0。
 - `pnpm package:extension`：连续执行两次，20 个条目的顺序、固定时间戳、大小与 SHA-256 一致。
+- 首次远端 Quality run `42447108207` 在 Install pnpm 步骤失败：workflow 同时指定 pnpm 11.17.0，而 `package.json#packageManager` 已锁定 11.25.0。修复删除重复版本来源，并由回归测试确保 `pnpm/action-setup@v6` 只读取 `packageManager`；待修复提交完成远端复验。
 
 ## 发布资产
 

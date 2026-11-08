@@ -37,6 +37,7 @@ describe('GitHub Release runtime hardening', () => {
     expect(qualityWorkflow).toContain('uses: actions/checkout@v7');
     expect(qualityWorkflow).toContain('uses: pnpm/action-setup@v6');
     expect(qualityWorkflow).toContain('uses: actions/setup-node@v7');
+    expect(qualityWorkflow).not.toMatch(/uses:\s+pnpm\/action-setup@v6\s+with:\s+version:/);
     expect(qualityWorkflow).not.toMatch(
       /uses:\s+(?:actions\/(?:checkout|setup-node)|pnpm\/action-setup)@v4/,
     );

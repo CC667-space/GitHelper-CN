@@ -394,6 +394,7 @@
   - 本地门禁通过：frozen install、384 项依赖零漏洞、许可证零差异、typecheck、lint、format、`git diff --check`、Vitest 60 files / 328 tests、匿名 GitHub live 1/1、build（437 modules）、安全扫描与隔离 Chrome 149 E2E
   - 20 条目确定性 ZIP 连续两次 SHA-256 均为 `eebb6f7bef98c6fbe608d301cbaa826c8d8313865dc2bee0e834c43ca38e77c7`，ZIP 208,287 bytes，校验文件 97 bytes；权限相对 `v0.1.4` 未扩大
   - 凭据审计覆盖生产源码、本轮新增行、`dist`、ZIP、禁止跟踪路径与全部 Git 历史：生产/新增/构建/ZIP 意外敏感形态命中 0；历史 8 个唯一命中路径均为测试或 E2E 安全哨兵
+  - 首次远端 Quality 在 Install pnpm 步骤发现 workflow 仍写死 11.17.0，与 `packageManager` 的 11.25.0 冲突；已按单一版本来源原则删除重复值并增加回归断言，待修复提交远端复验
   - 待完成：版本提交 Push、远端 Quality/CodeQL、tag、Release、资产 digest 与公开安全告警复核
 
 ## 下一任务
