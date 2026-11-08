@@ -40,7 +40,7 @@ describe('Provider settings', () => {
       visionModel: 'gpt-6.1-sol',
     });
     expect(settings.schemaVersion).toBe(2);
-    expect(settings.providers.glm.textModel).toBe('glm-5.2');
+    expect(settings.providers.glm.textModel).toBe('glm-5.3-flash');
     expect(settings.providers.custom.textModel).toBe('');
   });
 

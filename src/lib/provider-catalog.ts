@@ -16,7 +16,7 @@ export const PROVIDER_IDS = [
 ] as const;
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 export const providerIdSchema = z.enum(PROVIDER_IDS);
-export const PROVIDER_CATALOG_VERIFIED_AT = '2026-10-07';
+export const PROVIDER_CATALOG_VERIFIED_AT = '2026-11-07';
 
 export interface ProviderCatalogEntry {
   id: ProviderId;
@@ -98,11 +98,11 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     visibility: 'common',
     supportsVisionSelection: true,
     intermediary: false,
-    defaultTextModel: 'claude-sonnet-5-5',
-    defaultVisionModel: 'claude-sonnet-5-5',
+    defaultTextModel: 'claude-sonnet-5',
+    defaultVisionModel: 'claude-sonnet-5',
     modelSuggestions: {
-      text: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1', 'claude-haiku-4-5'],
-      vision: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1', 'claude-haiku-4-5'],
+      text: ['claude-sonnet-5', 'claude-fable-5', 'claude-haiku-4-5-20251001'],
+      vision: ['claude-sonnet-5', 'claude-fable-5', 'claude-haiku-4-5-20251001'],
     },
     connectionNote: '当前使用 Anthropic 官方 OpenAI 兼容层；高级原生能力不在本版本范围内。',
   },
@@ -149,11 +149,11 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     visibility: 'common',
     supportsVisionSelection: true,
     intermediary: true,
-    defaultTextModel: 'zai-org/GLM-5.2',
-    defaultVisionModel: 'Qwen/Qwen3.8-27B',
+    defaultTextModel: 'zai-org/GLM-5.3-Flash',
+    defaultVisionModel: 'zai-org/GLM-5.3-Flash',
     modelSuggestions: {
-      text: ['zai-org/GLM-5.2', 'Pro/zai-org/GLM-5.1', 'moonshotai/Kimi-K2.7-Code'],
-      vision: ['Qwen/Qwen3.8-27B', 'Qwen/Qwen3.6-35B-A3B', 'Qwen/Qwen3.6-27B'],
+      text: ['zai-org/GLM-5.3-Flash', 'zai-org/GLM-5.3', 'moonshotai/Kimi-K2.7-Code'],
+      vision: ['zai-org/GLM-5.3-Flash', 'Qwen/Qwen3.8-27B', 'Qwen/Qwen3.6-27B'],
     },
     connectionNote: '模型上下线与能力可能变化；可在模型框中填写账号当前可用的模型 ID。',
   },
@@ -166,11 +166,11 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     visibility: 'common',
     supportsVisionSelection: true,
     intermediary: false,
-    defaultTextModel: 'glm-5.2',
-    defaultVisionModel: 'glm-5v-turbo',
+    defaultTextModel: 'glm-5.3-flash',
+    defaultVisionModel: 'glm-5.3-flash',
     modelSuggestions: {
-      text: ['glm-5.2', 'glm-4.7', 'glm-4.7-flash'],
-      vision: ['glm-5v-turbo', 'glm-4.6v', 'glm-4.6v-flash'],
+      text: ['glm-5.3', 'glm-5.3-flash', 'glm-4.7-flash'],
+      vision: ['glm-5.3-flash', 'glm-5v-turbo', 'glm-4.6v-flash'],
     },
   },
   {
@@ -182,11 +182,11 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     visibility: 'common',
     supportsVisionSelection: true,
     intermediary: false,
-    defaultTextModel: 'kimi-k3',
-    defaultVisionModel: 'kimi-k3',
+    defaultTextModel: 'kimi-k3.1-pro',
+    defaultVisionModel: 'kimi-k3.1-pro',
     modelSuggestions: {
-      text: ['kimi-k3', 'kimi-k2.7-code', 'kimi-k2.6'],
-      vision: ['kimi-k3', 'kimi-k2.6'],
+      text: ['kimi-k3.1-pro', 'kimi-k3'],
+      vision: ['kimi-k3.1-pro', 'kimi-k3'],
     },
   },
   {
@@ -198,11 +198,11 @@ export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
     visibility: 'common',
     supportsVisionSelection: true,
     intermediary: false,
-    defaultTextModel: 'grok-4.6',
-    defaultVisionModel: 'grok-4.6',
+    defaultTextModel: 'grok-4.7',
+    defaultVisionModel: 'grok-4.7',
     modelSuggestions: {
-      text: ['grok-4.6', 'grok-4.5', 'grok-4.3'],
-      vision: ['grok-4.6', 'grok-4.5', 'grok-4.3'],
+      text: ['grok-4.7', 'grok-4.6', 'grok-4.3'],
+      vision: ['grok-4.7', 'grok-4.6', 'grok-4.3'],
     },
   },
   {

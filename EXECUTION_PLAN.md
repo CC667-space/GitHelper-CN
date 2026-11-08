@@ -14,6 +14,7 @@
 > v1.10（2026-09-13）：记录获授权的 `v0.1.3` 维护 Release，范围仅含 D-077 与 GitHub Actions Node 24 运行时修复（D-078/D-079）。
 > v1.11（2026-10-07）：记录发布后的模型目录与开发依赖定向维护；不含 Push、tag 或 Release（D-080）。
 > v1.12（2026-10-07）：记录获授权的 `v0.1.4` 维护 Release，范围仅含 D-080（D-081）。
+> v1.13（2026-11-07）：记录 `v0.1.4` 发布后的依赖与模型目录维护；不含 Push、tag 或新 Release（D-082）。
 
 ---
 
@@ -316,9 +317,16 @@ Phase 14 (GitHub Release 加固与发布) ← 已完成；后续维护补丁不�
 - **配置保障**：项目负责人已在当前构建中人工确认 DeepSeek `deepseek-flash` 文本与视觉探针均通过；不读取 Key，不要求未变更 Key/Model/custom URL 的其他已验证 Provider 重测。
 - **范围**：不新增产品功能、Provider、endpoint、Chrome 权限/Host、GitHub 写能力、CRX 或 Chrome Web Store 工作。
 
+### Phase 14 后续本地维护 — 依赖、模型目录与请求兼容（D-082）
+
+- **内容**：修复当前依赖公告并更新同主版本维护依赖；按 2026-11-07 官方目录刷新 Anthropic、SiliconFlow、GLM、Kimi 与 Grok 候选；Kimi 请求不再注入通用 `temperature`，避免固定采样模型拒绝请求。
+- **配置保障**：新默认值只用于缺失配置；已保存 Model ID 与 Key 不读取、不迁移、不覆盖。目录候选仍不代表账号权限或真实能力，实际可用性继续以单 Provider 探针为准。
+- **门禁**：frozen install、零依赖告警、许可证清单、typecheck、lint、format、全量测试、build、安全扫描、隔离 Chrome E2E 与 `git diff --check`。
+- **范围**：不新增 Provider、endpoint、Chrome 权限/Host 或数据类别；不调用真实 Provider，不 Push、不创建 tag 或 Release。React 19、TypeScript 7、Vitest 5、CRXJS 3 等 major 迁移留待独立需求。
+
 ---
 
-## 强制确认节点清单（v1.12）
+## 强制确认节点清单（v1.13）
 
 1. **Phase 4**：首次填入真实 AI Provider Key（凭据）—— 必需。
 2. **Phase 11**：MVP 批量体验复核（真实交互验收）—— 必需。

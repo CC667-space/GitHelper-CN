@@ -1,4 +1,4 @@
-import type { ProviderTransport } from './base';
+import type { ProviderChatRequest, ProviderTransport } from './base';
 import { OpenAICompatibleProvider } from './base';
 
 export class KimiProvider extends OpenAICompatibleProvider {
@@ -14,5 +14,14 @@ export class KimiProvider extends OpenAICompatibleProvider {
       toolCallStreamingFormat: 'openai_delta',
       errorResponseFormat: 'openai',
     });
+  }
+
+  protected override buildRequestBody(
+    request: ProviderChatRequest,
+    stream: boolean,
+  ): Record<string, unknown> {
+    const body = super.buildRequestBody(request, stream);
+    delete body.temperature;
+    return body;
   }
 }

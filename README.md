@@ -86,6 +86,8 @@ API Key 由用户自行向 Provider 获取，可能产生 Provider 侧费用。�
 
 `v0.1.4` 按“加入当前模型、移出新配置中的过时模型、保留低价模型”再次维护了 Provider 候选，并让 DeepSeek `deepseek-flash` 可在文本或视觉卡片中选择；同时修复了开发依赖公告。升级不会覆盖已保存的 Model ID，也不会读取、迁移或删除已保存 Key。只有实际修改 Key、Model ID 或 custom URL 时，对应旧探针状态才会失效；若新候选不适用于你的账号，可继续手填原 Model ID。
 
+当前源码在 `v0.1.4` 之后继续完成了 2026-11-07 本地维护：Anthropic、SiliconFlow、GLM、Kimi 与 Grok 的便捷候选按“新增当前型号、保留低价路线”刷新，Kimi 请求兼容固定采样参数，依赖审计归零。该维护不会覆盖已保存 Model ID；公开安装包仍是 `v0.1.4`，后续版本尚未发布。
+
 从 `v0.1.1` 或更早版本升级时，`v0.1.2` 引入的探针新鲜度校验仍会使旧探针状态显示为“未验证”；已保存 Key 不会被删除，可在 Options 对相应 Provider 重新点击一次“测试 Key 与模型”。
 
 不要先点击“移除扩展程序”，除非你接受 Chrome 可能清除该扩展的本地会话、偏好和已保存 Key。更新前可在 Options 导出不含 Key 的 Model 配置 JSON；API Key 不会被导出。

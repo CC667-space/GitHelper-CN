@@ -114,8 +114,8 @@ Production packages
 - unist-util-visit-parents@6.0.2 | MIT | license
 - vfile@6.0.3 | MIT | license
 - vfile-message@4.0.3 | MIT | license
-- zod@4.4.3 | MIT | LICENSE | https://zod.dev
-- zustand@5.0.14 | MIT | LICENSE | https://github.com/pmndrs/zustand
+- zod@4.6.7 | MIT | LICENSE | https://zod.dev
+- zustand@5.0.16 | MIT | LICENSE | https://github.com/pmndrs/zustand
 - zwitch@2.0.4 | MIT | license
 
 License texts
@@ -268,7 +268,7 @@ THE SOFTWARE.
 
 ------------------------------------------------------------------------
 
-Packages: zustand@5.0.14
+Packages: zustand@5.0.16
 SHA-256: 384a8fa756d4ca7e5df8639719e5ee7e279b2b27d2ccecbbe4222733050d4423
 
 MIT License
@@ -857,7 +857,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ------------------------------------------------------------------------
 
-Packages: zod@4.4.3
+Packages: zod@4.6.7
 SHA-256: f61cacc2acb8b71aa79a128b3e732bf25e02aab40747bbbd5bf00c97c9cda28d
 
 MIT License

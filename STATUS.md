@@ -6,7 +6,7 @@
 
 ## 当前阶段
 
-**Phase 14 — GitHub Release `v0.1.4` 已发布并完成远程资产核验。Chrome Web Store 继续暂停。**
+**Phase 14 — GitHub Release `v0.1.4` 已发布；D-082 依赖与模型目录本地维护已完成。Chrome Web Store 继续暂停。**
 
 ## 已完成
 
@@ -382,10 +382,16 @@
   - 版本提交 `8a33e4b` 已普通 fast-forward Push；远端 Quality run `37597902173` 与 CodeQL run `37597901376` 成功，Quality annotations 为 0
   - 注释 tag `v0.1.4` 解引用到版本提交；公开 Release `405577165` 为 latest、非 draft/prerelease，远端仅含 ZIP 201,496 bytes 与校验文件 97 bytes，两项 digest 均与本地一致：`https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.4`
   - 发布后 Dependabot、Code scanning、Secret scanning 的 open 告警均为 0；完整证据见 `scripts/phase14-v0.1.4-release-evidence.md`
+- [x] **Phase 14 后续本地维护 — 依赖、模型目录与请求兼容（2026-11-07，D-082）完成自动验收**：
+  - 官方目录核对日期更新到 2026-11-07；刷新 Anthropic、SiliconFlow、GLM、Kimi、Grok 当前/低价候选，OpenAI、DeepSeek、Gemini、Qwen、OpenRouter 保持不变；已保存 Model ID 不迁移、不覆盖
+  - Kimi 适配器不再注入通用 `temperature`，避免 K3 固定采样模型拒绝仓库分析、问答、搜索转换或探针请求；定向测试 47/47 通过
+  - 生产依赖做补丁维护，开发/构建依赖只做同主版本更新；`undici` 7.30.1、`minimatch` 11.0.1，`pnpm audit --json` 为 0；React 19、TypeScript 7、Vitest 5、CRXJS 3 等 major 迁移延后
+  - frozen install、110 个生产依赖/31 组许可证文本生成、typecheck、lint、全仓 format、Vitest 60 files / 328 tests（另 1 file / 1 live test 默认跳过）、build（437 modules）、安全扫描与隔离 Chrome 149 E2E 全过；Provider 请求 0、页面错误 0
+  - 未读取真实 Key，未调用真实 Provider，未新增 Provider/endpoint/Chrome 权限或 Host；未 Push、未创建 tag 或 Release
 
 ## 下一任务
 
-**等待后续真实使用反馈。公开安装版为 `v0.1.4`；Chrome Web Store 上架继续暂停，后续版本或其他渠道需另行确认。**
+**等待后续真实使用反馈。公开安装版仍为 `v0.1.4`；D-082 仅有本地提交，Push、后续版本或其他发布渠道需另行确认。**
 
 ## 已登记的后续优化
 
@@ -393,24 +399,24 @@
 
 ## 阶段进度表
 
-| Phase                                     | 状态                                 |
-| ----------------------------------------- | ------------------------------------ |
-| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成                            |
-| 1 仓库结构 + 扩展骨架                     | ✅ 已完成                            |
-| 1.5 安全地基                              | ✅ 已完成                            |
-| 2 Side Panel + 消息通信                   | ✅ 已完成                            |
-| 3 页面识别 + 上下文 + SPA                 | ✅ 已完成                            |
-| 4 Provider + 能力探针 + 对话 + 手动切换   | ✅ 已完成                            |
-| 5 Session + 偏好 + 容量淘汰               | ✅ 已完成                            |
-| 6 点击提问（MVP 必达）                    | ✅ 已完成                            |
-| 7 框选 + 视觉（MVP 必达）                 | ✅ 已完成                            |
-| 8 NL 搜索（MVP 必达）                     | ✅ 已完成                            |
-| 9 一键仓库分析                            | ✅ 已完成                            |
-| 10 安全加固 + 红队测试                    | ✅ 已完成                            |
-| 11 测试 + 打包 + MVP 验收                 | ✅ 已完成，v1 MVP 达标               |
-| 12 Provider 目录扩展 + 受限 custom 端点   | ✅ 已完成自动验收                    |
-| 13 GitHub 公开开源发布                    | ✅ 已完成                            |
-| 14 GitHub Release 加固与发布              | ✅ `v0.1.4` 已发布并完成远程资产核验 |
+| Phase                                     | 状态                                   |
+| ----------------------------------------- | -------------------------------------- |
+| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成                              |
+| 1 仓库结构 + 扩展骨架                     | ✅ 已完成                              |
+| 1.5 安全地基                              | ✅ 已完成                              |
+| 2 Side Panel + 消息通信                   | ✅ 已完成                              |
+| 3 页面识别 + 上下文 + SPA                 | ✅ 已完成                              |
+| 4 Provider + 能力探针 + 对话 + 手动切换   | ✅ 已完成                              |
+| 5 Session + 偏好 + 容量淘汰               | ✅ 已完成                              |
+| 6 点击提问（MVP 必达）                    | ✅ 已完成                              |
+| 7 框选 + 视觉（MVP 必达）                 | ✅ 已完成                              |
+| 8 NL 搜索（MVP 必达）                     | ✅ 已完成                              |
+| 9 一键仓库分析                            | ✅ 已完成                              |
+| 10 安全加固 + 红队测试                    | ✅ 已完成                              |
+| 11 测试 + 打包 + MVP 验收                 | ✅ 已完成，v1 MVP 达标                 |
+| 12 Provider 目录扩展 + 受限 custom 端点   | ✅ 已完成自动验收                      |
+| 13 GitHub 公开开源发布                    | ✅ 已完成                              |
+| 14 GitHub Release 加固与发布              | ✅ `v0.1.4` 已发布；D-082 本地维护完成 |
 
 ## 待处理的强制确认节点
 
@@ -433,7 +439,7 @@
 
 ## 阻塞
 
-当前无阻塞。GitHub Release `v0.1.4` 已完成本地与远程门禁、资产 digest 和安全告警核验；Chrome Web Store 上架继续暂停。
+当前无阻塞。D-082 本地维护已完成自动门禁；公开安装版仍为 `v0.1.4`，本轮未 Push、未创建 tag 或 Release；Chrome Web Store 上架继续暂停。
 
 ## 变更记录
 
@@ -506,3 +512,4 @@
 - 2026-10-07：完成 D-080 本地维护；模型目录按新增/淘汰/低价保留策略更新，DeepSeek Flash 加入受探针约束的视觉候选，开发依赖告警清零；327 项常规测试与完整静态/构建/安全/E2E 门禁通过。未读取真实 Key，未 Push、未创建 tag 或 Release。
 - 2026-10-07：项目负责人确认当前构建的 DeepSeek `deepseek-flash` 文本与视觉探针均通过，并授权按既有流程发布 `v0.1.4`；发布范围仅含 D-080，Chrome Web Store 继续暂停。
 - 2026-10-07：`8a33e4b` 已 Push；远端 Quality `37597902173`、CodeQL `37597901376` 成功。注释 tag `v0.1.4` 指向版本提交，公开 latest Release 与 ZIP/SHA-256 两项资产已上传，名称、大小和 GitHub digest 均与本地一致；三类 GitHub open 安全告警均为 0。Chrome Web Store 继续暂停。
+- 2026-11-07：完成 D-082 本地维护；依赖公告清零，Anthropic/SiliconFlow/GLM/Kimi/Grok 候选按当前/低价策略更新，Kimi 固定采样请求兼容落地；328 项常规测试与完整静态/构建/安全/E2E 门禁通过。未读取真实 Key，未 Push、未创建 tag 或 Release。

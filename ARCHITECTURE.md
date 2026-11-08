@@ -13,6 +13,7 @@
 > v1.10（2026-09-13）：记录 `v0.1.3` 复用既有 Release 门禁，并将 Quality workflow 的官方 Actions 迁移到 Node 24 运行时（D-078/D-079）。
 > v1.11（2026-10-07）：Provider Catalog 定向刷新当前/低价候选，DeepSeek Flash 复用既有 OpenAI-compatible 视觉消息格式；能力仍由探针判定（D-080）。
 > v1.12（2026-10-07）：记录 `v0.1.4` 只封装 D-080，并复用既有确定性 Release 与远端门禁（D-081）。
+> v1.13（2026-11-07）：Provider Catalog 刷新 Anthropic/SiliconFlow/GLM/Kimi/Grok 候选；Kimi 适配器省略固定采样参数（D-082）。
 
 ---
 
@@ -611,7 +612,7 @@ interface OperationConfirmation {
 - **仓库分析事实回填（D-048）**：Provider 输出 Schema 不包含 Star/Release/日期/许可证/Issue-PR 等可变事实；最终卡片仅从 `RepositoryAnalysisFacts` 回填这些字段。Provider 失败不阻断事实卡，降级说明明确标记数据源。
 - **Phase 10 安全执行 seam（D-049/D-075）**：`sanitizer` 统一字符串与结构化敏感字段遮蔽，Message Router 复用同一字段判定；`ToolRegistry` 定义完整只读工具契约与 strict zod Schema，当前生产运行时只实例化 `SearchToolRegistry` 的搜索子集。Panel 发起的 GitHub 导航不经过模型工具注册表，而是在 PanelBridge 中按同一 URL Schema 与 `operationPolicy` 独立校验/确认。PanelBridge 在会话准备、Provider、GitHub API 与截图前先执行私有页阻断。
 - **能力探针绑定（D-075）**：保存 Key 时只新增非秘密 UUID 修订号；持久探针 Schema v2 同时绑定该修订号、文本 model、视觉 model 和 custom Base URL。任一绑定项变化即失效对应探针，旧 Schema 或绑定不匹配的结果不能恢复为 `available`。修订号不代替 Key，也不进入 Provider 请求。
-- **模型目录时效（D-075）**：Catalog 暴露 `PROVIDER_CATALOG_VERIFIED_AT`；候选 model 只作便利输入，不覆盖已保存/default 值，也不表示账号可用或能力已验证。最终仍以用户账号和显式能力探针为准。
+- **模型目录时效（D-075/D-082）**：Catalog 暴露 `PROVIDER_CATALOG_VERIFIED_AT`；候选 model 只作便利输入，不覆盖已保存/default 值，也不表示账号可用或能力已验证。Kimi 适配器省略通用 `temperature`，交由固定采样模型使用服务端默认值；其他 Provider 仍沿用公共 OpenAI-compatible 请求骨架。最终可用性以用户账号和显式能力探针为准。
 - **对话持久化脱敏（D-051）**：PanelBridge 对已校验的问题先脱敏，再把同一结果交给 SessionStore 与 Provider runtime；因此 ContextBuilder 不是问题明文离开临时输入状态前的唯一防线。
 - **问答状态与紧凑交互（D-052）**：页面上下文与活动会话是两个独立状态；`hydrate` 只补充最近会话目录，不能覆盖 Panel 当前对话。Panel 提供显式会话选择/新建、分析与问答折叠、点击/框选后的输入 CTA；System Prompt 约束普通回答简练但不牺牲准确性。
 - **受限文件证据（D-053）**：仓库分析由 Background 固定构造 GitHub Contents API 路径，只读取根目录、最多 2 个高信号源码目录与最多 3 个关键文件；单候选文件 API 大小 ≤24KB，解码文本 ≤4KB，锁文件和不安全路径拒绝。确定性层先提取目录、文件角色、清单脚本/依赖或源码定义，再把经 sanitizer 的不可信片段交给 Provider；卡片不保存或返回原始文件正文。

@@ -14,6 +14,7 @@
 > v1.10（2026-09-13）：D-077/D-078 获授权作为 GitHub Release `v0.1.3` 发布；Chrome Web Store 继续暂停（D-079）。
 > v1.11（2026-10-07）：模型目录按新增/淘汰/低价保留策略维护，DeepSeek Flash 加入视觉候选；同步修复开发依赖公告（D-080）。
 > v1.12（2026-10-07）：D-080 经真实探针确认后获授权作为 GitHub Release `v0.1.4` 发布；Chrome Web Store 继续暂停（D-081）。
+> v1.13（2026-11-07）：完成发布后的依赖安全维护、Provider 候选刷新与 Kimi 固定采样参数兼容；不含 Push 或新 Release（D-082）。
 
 ---
 
@@ -132,6 +133,7 @@ STATUS.md 是断点续跑唯一依据：每完成任务即更新；遇阻塞写�
 - 普通问答的 `PAGE_INFO_REQUEST` 必须实时解析当前 DOM，不得复用启动时 PageContext；repo 的 `pageSummary`/description 不是 README 证据，缺失只能说“当前未读取到”（D-071）。
 - **GitHub API 匿名限流（P0-7/D-032）**：按 resource 分桶（core/search/code_search），读 `X-RateLimit-Resource/Remaining/Reset` 与 `Retry-After`；限流后**禁止持续指数重试**，等 Reset 恢复；search 受限降级网页搜索/DOM；v1 无 Token、无私有仓库支持。
 - DeepSeek `deepseek-flash` 可发送 OpenAI-compatible `image_url` 输入，但只有该 Key/Model 的视觉探针通过后才可用；`deepseek-v4-pro` 不声明视觉能力。provider-manager 继续用 Capability 护栏阻止未验证视觉路线。
+- Kimi 官方模型对采样值有固定约束；Kimi 适配器不得把通用运行时 `temperature` 注入请求，交由服务端按模型默认值处理（D-082）。
 - Provider 手动切换优先级高于默认路由（用户明确要求）。
 - host 权限严格限域（github.com / api.github.com / 三 AI 厂商域名），禁用 `<all_urls>`；manifest 含 `minimum_chrome_version: "114"`（D-035）。
 - **工具限域（D-013R）**：openGitHubPage 仅 `https://github.com/*`；外链/下载分别逐次确认；一律拒绝 javascript/data/file/chrome 等非 https Scheme。

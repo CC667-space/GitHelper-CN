@@ -14,6 +14,7 @@
 > v1.10（2026-09-13）：补充 `v0.1.3` 的 Node 24 Action 回归、完整门禁、远端 Quality/CodeQL、tag、Release 与资产 digest 核验（D-078/D-079）。
 > v1.11（2026-10-07）：补充模型目录新增/淘汰/低价保留、DeepSeek Flash 视觉组装与开发依赖零告警回归（D-080）。
 > v1.12（2026-10-07）：补充 `v0.1.4` 的真实 DeepSeek 文本/视觉确认、完整门禁、远端 Quality/CodeQL、tag、Release、资产 digest 与安全告警复核（D-081）。
+> v1.13（2026-11-07）：补充依赖零告警、当前/低价模型候选及 Kimi 固定采样参数兼容回归（D-082）。
 
 ---
 
@@ -37,7 +38,7 @@
 
 - parsers：各页面类型对 fixtures 的识别与字段提取；仓库页同时覆盖旧 `#readme` 与当前 `main article.markdown-body` 容器
 - sanitizer：各类凭据正/反/边界/组合用例
-- provider：mock HTTP，断言请求组装、apiHost 固定预设、model、错误映射（**八个适配器全部有 mock 测试，D-031/D-063**）
+- provider：mock HTTP，断言请求组装、apiHost 固定预设、model、错误映射；Kimi 请求不得注入通用 `temperature`（**全部适配器均有 mock 测试，D-031/D-063/D-082**）
 - provider-host-access：固定可选 Provider 只请求各自精确 Host；custom 只请求已保存 URL 的精确 Host；拒绝授权时 Key 零写入；Background 在 Key 读取前断言权限；删除 Key 后释放权限
 - provider-settings：旧配置迁移后合并当前目录默认值；内置条目只接受 model，custom 可含非秘密 URL/model；拒绝 Key/token/Authorization、内置 endpoint 覆盖与未知字段，错误不回显输入
 - custom URL/transport：拒绝 credentials/query/fragment、非默认端口、localhost、IPv4/IPv6 私网/回环/链路本地/保留地址字面量；配置/权限/请求 origin 不一致在读取 Key 与 fetch 前阻断；重定向拒绝
@@ -68,7 +69,7 @@
 - 同名但不来自精确 Panel 扩展页的 Port 被断开且不启动 hydration；`navigation/search=confirm` 时未确认请求零执行，Panel 只有“取消/确认一次”，确认后仅执行一次（D-075）
 - 助手 Markdown/GFM 生成语义化标题/列表/强调/代码/表格；fenced code 与行内代码样式不冲突；原始 HTML、远程图片与可点击外链不会进入 DOM（D-042/D-052）
 - Options 表单读写、Key 录入与掩码（**可实现表述，D-028**）：录入用 password input；**保存成功后输入框与受控状态被清空**（断言 value === ''）；**已保存 Key 不回显明文**——保存后重新打开 Options，DOM/组件状态中只有掩码（尾 4 位），无完整 Key 字符串；Zustand store 全量序列化后不含已存 Key 明文
-- Options 只用“文本 Model / 视觉 Model”两张角色卡组织配置；常用列表排除 legacy UUAPI；DeepSeek Flash 可进入视觉列表但仍须视觉探针通过；选择后显示 Key、少量当前/低价候选及手填 Model ID；目录刷新不覆盖已保存 Model ID；custom 先保存 URL/model 后精确授权；设置 JSON 不含 Key且不能新增白名单外 Provider
+- Options 只用“文本 Model / 视觉 Model”两张角色卡组织配置；常用列表排除 legacy UUAPI；DeepSeek Flash 可进入视觉列表但仍须视觉探针通过；选择后显示 Key、少量当前/低价候选及手填 Model ID；目录核对日期为 2026-11-07，刷新不覆盖已保存 Model ID；custom 先保存 URL/model 后精确授权；设置 JSON 不含 Key且不能新增白名单外 Provider
 - Options 偏好表单与容量用量可读；三种数据清除入口分别可用且全清有显式二次确认（D-033）、数据流向披露展示
 - Panel 收到 `SESSION_STATE` 后恢复活动会话；页面变化/Background 重连的 hydrate 不覆盖当前对话；最近会话可选择且可强制新建；恢复投影过长时明确提示早期内容未展开
 - Panel 以“页面提问 / 仓库分析 / 中文搜索 / 问答”四分段导航切换且不丢失当前状态；分析内容仍可收起，问答不提供整体收起按钮但保留逐轮收展（D-066）

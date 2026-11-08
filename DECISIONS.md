@@ -787,3 +787,16 @@
 - **理由**：D-080 已通过完整自动门禁，并由项目负责人确认本轮新增的 DeepSeek Flash 文本/视觉路线在真实环境可用。复用既有确定性 ZIP、许可证、凭据审计和远端门禁，可以让公开安装版与受维护源码一致，同时保持低价路线和既有用户配置。
 - **范围**：只发布既有 D-080 成果及其版本、文档和证据；不新增 Provider、endpoint、Chrome 权限/Host、GitHub 写功能、CRX 或 Chrome Web Store 工作，不由执行 Agent 读取真实 Key 或再次调用真实 Provider。
 - 状态：版本提交、远端 Quality/CodeQL、注释 tag、公开 latest Release、两项资产 digest 与三类安全告警均已核验 ｜ 2026-10-07
+
+## D-082 模型目录与依赖采用兼容维护，不进行主版本迁移
+
+- **决策**：
+  - Provider Catalog 的官方资料核对日期更新为 2026-11-07。Anthropic 改用已公开的 `claude-sonnet-5`、`claude-fable-5` 与低价 `claude-haiku-4-5-20251001`；SiliconFlow 加入 `zai-org/GLM-5.3-Flash` / `zai-org/GLM-5.3`；GLM 加入 `glm-5.3` 与低价多模态 `glm-5.3-flash`；Kimi 加入 `kimi-k3.1-pro` 并保留 `kimi-k3`；Grok 加入 `grok-4.7` 并保留低价 `grok-4.3`。OpenAI、DeepSeek、Gemini、Qwen 与 OpenRouter 当前候选保持不变。
+  - 已保存 Model ID 继续优先，不迁移、不覆盖；被移出新候选的旧模型仍可手填。目录候选只表示便捷输入，账号权限、文本和视觉能力仍由对应 Key/Model 的真实探针确认。
+  - Kimi 适配器统一省略运行时通用 `temperature`。Kimi K3 系列采样值由服务端固定或默认处理，避免仓库分析、问答、搜索转换和能力探针传入 `0` / `0.1` / `0.2` 后被拒绝。
+  - 修复当前依赖公告：生产依赖只做兼容补丁更新；开发/构建依赖只做同主版本更新；`undici` 固定到 7.30.1，`minimatch` 固定到已修复的 11.0.1。项目工具链锁定 pnpm 11.25.0。React 19、TypeScript 7、Vitest 5、CRXJS 3、jsdom 31 等主版本迁移不在本轮范围。
+  - Vite 8.3 配置入口使用显式 `.ts` 扩展，并只在 `noEmit` 类型检查中允许 TS 扩展导入；Playwright 保留 1.61.1，以继续复用项目锁定的隔离 Chrome 149，不为无安全收益的更新下载新浏览器 revision。
+- **理由**：当前依赖公告均可通过兼容版本消除；模型目录中的 Anthropic 名称已与官方活动型号不符，GLM/Kimi/Grok/SiliconFlow 已出现明确的新型号。维护便捷候选并保留低价路线可以降低新配置失败率，但主版本迁移和自动覆盖用户配置没有当前必要性。Kimi 的固定采样约束则是新候选可实际调用的直接兼容条件，必须与目录更新同步处理。
+- **证据**：`pnpm audit --json` 为 0；frozen install、许可证清单生成、typecheck、lint、全仓 format、Vitest 60 files / 328 tests（另 1 file / 1 live test 默认跳过）、build（437 modules）、构建安全扫描与隔离 Chrome 149 E2E 全过；E2E Provider 请求 0、页面错误 0。定向红测先确认旧目录与 Kimi `temperature` 注入失败，修复后 47/47 通过。
+- **范围**：Phase 14 发布后的本地维护；不新增 Provider、endpoint、Chrome 权限/Host 或数据类别，不读取真实 Key，不调用真实 Provider，不 Push、不创建 tag 或 Release。
+- 状态：本地实现与自动门禁完成；后续版本发布须另行授权 ｜ 2026-11-07

@@ -8,7 +8,7 @@ import {
 
 describe('Provider catalog', () => {
   it('暴露十家常用内置服务、一个受限 custom，并把 UUAPI 标记为 legacy', () => {
-    expect(PROVIDER_CATALOG_VERIFIED_AT).toBe('2026-10-07');
+    expect(PROVIDER_CATALOG_VERIFIED_AT).toBe('2026-11-07');
     expect(PROVIDER_CATALOG.map((provider) => provider.id)).toEqual([
       'deepseek',
       'openrouter',
@@ -43,11 +43,11 @@ describe('Provider catalog', () => {
       settingsLabel: 'Claude（Anthropic API）',
       apiHost: 'https://api.anthropic.com',
       apiPath: '/v1/chat/completions',
-      defaultTextModel: 'claude-sonnet-5-5',
-      defaultVisionModel: 'claude-sonnet-5-5',
+      defaultTextModel: 'claude-sonnet-5',
+      defaultVisionModel: 'claude-sonnet-5',
       modelSuggestions: {
-        text: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1', 'claude-haiku-4-5'],
-        vision: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1', 'claude-haiku-4-5'],
+        text: ['claude-sonnet-5', 'claude-fable-5', 'claude-haiku-4-5-20251001'],
+        vision: ['claude-sonnet-5', 'claude-fable-5', 'claude-haiku-4-5-20251001'],
       },
       hostPermission: 'optional',
     });
@@ -74,11 +74,11 @@ describe('Provider catalog', () => {
     expect(providerCatalogEntry('siliconflow')).toMatchObject({
       apiHost: 'https://api.siliconflow.cn',
       apiPath: '/v1/chat/completions',
-      defaultTextModel: 'zai-org/GLM-5.2',
-      defaultVisionModel: 'Qwen/Qwen3.8-27B',
+      defaultTextModel: 'zai-org/GLM-5.3-Flash',
+      defaultVisionModel: 'zai-org/GLM-5.3-Flash',
       modelSuggestions: {
-        text: ['zai-org/GLM-5.2', 'Pro/zai-org/GLM-5.1', 'moonshotai/Kimi-K2.7-Code'],
-        vision: ['Qwen/Qwen3.8-27B', 'Qwen/Qwen3.6-35B-A3B', 'Qwen/Qwen3.6-27B'],
+        text: ['zai-org/GLM-5.3-Flash', 'zai-org/GLM-5.3', 'moonshotai/Kimi-K2.7-Code'],
+        vision: ['zai-org/GLM-5.3-Flash', 'Qwen/Qwen3.8-27B', 'Qwen/Qwen3.6-27B'],
       },
     });
 
@@ -96,16 +96,30 @@ describe('Provider catalog', () => {
       apiPath: '/api/paas/v4/chat/completions',
       hostPermission: 'optional',
       visibility: 'common',
+      defaultTextModel: 'glm-5.3-flash',
+      defaultVisionModel: 'glm-5.3-flash',
+      modelSuggestions: {
+        text: ['glm-5.3', 'glm-5.3-flash', 'glm-4.7-flash'],
+        vision: ['glm-5.3-flash', 'glm-5v-turbo', 'glm-4.6v-flash'],
+      },
     });
-    expect(providerCatalogEntry('kimi').apiHost).toBe('https://api.moonshot.cn');
+    expect(providerCatalogEntry('kimi')).toMatchObject({
+      apiHost: 'https://api.moonshot.cn',
+      defaultTextModel: 'kimi-k3.1-pro',
+      defaultVisionModel: 'kimi-k3.1-pro',
+      modelSuggestions: {
+        text: ['kimi-k3.1-pro', 'kimi-k3'],
+        vision: ['kimi-k3.1-pro', 'kimi-k3'],
+      },
+    });
     expect(providerCatalogEntry('grok').apiHost).toBe('https://api.x.ai');
     expect(providerCatalogEntry('grok')).toMatchObject({
-      defaultTextModel: 'grok-4.6',
-      defaultVisionModel: 'grok-4.6',
+      defaultTextModel: 'grok-4.7',
+      defaultVisionModel: 'grok-4.7',
     });
     expect(providerCatalogEntry('grok').modelSuggestions).toEqual({
-      text: ['grok-4.6', 'grok-4.5', 'grok-4.3'],
-      vision: ['grok-4.6', 'grok-4.5', 'grok-4.3'],
+      text: ['grok-4.7', 'grok-4.6', 'grok-4.3'],
+      vision: ['grok-4.7', 'grok-4.6', 'grok-4.3'],
     });
     expect(providerCatalogEntry('custom')).toMatchObject({
       apiHost: '',

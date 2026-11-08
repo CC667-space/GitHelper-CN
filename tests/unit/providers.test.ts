@@ -203,6 +203,31 @@ describe.each(factories)('$id adapter', ({ id, endpoint, model, create }) => {
 });
 
 describe('Provider-specific behavior', () => {
+  it('Kimi K3 系列省略固定采样参数，避免运行时温度覆盖导致请求被拒绝', async () => {
+    const transport: ProviderTransport = {
+      request: vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              model: 'kimi-k3.1-pro',
+              choices: [{ message: { content: 'OK' }, finish_reason: 'stop' }],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+      ),
+    };
+    const provider = new KimiProvider(transport);
+
+    await provider.chat({
+      ...request('kimi:fixed-sampling', 'kimi-k3.1-pro'),
+      temperature: 0.2,
+    });
+
+    const [, , init] = vi.mocked(transport.request).mock.calls[0]!;
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+    expect(body).not.toHaveProperty('temperature');
+  });
+
   it('OpenAI 使用当前 Chat Completions 的 max_completion_tokens 参数', async () => {
     const transport: ProviderTransport = {
       request: vi.fn(

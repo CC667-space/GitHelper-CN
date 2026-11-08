@@ -45,12 +45,15 @@ describe('GitHub Release runtime hardening', () => {
   it('发布包使用固定时间戳并包含项目及生产依赖许可证', () => {
     const packageScript = readProjectFile('scripts/package-extension.ps1');
     const thirdPartyNotices = readProjectFile('THIRD_PARTY_NOTICES.txt');
+    const packageJson = JSON.parse(readProjectFile('package.json')) as {
+      dependencies?: Record<string, string>;
+    };
 
     expect(packageScript).not.toContain('Compress-Archive');
     expect(packageScript).toContain('1980, 1, 1');
     expect(packageScript).toContain("'LICENSE', 'THIRD_PARTY_NOTICES.txt'");
     expect(thirdPartyNotices).toContain('react@18.3.1');
-    expect(thirdPartyNotices).toContain('zod@4.4.3');
+    expect(thirdPartyNotices).toContain(`zod@${packageJson.dependencies?.zod}`);
     expect(thirdPartyNotices).toContain('License texts');
   });
 
