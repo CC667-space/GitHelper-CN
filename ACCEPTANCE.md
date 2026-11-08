@@ -15,6 +15,7 @@
 > v1.11（2026-10-07）：补充模型目录新增/淘汰/低价保留、DeepSeek Flash 视觉组装与开发依赖零告警回归（D-080）。
 > v1.12（2026-10-07）：补充 `v0.1.4` 的真实 DeepSeek 文本/视觉确认、完整门禁、远端 Quality/CodeQL、tag、Release、资产 digest 与安全告警复核（D-081）。
 > v1.13（2026-11-07）：补充依赖零告警、当前/低价模型候选及 Kimi 固定采样参数兼容回归（D-082）。
+> v1.14（2026-11-08）：补充 `v0.1.5` 的完整门禁、远端 Quality/CodeQL、tag、Release、资产 digest 与安全告警复核（D-083）。
 
 ---
 
@@ -154,7 +155,7 @@
 | 11    | 全测试绿、打包可加载、S1-S5 证据齐全（前置：Phase 6/7/8 已完成）｜ **人工：S1-S5 批量体验复核**                                                                                                                                                                                                                                                                                                                        |
 | 12    | GLM/Kimi/Grok/custom Mock、安全、动态 Host、迁移、UUAPI legacy、构建与 E2E 全过；无新 Key 不阻塞                                                                                                                                                                                                                                                                                                                       |
 | 13    | MIT 公开源码、历史邮箱隐私处理、全历史凭据审计、公开仓库与首次 Push 通过                                                                                                                                                                                                                                                                                                                                               |
-| 14    | 正式运行时无开发探针入口；图标完整；README 快速上手完整；typecheck/lint/format/`git diff --check`/test/build/安全扫描/E2E/确定性打包/凭据审计全过；获授权的 `v0.1.0`/`v0.1.1`/`v0.1.2`/`v0.1.3`/`v0.1.4` Release 均只含可核对的 ZIP/SHA256 资产；`v0.1.4` 的远端 Quality/CodeQL、资产 digest 与三类公开安全告警复核通过；DeepSeek `deepseek-flash` 文本/视觉真实探针由项目负责人确认通过                               |
+| 14    | 正式运行时无开发探针入口；图标完整；README 快速上手完整；typecheck/lint/format/`git diff --check`/test/build/安全扫描/E2E/确定性打包/凭据审计全过；获授权的 `v0.1.0`–`v0.1.5` Release 均只含可核对的 ZIP/SHA256 资产；`v0.1.5` 的远端 Quality/CodeQL、资产 digest 与三类公开安全告警复核通过；已保存 Key/Model 不因升级被覆盖，模型候选仍以账号权限和真实探针为准                                                      |
 
 ---
 

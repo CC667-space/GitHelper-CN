@@ -800,3 +800,14 @@
 - **证据**：`pnpm audit --json` 为 0；frozen install、许可证清单生成、typecheck、lint、全仓 format、Vitest 60 files / 328 tests（另 1 file / 1 live test 默认跳过）、build（437 modules）、构建安全扫描与隔离 Chrome 149 E2E 全过；E2E Provider 请求 0、页面错误 0。定向红测先确认旧目录与 Kimi `temperature` 注入失败，修复后 47/47 通过。
 - **范围**：Phase 14 发布后的本地维护；不新增 Provider、endpoint、Chrome 权限/Host 或数据类别，不读取真实 Key，不调用真实 Provider，不 Push、不创建 tag 或 Release。
 - 状态：本地实现与自动门禁完成；后续版本发布须另行授权 ｜ 2026-11-07
+
+## D-083 `v0.1.5` 只发布 D-082 维护成果
+
+- **决策**：
+  - 经项目负责人 2026-11-08 明确授权，把 D-082 的依赖安全维护、Anthropic/SiliconFlow/GLM/Kimi/Grok 候选刷新与 Kimi 固定采样参数兼容发布为 GitHub Release `v0.1.5`。
+  - `package.json` 与 manifest 同步升级为 `0.1.5`；安装资产继续限定为 `GitHelper-CN-v0.1.5-chrome.zip` 和对应 SHA-256 文件。Release 必须公开、非 draft、非 prerelease 并设为 latest，注释 tag 指向通过全部门禁的版本提交。
+  - Push 前重新执行 frozen install、依赖/许可证/代码/测试/build/E2E/确定性打包门禁，并复核当前源码、全部 Git 历史、`dist` 与 ZIP 无真实凭据；版本提交的远端 Quality 与 CodeQL 成功后才创建 tag 和 Release。
+  - 已保存 Key、Model ID 与 custom URL 不读取、不迁移、不覆盖。仅升级扩展不强制重测未变化的 Provider；新候选的实际可用性仍以账号权限和单 Provider 探针为准。
+- **理由**：D-082 已通过完整本地门禁，消除了当前依赖公告并使便捷模型候选与 Kimi 请求格式保持可用。复用既有确定性 ZIP、许可证、凭据审计和远端门禁，可以让公开安装版与受维护源码一致，而不扩大产品或权限边界。
+- **范围**：只发布既有 D-082 成果及其版本、文档和证据；不新增 Provider、endpoint、Chrome 权限/Host、GitHub 写功能、CRX 或 Chrome Web Store 工作，不由执行 Agent 读取真实 Key 或调用真实 Provider。
+- 状态：已获发布授权，待完整门禁与远端验收完成 ｜ 2026-11-08

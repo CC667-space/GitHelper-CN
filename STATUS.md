@@ -6,7 +6,7 @@
 
 ## 当前阶段
 
-**Phase 14 — GitHub Release `v0.1.4` 已发布；D-082 依赖与模型目录本地维护已完成。Chrome Web Store 继续暂停。**
+**Phase 14 — GitHub Release `v0.1.5` 已获授权，正在按既有门禁准备发布。Chrome Web Store 继续暂停。**
 
 ## 已完成
 
@@ -388,10 +388,17 @@
   - 生产依赖做补丁维护，开发/构建依赖只做同主版本更新；`undici` 7.30.1、`minimatch` 11.0.1，`pnpm audit --json` 为 0；React 19、TypeScript 7、Vitest 5、CRXJS 3 等 major 迁移延后
   - frozen install、110 个生产依赖/31 组许可证文本生成、typecheck、lint、全仓 format、Vitest 60 files / 328 tests（另 1 file / 1 live test 默认跳过）、build（437 modules）、安全扫描与隔离 Chrome 149 E2E 全过；Provider 请求 0、页面错误 0
   - 未读取真实 Key，未调用真实 Provider，未新增 Provider/endpoint/Chrome 权限或 Host；未 Push、未创建 tag 或 Release
+- [ ] **Phase 14 — GitHub Release `v0.1.5` 发布验收（2026-11-08，D-083）进行中**：
+  - 项目负责人已明确授权按既有流程发布 `v0.1.5`；范围只含 D-082，Chrome Web Store 继续暂停
+  - 版本、README、用户指南、Release Notes 与权威记录已同步；不读取真实 Key，不新增 Provider、endpoint、Chrome 权限或 Host
+  - 本地门禁通过：frozen install、384 项依赖零漏洞、许可证零差异、typecheck、lint、format、`git diff --check`、Vitest 60 files / 328 tests、匿名 GitHub live 1/1、build（437 modules）、安全扫描与隔离 Chrome 149 E2E
+  - 20 条目确定性 ZIP 连续两次 SHA-256 均为 `eebb6f7bef98c6fbe608d301cbaa826c8d8313865dc2bee0e834c43ca38e77c7`，ZIP 208,287 bytes，校验文件 97 bytes；权限相对 `v0.1.4` 未扩大
+  - 凭据审计覆盖生产源码、本轮新增行、`dist`、ZIP、禁止跟踪路径与全部 Git 历史：生产/新增/构建/ZIP 意外敏感形态命中 0；历史 8 个唯一命中路径均为测试或 E2E 安全哨兵
+  - 待完成：版本提交 Push、远端 Quality/CodeQL、tag、Release、资产 digest 与公开安全告警复核
 
 ## 下一任务
 
-**等待后续真实使用反馈。公开安装版仍为 `v0.1.4`；D-082 仅有本地提交，Push、后续版本或其他发布渠道需另行确认。**
+**完成 `v0.1.5` 本地与远端发布门禁；仅在既有 GitHub 认证无法恢复或其他强制阻断项出现时暂停。**
 
 ## 已登记的后续优化
 
@@ -399,24 +406,24 @@
 
 ## 阶段进度表
 
-| Phase                                     | 状态                                   |
-| ----------------------------------------- | -------------------------------------- |
-| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成                              |
-| 1 仓库结构 + 扩展骨架                     | ✅ 已完成                              |
-| 1.5 安全地基                              | ✅ 已完成                              |
-| 2 Side Panel + 消息通信                   | ✅ 已完成                              |
-| 3 页面识别 + 上下文 + SPA                 | ✅ 已完成                              |
-| 4 Provider + 能力探针 + 对话 + 手动切换   | ✅ 已完成                              |
-| 5 Session + 偏好 + 容量淘汰               | ✅ 已完成                              |
-| 6 点击提问（MVP 必达）                    | ✅ 已完成                              |
-| 7 框选 + 视觉（MVP 必达）                 | ✅ 已完成                              |
-| 8 NL 搜索（MVP 必达）                     | ✅ 已完成                              |
-| 9 一键仓库分析                            | ✅ 已完成                              |
-| 10 安全加固 + 红队测试                    | ✅ 已完成                              |
-| 11 测试 + 打包 + MVP 验收                 | ✅ 已完成，v1 MVP 达标                 |
-| 12 Provider 目录扩展 + 受限 custom 端点   | ✅ 已完成自动验收                      |
-| 13 GitHub 公开开源发布                    | ✅ 已完成                              |
-| 14 GitHub Release 加固与发布              | ✅ `v0.1.4` 已发布；D-082 本地维护完成 |
+| Phase                                     | 状态                               |
+| ----------------------------------------- | ---------------------------------- |
+| 0 基线检查 + 环境 + 技术探针 + Git 初始化 | ✅ 已完成                          |
+| 1 仓库结构 + 扩展骨架                     | ✅ 已完成                          |
+| 1.5 安全地基                              | ✅ 已完成                          |
+| 2 Side Panel + 消息通信                   | ✅ 已完成                          |
+| 3 页面识别 + 上下文 + SPA                 | ✅ 已完成                          |
+| 4 Provider + 能力探针 + 对话 + 手动切换   | ✅ 已完成                          |
+| 5 Session + 偏好 + 容量淘汰               | ✅ 已完成                          |
+| 6 点击提问（MVP 必达）                    | ✅ 已完成                          |
+| 7 框选 + 视觉（MVP 必达）                 | ✅ 已完成                          |
+| 8 NL 搜索（MVP 必达）                     | ✅ 已完成                          |
+| 9 一键仓库分析                            | ✅ 已完成                          |
+| 10 安全加固 + 红队测试                    | ✅ 已完成                          |
+| 11 测试 + 打包 + MVP 验收                 | ✅ 已完成，v1 MVP 达标             |
+| 12 Provider 目录扩展 + 受限 custom 端点   | ✅ 已完成自动验收                  |
+| 13 GitHub 公开开源发布                    | ✅ 已完成                          |
+| 14 GitHub Release 加固与发布              | 🚧 `v0.1.5` 已授权，发布验收进行中 |
 
 ## 待处理的强制确认节点
 
@@ -435,11 +442,12 @@
 - ✅ GitHub Release `v0.1.2`、既有 `origin` Push 与 tag（用户已明确授权；远程发布与资产 digest 核验完成）
 - ✅ GitHub Release `v0.1.3`、既有 `origin` Push 与 tag（用户已明确授权；远程发布与资产 digest 核验完成）
 - ✅ GitHub Release `v0.1.4`、既有 `origin` Push 与 tag（用户已明确授权；远程发布与资产 digest 核验完成）
+- ✅ GitHub Release `v0.1.5`、既有 `origin` Push 与 tag（用户已明确授权；仅限 D-082 与既有发布边界）
 - ⏸ 条件性：匿名 GitHub API 限额实测阻塞 MVP → 评估 Token（基线变更）；所有文本或所有视觉 Provider 真实探针均失败（D-031）；触及付费/权限扩大/发布/Git Remote 与 Push → 即时暂停
 
 ## 阻塞
 
-当前无阻塞。D-082 本地维护已完成自动门禁；公开安装版仍为 `v0.1.4`，本轮未 Push、未创建 tag 或 Release；Chrome Web Store 上架继续暂停。
+当前无产品或代码阻塞。GitHub CLI 当前认证状态需在远程阶段复核；本地发布准备与门禁不受影响。Chrome Web Store 上架继续暂停。
 
 ## 变更记录
 

@@ -14,6 +14,7 @@
 > v1.11（2026-10-07）：Provider Catalog 定向刷新当前/低价候选，DeepSeek Flash 复用既有 OpenAI-compatible 视觉消息格式；能力仍由探针判定（D-080）。
 > v1.12（2026-10-07）：记录 `v0.1.4` 只封装 D-080，并复用既有确定性 Release 与远端门禁（D-081）。
 > v1.13（2026-11-07）：Provider Catalog 刷新 Anthropic/SiliconFlow/GLM/Kimi/Grok 候选；Kimi 适配器省略固定采样参数（D-082）。
+> v1.14（2026-11-08）：记录 `v0.1.5` 只封装 D-082，并复用既有确定性 Release 与远端门禁（D-083）。
 
 ---
 
@@ -683,6 +684,6 @@ strict zod payload 与 64KB 信封限制；UI 的垃圾桶只进入待确认态�
 - 打包阶段拒绝 `.env`、凭据命名、私钥/证书、source map 和日志类条目，并断言四档图标及两份法律文件存在。
 - `artifacts/` 不进入 Git；仅在完整门禁与凭据审计通过后上传到对应 GitHub Release。
 - `.github/workflows/quality.yml` 使用项目固定的 Node/pnpm 版本，在 Windows 依次执行 frozen install、audit、许可证再生成差异检查、typecheck、lint、format、test、build、安全扫描和打包；checkout、Node setup 与 pnpm setup 使用声明 `node24` 运行时的官方稳定主版本。本地工作树通过不等于远端 workflow 已运行。
-- 获授权维护版的版本提交必须先由上述远端 Quality workflow 与 CodeQL 成功验证，再创建 tag 和 Release。远端仍只上传确定性 ZIP 与其 SHA-256 文件；`v0.1.4` 不新增或扩大 Chrome permissions、host permissions 或 optional host permissions。
+- 获授权维护版的版本提交必须先由上述远端 Quality workflow 与 CodeQL 成功验证，再创建 tag 和 Release。远端仍只上传确定性 ZIP 与其 SHA-256 文件；`v0.1.5` 不新增或扩大 Chrome permissions、host permissions 或 optional host permissions。
 - Phase 0 的截图/存储技术探针已完成并保留书面证据，但其 Background 原始消息入口、Content DOM 触发器和 Options 技术验证 UI 不进入正式 Release。Provider 的单卡“测试 Key 与模型”是用户必要配置能力，继续保留。
 - Chrome Web Store、CRX 签名和其他商店不属于该流水线。
