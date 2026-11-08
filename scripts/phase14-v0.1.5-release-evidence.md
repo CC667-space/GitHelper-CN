@@ -48,4 +48,14 @@
 
 ## 远程门禁与发布
 
-- 待版本提交 Push、Quality/CodeQL、tag、Release、资产 digest 与安全告警复核完成后填写。
+- 目标仓库：`https://github.com/CC667-space/GitHelper-CN`。
+- 版本准备提交：`d79c2388bcd3459ce7aa99c3e417f7a1f2c24671`；Quality pnpm 单一版本来源修复提交：`a8395b71b126e4190c19479f701801a0b605e2ce`；均已普通 fast-forward Push 到 `origin/main`。
+- 首次 Quality run `42447108207` 精确暴露 pnpm 11.17.0/11.25.0 双版本冲突；修复后 Quality run `42447360979` 成功，verify job `128628999519` 全步骤通过，job annotations 为 0。地址：`https://github.com/CC667-space/GitHelper-CN/actions/runs/42447360979`。
+- CodeQL run `42447360933` 成功；`Analyze (javascript-typescript)` 与 `Analyze (actions)` 两个 job 均通过。各有一条 `notice`，内容仅为 GitHub 托管的 `ubuntu-latest` 将迁移到 Ubuntu 26，不是代码或安全告警。地址：`https://github.com/CC667-space/GitHelper-CN/actions/runs/42447360933`。
+- 注释 tag：`v0.1.5`；tag 对象 `8e423a908f89a9bb0f6a8118d090a9fb51b0ecf6` 解引用到修复提交 `a8395b71b126e4190c19479f701801a0b605e2ce`。
+- Release：ID `438157655`；公开、非 draft、非 prerelease，并由 `/releases/latest` 返回为当前 latest：`https://github.com/CC667-space/GitHelper-CN/releases/tag/v0.1.5`。
+- 远程 ZIP：208,287 bytes；digest `sha256:eebb6f7bef98c6fbe608d301cbaa826c8d8313865dc2bee0e834c43ca38e77c7`，与本地一致。
+- 远程校验文件：97 bytes；digest `sha256:366369e490742971c5cb621041124829df3323657eba69849e0e77d882185195`，与本地一致。
+- Release 的显式资产只有上述 ZIP 与 SHA-256 文件两项，状态均为 `uploaded`。
+- 首次版本 Push 回执曾显示 19 条漏洞；依赖图刷新后通过 GitHub API 复核，Dependabot、Code scanning、Secret scanning 的 open 告警均为 0，与本地 `pnpm audit` 一致。
+- 状态：GitHub Release `v0.1.5` 发布与远程资产核验完成；Chrome Web Store 继续暂停。

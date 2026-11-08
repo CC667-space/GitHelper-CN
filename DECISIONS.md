@@ -811,4 +811,4 @@
   - 已保存 Key、Model ID 与 custom URL 不读取、不迁移、不覆盖。仅升级扩展不强制重测未变化的 Provider；新候选的实际可用性仍以账号权限和单 Provider 探针为准。
 - **理由**：D-082 已通过完整本地门禁，消除了当前依赖公告并使便捷模型候选与 Kimi 请求格式保持可用。复用既有确定性 ZIP、许可证、凭据审计和远端门禁，可以让公开安装版与受维护源码一致，而不扩大产品或权限边界。
 - **范围**：只发布既有 D-082 成果及其版本、文档和证据；不新增 Provider、endpoint、Chrome 权限/Host、GitHub 写功能、CRX 或 Chrome Web Store 工作，不由执行 Agent 读取真实 Key 或调用真实 Provider。
-- 状态：已获发布授权，待完整门禁与远端验收完成 ｜ 2026-11-08
+- 状态：版本提交、CI 修复提交、远端 Quality/CodeQL、注释 tag、公开 latest Release、两项资产 digest 与三类安全告警均已核验 ｜ 2026-11-08
